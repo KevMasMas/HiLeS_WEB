@@ -5,16 +5,17 @@ import { useEditorStore } from '../../stores/useEditorStore';
 import { HilesGlyph } from './HilesGlyph';
 
 const groups: Array<{ title: string; elements: HilesElementType[] }> = [
-  { title: 'Componentes grandes', elements: [HilesElementType.STRUCTURAL_BLOCK] },
-  { title: 'Lógica e interfaz', elements: [HilesElementType.FUNCTIONAL_BLOCK, HilesElementType.SERVICE, HilesElementType.PORT, HilesElementType.SAMPLE, HilesElementType.HOLD] },
-  { title: 'Red de Petri', elements: [HilesElementType.PLACE, HilesElementType.TRANSITION, HilesElementType.TOKEN] },
+  { title: 'Blocks', elements: [HilesElementType.STRUCTURAL_BLOCK, HilesElementType.FUNCTIONAL_BLOCK] },
+  { title: 'Petri Net', elements: [HilesElementType.PLACE, HilesElementType.TRANSITION] },
+  { title: 'Interface', elements: [HilesElementType.SERVICE] },
+  { title: 'Converters', elements: [HilesElementType.SAMPLE, HilesElementType.HOLD] },
 ];
 
 const connections = [
-  { type: HilesConnectionType.CONTINUOUS, label: 'Canal continuo', line: 'solid', arrow: '▶' },
-  { type: HilesConnectionType.DISCRETE, label: 'Evento discreto', line: 'solid', arrow: '▷' },
-  { type: HilesConnectionType.PETRI, label: 'Canal lógico / Petri', line: 'dashed', arrow: '▷' },
-  { type: HilesConnectionType.TOKEN_FLOW, label: 'Arco de token', line: 'solid', arrow: '▷' },
+  { type: HilesConnectionType.CONTINUOUS, label: 'Continuous Channel', line: 'solid', arrow: '▶' },
+  { type: HilesConnectionType.DISCRETE, label: 'Discrete Event', line: 'solid', arrow: '▷' },
+  { type: HilesConnectionType.PETRI, label: 'Logical / Petri Channel', line: 'dashed', arrow: '▷' },
+  { type: HilesConnectionType.TOKEN_FLOW, label: 'Token Arc', line: 'solid', arrow: '▷' },
 ] as const;
 
 export const Palette: React.FC = () => {
@@ -27,7 +28,7 @@ export const Palette: React.FC = () => {
 
   return (
     <aside style={styles.aside}>
-      <h3 style={styles.title}>Elementos HiLeS</h3>
+      <h3 style={styles.title}>HiLeS Elements</h3>
       <div style={styles.scroll}>
         {groups.map((group) => (
           <section key={group.title} style={styles.section}>
@@ -44,7 +45,7 @@ export const Palette: React.FC = () => {
         ))}
 
         <section style={styles.section}>
-          <h4 style={styles.groupTitle}>Conectores</h4>
+          <h4 style={styles.groupTitle}>Connectors</h4>
           <div style={{ display: 'grid', gap: 7 }}>
             {connections.map((connection) => {
               const active = activeConnectionType === connection.type;
@@ -60,7 +61,7 @@ export const Palette: React.FC = () => {
           </div>
         </section>
       </div>
-      <div style={styles.help}>Arrastra componentes al lienzo. Selecciona un conector antes de unir dos puntos.</div>
+      <div style={styles.help}>Drag components onto the canvas. Ports are managed from a block's Properties panel. Select a connector before joining two compatible endpoints.</div>
     </aside>
   );
 };
@@ -73,7 +74,7 @@ const styles: Record<string, React.CSSProperties> = {
   groupTitle: { margin: '0 0 7px', fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.07em' },
   grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 7 },
   item: { minHeight: 76, padding: '7px 4px', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff', cursor: 'grab', fontSize: 10, fontWeight: 700, textAlign: 'center', color: '#273449', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' },
-  connector: { width: '100%', padding: '8px 9px', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff', color: '#273449', cursor: 'pointer', display: 'flex', gap: 10, alignItems: 'center', fontSize: 11, fontWeight: 700, textAlign: 'left' },
+  connector: { width: '100%', padding: '8px 9px', borderWidth: 1, borderStyle: 'solid', borderColor: '#cbd5e1', borderRadius: 7, background: '#fff', color: '#273449', cursor: 'pointer', display: 'flex', gap: 10, alignItems: 'center', fontSize: 11, fontWeight: 700, textAlign: 'left' },
   connectorActive: { color: '#1d4ed8', borderColor: '#2563eb', background: '#eff6ff', boxShadow: '0 0 0 2px rgba(37,99,235,.12)' },
   help: { marginTop: 'auto', fontSize: 10, lineHeight: 1.35, color: '#64748b', borderTop: '1px solid #d8e0ea', paddingTop: 10 },
 };

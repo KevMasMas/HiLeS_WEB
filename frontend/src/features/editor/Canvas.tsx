@@ -1,48 +1,30 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import {
-  Background,
-  Controls,
-  MiniMap,
-  ReactFlow,
-  ReactFlowProvider,
-  useReactFlow,
-} from '@xyflow/react';
-import type { Node, NodeMouseHandler, XYPosition } from '@xyflow/react';
+import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import type { Connection, Edge, EdgeMouseHandler, Node, NodeMouseHandler, XYPosition } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import './editor.css';
 
-import { useEditorStore } from '../../stores/useEditorStore';
+import { getConnectionValidation, useEditorStore } from '../../stores/useEditorStore';
 import { HilesNode } from './CustomNodes';
-import { HilesElementType } from '../../types/hiles';
+import { HilesElementType, type HilesNodeData } from '../../types/hiles';
 
 const nodeTypes = { hilesNode: HilesNode };
 const DETAIL_ZOOM = 0.72;
 
-const nodeSize = (node: Node) => ({
-  width: Number(node.style?.width ?? node.measured?.width ?? 160),
-  height: Number(node.style?.height ?? node.measured?.height ?? 80),
-});
+const nodeSize = (node: Node) => ({ width: Number(node.style?.width ?? node.measured?.width ?? 160), height: Number(node.style?.height ?? node.measured?.height ?? 80) });
 
 const absolutePosition = (node: Node, nodesById: Map<string, Node>): XYPosition => {
-  let x = node.position.x;
-  let y = node.position.y;
-  let parentId = node.parentId;
+  let x = node.position.x; let y = node.position.y; let parentId = node.parentId;
   while (parentId) {
-    const parent = nodesById.get(parentId);
-    if (!parent) break;
-    x += parent.position.x;
-    y += parent.position.y;
-    parentId = parent.parentId;
+    const parent = nodesById.get(parentId); if (!parent) break;
+    x += parent.position.x; y += parent.position.y; parentId = parent.parentId;
   }
   return { x, y };
 };
 
 const depthOf = (node: Node, nodesById: Map<string, Node>) => {
-  let depth = 0;
-  let parentId = node.parentId;
-  while (parentId) {
-    depth += 1;
-    parentId = nodesById.get(parentId)?.parentId;
-  }
+  let depth = 0; let parentId = node.parentId;
+  while (parentId) { depth += 1; parentId = nodesById.get(parentId)?.parentId; }
   return depth;
 };
 
@@ -50,93 +32,82 @@ const CanvasInner: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [zoom, setZoom] = useState(1);
   const { screenToFlowPosition } = useReactFlow();
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect, addNode, setSelectedElement } = useEditorStore();
+  const store = useEditorStore();
+  const { nodes, edges, activeConnectionType } = store;
 
-  const hiddenNodeIds = useMemo(() => new Set(
-    zoom < DETAIL_ZOOM ? nodes.filter((node) => Boolean(node.parentId)).map((node) => node.id) : [],
-  ), [nodes, zoom]);
+  const nodesById = useMemo(() => new Map<string, Node>(nodes.map((node) => [node.id, node])), [nodes]);
+  const hiddenNodeIds = useMemo(() => {
+    const hidden = new Set<string>();
+    nodes.forEach((node) => {
+      if (!node.data.properties.visible) hidden.add(node.id);
+      let parentId = node.parentId;
+      while (parentId) {
+        const parent = nodesById.get(parentId) as Node<HilesNodeData> | undefined;
+        if (!parent || parent.data.properties.collapsed || !parent.data.properties.visible || zoom < DETAIL_ZOOM) {
+          hidden.add(node.id); break;
+        }
+        parentId = parent.parentId;
+      }
+    });
+    return hidden;
+  }, [nodes, nodesById, zoom]);
 
-  const visibleNodes = useMemo(() => nodes.map((node) => ({ ...node, hidden: hiddenNodeIds.has(node.id) })), [nodes, hiddenNodeIds]);
-  const visibleEdges = useMemo(() => edges.map((edge) => ({
-    ...edge,
-    hidden: hiddenNodeIds.has(edge.source) || hiddenNodeIds.has(edge.target),
-  })), [edges, hiddenNodeIds]);
+  const visibleNodes = useMemo(() => nodes.map((node) => ({
+    ...node,
+    hidden: hiddenNodeIds.has(node.id),
+    draggable: !node.data.properties.locked,
+    selectable: true,
+  })), [nodes, hiddenNodeIds]);
+  const visibleEdges = useMemo(() => edges.map((edge) => ({ ...edge, hidden: hiddenNodeIds.has(edge.source) || hiddenNodeIds.has(edge.target) })), [edges, hiddenNodeIds]);
 
-  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
-
+  const isValidConnection = useCallback((connection: Edge | Connection) => getConnectionValidation(nodes, connection, activeConnectionType).valid, [nodes, activeConnectionType]);
+  const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }, []);
   const onDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const type = event.dataTransfer.getData('application/reactflow') as HilesElementType;
-    if (!Object.values(HilesElementType).includes(type)) return;
-
+    if (!Object.values(HilesElementType).includes(type) || type === HilesElementType.TOKEN || type === HilesElementType.PORT) return;
     const flowPosition = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-    const nodesById = new Map(nodes.map((node) => [node.id, node]));
     const parent = nodes
-      .filter((node) => node.data.hilesType === HilesElementType.STRUCTURAL_BLOCK)
+      .filter((node) => node.data.hilesType === HilesElementType.STRUCTURAL_BLOCK && !node.data.properties.collapsed)
       .filter((node) => {
-        const absolute = absolutePosition(node, nodesById);
-        const size = nodeSize(node);
-        return flowPosition.x >= absolute.x && flowPosition.x <= absolute.x + size.width
-          && flowPosition.y >= absolute.y && flowPosition.y <= absolute.y + size.height;
+        const absolute = absolutePosition(node, nodesById); const size = nodeSize(node);
+        return flowPosition.x >= absolute.x && flowPosition.x <= absolute.x + size.width && flowPosition.y >= absolute.y && flowPosition.y <= absolute.y + size.height;
       })
       .sort((a, b) => depthOf(b, nodesById) - depthOf(a, nodesById))[0];
-
     if (parent) {
       const parentAbsolute = absolutePosition(parent, nodesById);
-      addNode(type, {
-        x: Math.max(12, flowPosition.x - parentAbsolute.x),
-        y: Math.max(48, flowPosition.y - parentAbsolute.y),
-      }, { parentId: parent.id });
-    } else {
-      addNode(type, flowPosition);
-    }
-  }, [addNode, nodes, screenToFlowPosition]);
+      store.addNode(type, { x: Math.max(12, flowPosition.x - parentAbsolute.x), y: Math.max(48, flowPosition.y - parentAbsolute.y) }, { parentId: parent.id });
+    } else store.addNode(type, flowPosition);
+  }, [nodes, nodesById, screenToFlowPosition, store]);
 
-  const onNodeClick: NodeMouseHandler = useCallback((_, node) => setSelectedElement(node.id), [setSelectedElement]);
-  const onPaneClick = useCallback(() => setSelectedElement(null), [setSelectedElement]);
+  const onNodeClick: NodeMouseHandler = useCallback((_, node) => store.setSelectedElement(node.id), [store]);
+  const onEdgeClick: EdgeMouseHandler = useCallback((_, edge) => store.setSelectedConnection(edge.id), [store]);
+  const onPaneClick = useCallback(() => { store.setSelectedElement(null); store.clearConnectionError(); }, [store]);
 
   return (
     <div style={{ flex: 1, position: 'relative' }} ref={reactFlowWrapper}>
       <ReactFlow
-        nodes={visibleNodes}
-        edges={visibleEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        onViewportChange={(viewport) => setZoom(viewport.zoom)}
-        nodeTypes={nodeTypes}
-        minZoom={0.2}
-        maxZoom={2.5}
-        fitView
+        nodes={visibleNodes} edges={visibleEdges}
+        onNodesChange={store.onNodesChange} onEdgesChange={store.onEdgesChange} onConnect={store.onConnect}
+        isValidConnection={isValidConnection}
+        onNodeClick={onNodeClick} onEdgeClick={onEdgeClick} onPaneClick={onPaneClick}
+        onDrop={onDrop} onDragOver={onDragOver} onViewportChange={(viewport) => setZoom(viewport.zoom)}
+        nodeTypes={nodeTypes} minZoom={0.2} maxZoom={2.5} defaultViewport={{ x: 0, y: 0, zoom: 1 }} snapToGrid snapGrid={[10, 10]}
+        deleteKeyCode={null}
       >
-        <Background color="#cbd5e1" gap={22} />
+        <Background color="#cbd5e1" gap={20} />
         <Controls />
-        <MiniMap pannable zoomable />
+        <MiniMap pannable zoomable nodeColor={(node) => node.data.hilesType === HilesElementType.STRUCTURAL_BLOCK ? '#94a3b8' : '#2563eb'} />
       </ReactFlow>
-      <div style={styles.zoomHint}>
-        {zoom < DETAIL_ZOOM ? 'Vista resumida · Acércate para ver la lógica interna' : 'Vista detallada · Los elementos internos están visibles'}
-      </div>
+      <div style={styles.zoomHint}>{zoom < DETAIL_ZOOM ? 'Summary view · Zoom in to reveal internal logic' : 'Detailed view · Internal elements are visible'}</div>
+      {store.connectionError && <button style={styles.error} onClick={store.clearConnectionError}>⚠ {store.connectionError} <strong>×</strong></button>}
     </div>
   );
 };
 
-export const Canvas: React.FC = () => (
-  <ReactFlowProvider>
-    <CanvasInner />
-  </ReactFlowProvider>
-);
+export const Canvas: React.FC = () => <ReactFlowProvider><CanvasInner /></ReactFlowProvider>;
 
 const styles: Record<string, React.CSSProperties> = {
-  zoomHint: {
-    position: 'absolute', left: 14, bottom: 14, padding: '7px 10px', borderRadius: 6,
-    color: '#475569', background: 'rgba(255,255,255,.92)', border: '1px solid #cbd5e1',
-    boxShadow: '0 3px 12px rgba(15,23,42,.08)', fontSize: 11, pointerEvents: 'none',
-  },
+  zoomHint: { position: 'absolute', left: 14, bottom: 14, padding: '7px 10px', borderRadius: 6, color: '#475569', background: 'rgba(255,255,255,.92)', border: '1px solid #cbd5e1', boxShadow: '0 3px 12px rgba(15,23,42,.08)', fontSize: 11, pointerEvents: 'none' },
+  error: { position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', padding: '9px 12px', border: '1px solid #fca5a5', borderRadius: 7, background: '#fff1f2', color: '#991b1b', fontSize: 11, cursor: 'pointer', boxShadow: '0 5px 18px rgba(127,29,29,.15)' },
 };

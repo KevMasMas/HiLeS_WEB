@@ -5,15 +5,16 @@ import { PropertiesPanel } from './PropertiesPanel';
 import { useEditorStore } from '../../stores/useEditorStore';
 
 export const Editor: React.FC = () => {
-  const { saveModel, loadModel } = useEditorStore();
+  const { saveModel, loadModel, statusMessage } = useEditorStore();
 
   return (
     <div style={styles.container}>
       <header style={styles.header}>
         <h1 style={styles.logo}>HiLeS Web</h1>
         <div style={styles.actions}>
-          <button style={styles.button} onClick={loadModel}>Cargar (Local)</button>
-          <button style={{ ...styles.button, ...styles.primaryButton }} onClick={saveModel}>Guardar (Local)</button>
+          {statusMessage && <span style={styles.status}>✓ {statusMessage}</span>}
+          <button style={styles.button} onClick={loadModel}>Load (Local)</button>
+          <button style={{ ...styles.button, ...styles.primaryButton }} onClick={saveModel}>Save (Local)</button>
         </div>
       </header>
       
@@ -50,7 +51,12 @@ const styles = {
   },
   actions: {
     display: 'flex',
-    gap: '10px'
+    gap: '10px',
+    alignItems: 'center'
+  },
+  status: {
+    fontSize: '11px',
+    color: '#bfdbfe'
   },
   button: {
     padding: '8px 16px',
