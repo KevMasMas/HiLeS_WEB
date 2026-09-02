@@ -7,6 +7,7 @@ export const HilesElementType = {
   HOLD: 'HOLD',
   PLACE: 'PLACE',
   TRANSITION: 'TRANSITION',
+  TOKEN: 'TOKEN',
 } as const;
 
 export type HilesElementType = (typeof HilesElementType)[keyof typeof HilesElementType];
@@ -15,6 +16,7 @@ export const HilesConnectionType = {
   CONTINUOUS: 'CONTINUOUS',
   DISCRETE: 'DISCRETE',
   PETRI: 'PETRI',
+  TOKEN_FLOW: 'TOKEN_FLOW',
 } as const;
 
 export type HilesConnectionType = (typeof HilesConnectionType)[keyof typeof HilesConnectionType];
@@ -25,7 +27,7 @@ export interface HilesElement {
   name: string;
   positionX: number;
   positionY: number;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
 }
 
 export interface HilesConnection {
@@ -35,7 +37,7 @@ export interface HilesConnection {
   sourceHandle?: string | null;
   targetHandle?: string | null;
   type: HilesConnectionType;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
 }
 
 export interface HilesModel {

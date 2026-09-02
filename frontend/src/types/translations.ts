@@ -7,6 +7,7 @@ export const HilesElementTranslations: Record<HilesElementType, string> = {
   [HilesElementType.PORT]: 'Puerto',
   [HilesElementType.SAMPLE]: 'Muestreador',
   [HilesElementType.HOLD]: 'Retenedor',
-  [HilesElementType.PLACE]: 'Plaza',
+  [HilesElementType.PLACE]: 'Lugar',
   [HilesElementType.TRANSITION]: 'Transición',
+  [HilesElementType.TOKEN]: 'Token',
 };

@@ -1,100 +1,115 @@
 import { create } from 'zustand';
-import type {
-  Connection,
-  Edge,
-  EdgeChange,
-  Node,
-  NodeChange,
-} from '@xyflow/react';
-import {
-  addEdge,
-  applyNodeChanges,
-  applyEdgeChanges,
-} from '@xyflow/react';
-import { HilesElementType } from '../types/hiles';
+import type { Connection, Edge, EdgeChange, Node, NodeChange, XYPosition } from '@xyflow/react';
+import { MarkerType, addEdge, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
+import { HilesConnectionType, HilesElementType } from '../types/hiles';
 import { HilesElementTranslations } from '../types/translations';
+
+interface AddNodeOptions {
+  parentId?: string;
+}
 
 interface EditorState {
   nodes: Node[];
   edges: Edge[];
   selectedElementId: string | null;
+  activeConnectionType: HilesConnectionType;
   onNodesChange: (changes: NodeChange[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
   onConnect: (connection: Connection) => void;
-  addNode: (type: HilesElementType, position: { x: number; y: number }) => void;
+  addNode: (type: HilesElementType, position: XYPosition, options?: AddNodeOptions) => void;
   updateNodeName: (id: string, name: string) => void;
   deleteElement: (id: string) => void;
   setSelectedElement: (id: string | null) => void;
+  setActiveConnectionType: (type: HilesConnectionType) => void;
   saveModel: () => void;
   loadModel: () => void;
 }
+
+const edgeAppearance = (type: HilesConnectionType) => {
+  if (type === HilesConnectionType.CONTINUOUS) {
+    return { prefix: 'CCH', style: { stroke: '#172033', strokeWidth: 2.2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#172033' } };
+  }
+  if (type === HilesConnectionType.DISCRETE) {
+    return { prefix: 'DCH', style: { stroke: '#2563eb', strokeWidth: 2 }, markerEnd: { type: MarkerType.Arrow, color: '#2563eb' } };
+  }
+  if (type === HilesConnectionType.PETRI) {
+    return { prefix: 'LCH', style: { stroke: '#dc2626', strokeWidth: 2, strokeDasharray: '7 5' }, markerEnd: { type: MarkerType.Arrow, color: '#dc2626' } };
+  }
+  return { prefix: 'ARC', style: { stroke: '#172033', strokeWidth: 2 }, markerEnd: { type: MarkerType.Arrow, color: '#172033' } };
+};
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedElementId: null,
+  activeConnectionType: HilesConnectionType.CONTINUOUS,
 
-  onNodesChange: (changes: NodeChange[]) => {
-    set({
-      nodes: applyNodeChanges(changes, get().nodes),
-    });
+  onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
+  onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
+
+  onConnect: (connection) => {
+    const type = get().activeConnectionType;
+    const appearance = edgeAppearance(type);
+    const count = get().edges.filter((edge) => edge.data?.hilesConnectionType === type).length + 1;
+    const edge: Edge = {
+      ...connection,
+      id: `${type}-${crypto.randomUUID()}`,
+      type: 'smoothstep',
+      label: `${appearance.prefix}${count}`,
+      data: { hilesConnectionType: type },
+      style: appearance.style,
+      markerEnd: appearance.markerEnd,
+      labelStyle: { fill: appearance.style.stroke, fontWeight: 700, fontSize: 11 },
+      labelBgStyle: { fill: '#fff', fillOpacity: 0.88 },
+    };
+    set({ edges: addEdge(edge, get().edges) });
   },
 
-  onEdgesChange: (changes: EdgeChange[]) => {
-    set({
-      edges: applyEdgeChanges(changes, get().edges),
-    });
-  },
-
-  onConnect: (connection: Connection) => {
-    set({
-      edges: addEdge(connection, get().edges),
-    });
-  },
-
-  addNode: (type: HilesElementType, position: { x: number; y: number }) => {
-    const id = `${type}-${Date.now()}`;
+  addNode: (type, position, options = {}) => {
+    const id = `${type}-${crypto.randomUUID()}`;
+    const isStructural = type === HilesElementType.STRUCTURAL_BLOCK;
     const newNode: Node = {
       id,
       type: 'hilesNode',
       position,
-      data: { name: `Nuevo ${HilesElementTranslations[type as keyof typeof HilesElementTranslations] || type}`, hilesType: type },
+      data: { name: `Nuevo ${HilesElementTranslations[type]}`, hilesType: type },
+      ...(isStructural ? { style: options.parentId ? { width: 300, height: 190 } : { width: 420, height: 280 } } : {}),
+      ...(options.parentId ? { parentId: options.parentId, extent: 'parent' as const, expandParent: true } : {}),
+      zIndex: isStructural ? 0 : 1,
     };
-
     set({ nodes: [...get().nodes, newNode] });
   },
 
-  updateNodeName: (id: string, name: string) => {
-    set({
-      nodes: get().nodes.map((node) => {
-        if (node.id === id) {
-          return { ...node, data: { ...node.data, name } };
+  updateNodeName: (id, name) => set({
+    nodes: get().nodes.map((node) => node.id === id ? { ...node, data: { ...node.data, name } } : node),
+  }),
+
+  deleteElement: (id) => {
+    const nodes = get().nodes;
+    const removed = new Set<string>([id]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      nodes.forEach((node) => {
+        if (node.parentId && removed.has(node.parentId) && !removed.has(node.id)) {
+          removed.add(node.id);
+          changed = true;
         }
-        return node;
-      }),
-    });
-  },
-
-  deleteElement: (id: string) => {
+      });
+    }
     set({
-      nodes: get().nodes.filter((node) => node.id !== id),
-      edges: get().edges.filter(
-        (edge) => edge.id !== id && edge.source !== id && edge.target !== id
-      ),
-      selectedElementId: get().selectedElementId === id ? null : get().selectedElementId,
+      nodes: nodes.filter((node) => !removed.has(node.id)),
+      edges: get().edges.filter((edge) => !removed.has(edge.source) && !removed.has(edge.target)),
+      selectedElementId: removed.has(get().selectedElementId ?? '') ? null : get().selectedElementId,
     });
   },
 
-  setSelectedElement: (id: string | null) => {
-    set({ selectedElementId: id });
-  },
+  setSelectedElement: (id) => set({ selectedElementId: id }),
+  setActiveConnectionType: (type) => set({ activeConnectionType: type }),
 
   saveModel: () => {
-    // Para este MVP, guardamos en localStorage. 
-    // Luego se integrará con el backend NestJS (POST/PATCH /models/:id)
     const { nodes, edges } = get();
-    const modelData = JSON.stringify({ nodes, edges });
-    localStorage.setItem('hiles_mvp_model', modelData);
+    localStorage.setItem('hiles_mvp_model', JSON.stringify({ nodes, edges }));
     alert('Modelo guardado correctamente en LocalStorage');
   },
 
