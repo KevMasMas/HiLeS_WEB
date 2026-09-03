@@ -1,0 +1,1103 @@
+{
+  "schemaVersion": 1,
+  "metadata": {
+    "savedAt": "2026-09-03T02:24:27.775Z"
+  },
+  "network": {
+    "topology": null,
+    "protocol": null,
+    "nodes": [
+      "SB_HUMIDITY",
+      "SB_VISUALIZATION",
+      "SB_IRRIGATION",
+      "SB_SENSOR"
+    ]
+  },
+  "allElements": [
+    {
+      "id": "SB_HUMIDITY",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Humidity Node",
+      "layout": {
+        "x": 70,
+        "y": 60,
+        "width": 1220,
+        "height": 700
+      },
+      "ports": [],
+      "properties": {
+        "description": "Figure 29 - Scenario 4. Sensor: 79%; last humidity sample: 70%; P2 marked (irrigation ON). Wi-Fi centralized WSN. Boundary channel segments are combined in edge labels. CCH4/CCH5 guards and the P2 data output use the existing Petri handles for visual reconstruction only; current manual connection rules do not model these interfaces.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right"
+      }
+    },
+    {
+      "id": "SB_VISUALIZATION",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Visualization",
+      "layout": {
+        "x": 100,
+        "y": 920,
+        "width": 330,
+        "height": 230
+      },
+      "ports": [
+        {
+          "id": "VIS_HUMIDITY_IN",
+          "name": "Humidity",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.22
+        },
+        {
+          "id": "VIS_STATUS_IN",
+          "name": "Irrigation",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.48
+        },
+        {
+          "id": "VIS_REQUEST_OUT",
+          "name": "Status request",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Black-box node. Last humidity sample: 70%. Irrigation status: True. Sends the status request shown in red in Figure 29.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right"
+      }
+    },
+    {
+      "id": "SB_IRRIGATION",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Irrigation Node",
+      "layout": {
+        "x": 800,
+        "y": 920,
+        "width": 490,
+        "height": 280
+      },
+      "ports": [],
+      "properties": {
+        "description": "Irrigation ON (True). Sample emits the current irrigation state when the status request arrives.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right"
+      }
+    },
+    {
+      "id": "SB_SENSOR",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Humidity Sensor",
+      "parentId": "SB_HUMIDITY",
+      "layout": {
+        "x": 280,
+        "y": 65,
+        "width": 260,
+        "height": 160
+      },
+      "ports": [
+        {
+          "id": "SENSOR_HUMIDITY_OUT",
+          "name": "Humidity 79%",
+          "direction": "output",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.55
+        },
+        {
+          "id": "SENSOR_RATE_OUT",
+          "name": "Transmission rate",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "left",
+          "offset": 0.52
+        }
+      ],
+      "properties": {
+        "description": "Continuous humidity signal and logical sampling trigger (LCH6). Current humidity in the figure: 79%.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "79",
+        "operatorDirection": "right"
+      }
+    },
+    {
+      "id": "SAMPLE_HUMIDITY",
+      "type": "SAMPLE",
+      "name": "Humidity Sample",
+      "parentId": "SB_HUMIDITY",
+      "layout": {
+        "x": 70,
+        "y": 330,
+        "width": 140,
+        "height": 110
+      },
+      "ports": [
+        {
+          "id": "HS_DATA_IN",
+          "name": "Humidity",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.72
+        },
+        {
+          "id": "HS_CONTROL_IN",
+          "name": "Rate",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.28
+        },
+        {
+          "id": "HS_DATA_OUT",
+          "name": "Sampled 70%",
+          "direction": "output",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "On LCH6, samples the continuous humidity value. DCH2 and DCH6 are drawn as one connection across the Humidity Node boundary. The figure displays a previously sampled humidity of 70%.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "70",
+        "operatorDirection": "down"
+      }
+    },
+    {
+      "id": "FB_BELOW_76",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Humidity < 76%",
+      "parentId": "SB_HUMIDITY",
+      "layout": {
+        "x": 310,
+        "y": 315,
+        "width": 190,
+        "height": 100
+      },
+      "ports": [
+        {
+          "id": "LOW_IN",
+          "name": "Humidity",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "LOW_OUT",
+          "name": "Below 76%",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "CCH2 -> CCH4. Condition enabling T1. False for the current humidity value of 79%.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "humidity < 76",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right"
+      }
+    },
+    {
+      "id": "FB_ABOVE_84",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Humidity > 84%",
+      "parentId": "SB_HUMIDITY",
+      "layout": {
+        "x": 975,
+        "y": 150,
+        "width": 190,
+        "height": 100
+      },
+      "ports": [
+        {
+          "id": "HIGH_IN",
+          "name": "Humidity",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "HIGH_OUT",
+          "name": "Above 84%",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "CCH3 -> CCH5. Condition enabling T2. False for the current humidity value of 79%.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "humidity > 84",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right"
+      }
+    },
+    {
+      "id": "P1",
+      "type": "PLACE",
+      "name": "P1 - Irrigation Off",
+      "parentId": "SB_HUMIDITY",
+      "layout": {
+        "x": 690,
+        "y": 300,
+        "width": 150,
+        "height": 100
+      },
+      "ports": [],
+      "properties": {
+        "description": "Unmarked place in Figure 29. Receives a token from T2 and supplies T1.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right"
+      }
+    },
+    {
+      "id": "T1",
+      "type": "TRANSITION",
+      "name": "T1",
+      "parentId": "SB_HUMIDITY",
+      "layout": {
+        "x": 480,
+        "y": 470,
+        "width": 110,
+        "height": 100
+      },
+      "ports": [],
+      "properties": {
+        "description": "CCH4 guards the LCH2 -> LCH3 token transfer from P1 to P2. Enabled is a configurable editor flag, not a computed firing state.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "humidity < 76",
+        "heldValue": "",
+        "operatorDirection": "right"
+      }
+    },
+    {
+      "id": "P2",
+      "type": "PLACE",
+      "name": "P2 - Irrigation On",
+      "parentId": "SB_HUMIDITY",
+      "layout": {
+        "x": 690,
+        "y": 470,
+        "width": 150,
+        "height": 100
+      },
+      "ports": [],
+      "properties": {
+        "description": "Marked place in Figure 29 (red token). Irrigation ON. CCH7 / CCH8 / CCH6 conveys its Boolean state to the irrigation Sample. The data readout is drawn from petri-out because this renderer exposes no dedicated Place data port.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right"
+      }
+    },
+    {
+      "id": "T2",
+      "type": "TRANSITION",
+      "name": "T2",
+      "parentId": "SB_HUMIDITY",
+      "layout": {
+        "x": 980,
+        "y": 300,
+        "width": 110,
+        "height": 100
+      },
+      "ports": [],
+      "properties": {
+        "description": "CCH5 guards the LCH4 -> LCH5 token transfer from P2 to P1.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "humidity > 84",
+        "heldValue": "",
+        "operatorDirection": "right"
+      }
+    },
+    {
+      "id": "SAMPLE_IRRIGATION",
+      "type": "SAMPLE",
+      "name": "Irrigation Sample",
+      "parentId": "SB_IRRIGATION",
+      "layout": {
+        "x": 255,
+        "y": 120,
+        "width": 145,
+        "height": 115
+      },
+      "ports": [
+        {
+          "id": "IS_DATA_IN",
+          "name": "Irrigation",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.28
+        },
+        {
+          "id": "IS_CONTROL_IN",
+          "name": "Status request",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "right",
+          "offset": 0.72
+        },
+        {
+          "id": "IS_DATA_OUT",
+          "name": "Status True",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "On the status request LCH1 / LCH7, samples the irrigation state carried by CCH7 / CCH8 / CCH6. Returns True through DCH5 / DCH4.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "true",
+        "operatorDirection": "left"
+      }
+    }
+  ],
+  "relationNode": [
+    {
+      "nodeId": "SB_HUMIDITY",
+      "elementIds": [
+        "SB_SENSOR",
+        "SAMPLE_HUMIDITY",
+        "FB_BELOW_76",
+        "FB_ABOVE_84",
+        "P1",
+        "T1",
+        "P2",
+        "T2"
+      ]
+    },
+    {
+      "nodeId": "SB_VISUALIZATION",
+      "elementIds": []
+    },
+    {
+      "nodeId": "SB_IRRIGATION",
+      "elementIds": [
+        "SAMPLE_IRRIGATION"
+      ]
+    },
+    {
+      "nodeId": "SB_SENSOR",
+      "elementIds": []
+    }
+  ],
+  "connections": [
+    {
+      "id": "CCH1",
+      "source": "SB_SENSOR",
+      "target": "SAMPLE_HUMIDITY",
+      "sourceHandle": "SENSOR_HUMIDITY_OUT",
+      "targetHandle": "HS_DATA_IN",
+      "type": "smoothstep",
+      "label": "CCH1",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2
+      },
+      "markerEnd": {
+        "type": "arrowclosed",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "CCH2",
+      "source": "SB_SENSOR",
+      "target": "FB_BELOW_76",
+      "sourceHandle": "SENSOR_HUMIDITY_OUT",
+      "targetHandle": "LOW_IN",
+      "type": "smoothstep",
+      "label": "CCH2 · Humidity [79%]",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2
+      },
+      "markerEnd": {
+        "type": "arrowclosed",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "CCH3",
+      "source": "SB_SENSOR",
+      "target": "FB_ABOVE_84",
+      "sourceHandle": "SENSOR_HUMIDITY_OUT",
+      "targetHandle": "HIGH_IN",
+      "type": "smoothstep",
+      "label": "CCH3",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2
+      },
+      "markerEnd": {
+        "type": "arrowclosed",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "LCH6",
+      "source": "SB_SENSOR",
+      "target": "SAMPLE_HUMIDITY",
+      "sourceHandle": "SENSOR_RATE_OUT",
+      "targetHandle": "HS_CONTROL_IN",
+      "type": "smoothstep",
+      "label": "LCH6 · Transmission rate",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2,
+        "strokeDasharray": "7 5"
+      },
+      "markerEnd": {
+        "type": "arrow",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "CCH4",
+      "source": "FB_BELOW_76",
+      "target": "T1",
+      "sourceHandle": "LOW_OUT",
+      "targetHandle": "petri-in",
+      "type": "smoothstep",
+      "label": "CCH4",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2
+      },
+      "markerEnd": {
+        "type": "arrowclosed",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "CCH5",
+      "source": "FB_ABOVE_84",
+      "target": "T2",
+      "sourceHandle": "HIGH_OUT",
+      "targetHandle": "petri-in",
+      "type": "smoothstep",
+      "label": "CCH5",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2
+      },
+      "markerEnd": {
+        "type": "arrowclosed",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "LCH2",
+      "source": "P1",
+      "target": "T1",
+      "sourceHandle": "petri-out",
+      "targetHandle": "petri-in",
+      "type": "smoothstep",
+      "label": "LCH2",
+      "data": {
+        "hilesConnectionType": "TOKEN_FLOW",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2,
+        "strokeDasharray": "7 5"
+      },
+      "markerEnd": {
+        "type": "arrow",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "LCH3",
+      "source": "T1",
+      "target": "P2",
+      "sourceHandle": "petri-out",
+      "targetHandle": "petri-in",
+      "type": "smoothstep",
+      "label": "LCH3",
+      "data": {
+        "hilesConnectionType": "TOKEN_FLOW",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2,
+        "strokeDasharray": "7 5"
+      },
+      "markerEnd": {
+        "type": "arrow",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "LCH4",
+      "source": "P2",
+      "target": "T2",
+      "sourceHandle": "petri-out",
+      "targetHandle": "petri-in",
+      "type": "smoothstep",
+      "label": "LCH4",
+      "data": {
+        "hilesConnectionType": "TOKEN_FLOW",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2,
+        "strokeDasharray": "7 5"
+      },
+      "markerEnd": {
+        "type": "arrow",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "LCH5",
+      "source": "T2",
+      "target": "P1",
+      "sourceHandle": "petri-out",
+      "targetHandle": "petri-in",
+      "type": "smoothstep",
+      "label": "LCH5",
+      "data": {
+        "hilesConnectionType": "TOKEN_FLOW",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2,
+        "strokeDasharray": "7 5"
+      },
+      "markerEnd": {
+        "type": "arrow",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "DCH2_DCH6",
+      "source": "SAMPLE_HUMIDITY",
+      "target": "SB_VISUALIZATION",
+      "sourceHandle": "HS_DATA_OUT",
+      "targetHandle": "VIS_HUMIDITY_IN",
+      "type": "smoothstep",
+      "label": "DCH2 / DCH6 · Humidity [70%]",
+      "data": {
+        "hilesConnectionType": "DISCRETE",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2
+      },
+      "markerEnd": {
+        "type": "arrow",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "CCH7_CCH8_CCH6",
+      "source": "P2",
+      "target": "SAMPLE_IRRIGATION",
+      "sourceHandle": "petri-out",
+      "targetHandle": "IS_DATA_IN",
+      "type": "smoothstep",
+      "label": "CCH7 / CCH8 / CCH6 · On [True]",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#172033",
+        "strokeWidth": 2
+      },
+      "markerEnd": {
+        "type": "arrowclosed",
+        "color": "#172033",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#172033",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "DCH5_DCH4",
+      "source": "SAMPLE_IRRIGATION",
+      "target": "SB_VISUALIZATION",
+      "sourceHandle": "IS_DATA_OUT",
+      "targetHandle": "VIS_STATUS_IN",
+      "type": "smoothstep",
+      "label": "DCH5 / DCH4 · Irrigation [True]",
+      "data": {
+        "hilesConnectionType": "DISCRETE",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#dc2626",
+        "strokeWidth": 2
+      },
+      "markerEnd": {
+        "type": "arrow",
+        "color": "#dc2626",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#dc2626",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    },
+    {
+      "id": "LCH1_LCH7",
+      "source": "SB_VISUALIZATION",
+      "target": "SAMPLE_IRRIGATION",
+      "sourceHandle": "VIS_REQUEST_OUT",
+      "targetHandle": "IS_CONTROL_IN",
+      "type": "smoothstep",
+      "label": "LCH1 / LCH7 · Status request",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1
+      },
+      "style": {
+        "stroke": "#dc2626",
+        "strokeWidth": 2,
+        "strokeDasharray": "7 5"
+      },
+      "markerEnd": {
+        "type": "arrow",
+        "color": "#dc2626",
+        "width": 18,
+        "height": 18
+      },
+      "labelStyle": {
+        "fill": "#dc2626",
+        "fontSize": 12,
+        "fontWeight": 600
+      },
+      "labelBgStyle": {
+        "fill": "#ffffff",
+        "fillOpacity": 0.94
+      },
+      "labelBgPadding": [
+        5,
+        3
+      ],
+      "labelBgBorderRadius": 3,
+      "zIndex": 5
+    }
+  ]
+}
