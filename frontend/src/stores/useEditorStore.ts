@@ -189,7 +189,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const newNode: HilesNode = {
       id, type: 'hilesNode', position,
       data: { hilesType: type, name: `New ${HilesElementTranslations[type]}`, ports: defaultPorts(type), properties: defaultProperties() },
-      ...(isStructural ? { style: options.parentId ? { width: 300, height: 190 } : { width: 420, height: 280 } } : {}),
+      ...(isStructural ? { style: options.parentId ? { width: 240, height: 150 } : { width: 340, height: 220 } } : {}),
       ...(options.parentId ? { parentId: options.parentId, extent: 'parent' as const, expandParent: true } : {}),
       zIndex: isStructural ? 0 : 1,
     };

@@ -43,7 +43,7 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ data, sele
   if (hilesType === HilesElementType.STRUCTURAL_BLOCK) {
     return (
       <div className={`hiles-structural ${selected ? 'is-selected' : ''} ${locked ? 'is-locked' : ''}`}>
-        <NodeResizer isVisible={selected && !locked} minWidth={260} minHeight={170} lineClassName="hiles-resizer-line" handleClassName="hiles-resizer-handle" />
+        <NodeResizer isVisible={selected && !locked} minWidth={200} minHeight={130} lineClassName="hiles-resizer-line" handleClassName="hiles-resizer-handle" />
         <PortHandles ports={ports} />
         <div className="hiles-structural__header">
           <strong>{name}</strong>
@@ -57,10 +57,10 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ data, sele
   const isPetri = hilesType === HilesElementType.PLACE || hilesType === HilesElementType.TRANSITION;
   const isFunctional = hilesType === HilesElementType.FUNCTIONAL_BLOCK;
   return (
-    <div className={`hiles-node ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''}`}>
+    <div className={`hiles-node ${isPetri ? 'hiles-node--petri' : ''} ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''}`}>
       {isPetri ? <PetriHandles /> : <PortHandles ports={ports} />}
       <div className="hiles-node__symbol">
-        <HilesGlyph type={hilesType} width={isFunctional ? 154 : 84} height={isFunctional ? 66 : 56} direction={properties.operatorDirection} />
+        <HilesGlyph type={hilesType} width={isFunctional ? 120 : hilesType === HilesElementType.TRANSITION ? 12 : 44} height={isFunctional ? 52 : hilesType === HilesElementType.TRANSITION ? 48 : 44} direction={properties.operatorDirection} />
         {isFunctional && properties.expression && <span className="hiles-node__expression">{properties.expression}</span>}
         {hilesType === HilesElementType.PLACE && properties.tokens > 0 && <span className="hiles-place-token" aria-label={`${properties.tokens} token`} />}
       </div>
