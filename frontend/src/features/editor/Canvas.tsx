@@ -1,15 +1,17 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
-import type { Connection, Edge, EdgeMouseHandler, Node, NodeMouseHandler, XYPosition } from '@xyflow/react';
+import type { Connection, Edge, EdgeMouseHandler, Node, NodeMouseHandler, OnNodeDrag, XYPosition } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './editor.css';
 
 import { getConnectionValidation, useEditorStore } from '../../stores/useEditorStore';
 import { HilesNode } from './CustomNodes';
+import { HilesEdge } from './HilesEdge';
 import { HilesElementType, type HilesNodeData } from '../../types/hiles';
 
 const nodeTypes = { hilesNode: HilesNode };
-const DETAIL_ZOOM = 0.72;
+const edgeTypes = { hilesEdge: HilesEdge };
+const DETAIL_ZOOM = 0.9;
 
 const nodeSize = (node: Node) => ({ width: Number(node.style?.width ?? node.measured?.width ?? 160), height: Number(node.style?.height ?? node.measured?.height ?? 80) });
 
@@ -54,11 +56,29 @@ const CanvasInner: React.FC = () => {
 
   const visibleNodes = useMemo(() => nodes.map((node) => ({
     ...node,
+    data: { ...node.data, summaryMode: node.data.hilesType === HilesElementType.STRUCTURAL_BLOCK && zoom < DETAIL_ZOOM },
     hidden: hiddenNodeIds.has(node.id),
     draggable: !node.data.properties.locked,
     selectable: true,
-  })), [nodes, hiddenNodeIds]);
-  const visibleEdges = useMemo(() => edges.map((edge) => ({ ...edge, hidden: hiddenNodeIds.has(edge.source) || hiddenNodeIds.has(edge.target) })), [edges, hiddenNodeIds]);
+  })), [nodes, hiddenNodeIds, zoom]);
+  const visibleEdges = useMemo(() => {
+    const groups = new Map<string, typeof edges>();
+    edges.forEach((edge) => {
+      const key = `${edge.source}:${edge.sourceHandle ?? ''}`;
+      groups.set(key, [...(groups.get(key) ?? []), edge]);
+    });
+    const lanes = new Map<string, number>();
+    groups.forEach((group) => group
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .forEach((edge, index) => lanes.set(edge.id, (index - (group.length - 1) / 2) * 34)));
+    return edges.map((edge) => ({
+      ...edge,
+      type: 'hilesEdge',
+      zIndex: 2,
+      data: { ...edge.data!, laneOffset: lanes.get(edge.id) ?? 0 },
+      hidden: hiddenNodeIds.has(edge.source) || hiddenNodeIds.has(edge.target),
+    }));
+  }, [edges, hiddenNodeIds]);
 
   const isValidConnection = useCallback((connection: Edge | Connection) => getConnectionValidation(nodes, connection, activeConnectionType).valid, [nodes, activeConnectionType]);
   const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }, []);
@@ -83,6 +103,8 @@ const CanvasInner: React.FC = () => {
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => store.setSelectedElement(node.id), [store]);
   const onEdgeClick: EdgeMouseHandler = useCallback((_, edge) => store.setSelectedConnection(edge.id), [store]);
   const onPaneClick = useCallback(() => { store.setSelectedElement(null); store.clearConnectionError(); }, [store]);
+  const onNodeDragStart: OnNodeDrag = useCallback(() => store.beginHistoryTransaction(), [store]);
+  const onNodeDragStop: OnNodeDrag = useCallback(() => store.endHistoryTransaction(), [store]);
 
   return (
     <div style={{ flex: 1, position: 'relative' }} ref={reactFlowWrapper}>
@@ -91,8 +113,9 @@ const CanvasInner: React.FC = () => {
         onNodesChange={store.onNodesChange} onEdgesChange={store.onEdgesChange} onConnect={store.onConnect}
         isValidConnection={isValidConnection}
         onNodeClick={onNodeClick} onEdgeClick={onEdgeClick} onPaneClick={onPaneClick}
+        onNodeDragStart={onNodeDragStart} onNodeDragStop={onNodeDragStop}
         onDrop={onDrop} onDragOver={onDragOver} onViewportChange={(viewport) => setZoom(viewport.zoom)}
-        nodeTypes={nodeTypes} minZoom={0.2} maxZoom={2.5} defaultViewport={{ x: 0, y: 0, zoom: 1 }} snapToGrid snapGrid={[10, 10]}
+        nodeTypes={nodeTypes} edgeTypes={edgeTypes} minZoom={0.2} maxZoom={2.5} defaultViewport={{ x: 0, y: 0, zoom: 1 }} snapToGrid snapGrid={[10, 10]}
         deleteKeyCode={null}
       >
         <Background color="#cbd5e1" gap={20} />

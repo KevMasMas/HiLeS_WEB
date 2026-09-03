@@ -17,6 +17,11 @@
 .hiles-structural__header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 5px 8px; border-bottom: 1px solid #cbd5e1; font-size: 11px; }
 .hiles-structural__header span { color: #64748b; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .hiles-structural__description { padding: 5px 8px; color: #64748b; font-size: 9px; max-width: 70%; }
+.hiles-structural.is-summary { display: grid; place-items: center; padding: 14px; text-align: center; }
+.hiles-structural__summary { display: grid; gap: 9px; max-width: 90%; color: #172033; }
+.hiles-structural__summary strong { font-size: 22px; line-height: 1.15; }
+.hiles-structural__summary span { color: #475569; font-size: 14px; line-height: 1.4; }
+.hiles-structural.is-summary .hiles-port-label { display: none; }
 .hiles-port { width: 11px !important; height: 11px !important; border: 2px solid white !important; border-radius: 50% !important; background: #2563eb !important; z-index: 6; }
 .hiles-port--input::after { content: '‹'; color: white; position: absolute; left: 1px; top: -4px; font-size: 12px; font-weight: 900; }
 .hiles-port--output::after { content: '›'; color: white; position: absolute; left: 2px; top: -4px; font-size: 12px; font-weight: 900; }

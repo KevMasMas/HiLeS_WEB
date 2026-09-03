@@ -58,6 +58,8 @@ export interface HilesNodeData extends Record<string, unknown> {
   name: string;
   ports: HilesPort[];
   properties: HilesNodeProperties;
+  /** Transient canvas presentation state; it is never serialized into the model. */
+  summaryMode?: boolean;
 }
 
 export interface HilesEdgeData extends Record<string, unknown> {

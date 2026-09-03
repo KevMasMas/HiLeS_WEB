@@ -27,6 +27,10 @@ interface EditorState {
   activeConnectionType: HilesConnectionType;
   connectionError: string | null;
   statusMessage: string | null;
+  past: ModelSnapshot[];
+  future: ModelSnapshot[];
+  canUndo: boolean;
+  canRedo: boolean;
   onNodesChange: (changes: NodeChange<HilesNode>[]) => void;
   onEdgesChange: (changes: EdgeChange<HilesEdge>[]) => void;
   onConnect: (connection: Connection) => void;
@@ -43,11 +47,41 @@ interface EditorState {
   setSelectedConnection: (id: string | null) => void;
   setActiveConnectionType: (type: HilesConnectionType) => void;
   clearConnectionError: () => void;
-  saveModel: () => void;
-  loadModel: () => void;
+  beginHistoryTransaction: () => void;
+  endHistoryTransaction: () => void;
+  undo: () => void;
+  redo: () => void;
+  clearModel: () => void;
+  loadAutosave: () => void;
   exportModel: () => string;
   importModel: (json: string) => void;
 }
+
+interface ModelSnapshot { nodes: HilesNode[]; edges: HilesEdge[] }
+
+const HISTORY_LIMIT = 100;
+const AUTOSAVE_KEY = 'hiles_mvp_autosave';
+const AUTOSAVE_VERSION = 1;
+const cloneSnapshot = (snapshot: ModelSnapshot): ModelSnapshot => structuredClone(snapshot);
+const snapshotOf = (state: Pick<EditorState, 'nodes' | 'edges'>): ModelSnapshot => cloneSnapshot({ nodes: state.nodes, edges: state.edges });
+const sameSnapshot = (left: ModelSnapshot, right: ModelSnapshot) => JSON.stringify(left) === JSON.stringify(right);
+
+let transactionSnapshot: ModelSnapshot | null = null;
+let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+let autosaveLoaded = false;
+
+const historyFor = (state: EditorState, before: ModelSnapshot) => ({
+  past: [...state.past, before].slice(-HISTORY_LIMIT), future: [], canUndo: true, canRedo: false,
+});
+
+const persistAutosave = () => {
+  const { nodes, edges } = useEditorStore.getState();
+  try {
+    localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ version: AUTOSAVE_VERSION, savedAt: new Date().toISOString(), data: serializeModel(nodes, edges) }));
+  } catch {
+    useEditorStore.setState({ connectionError: 'The model could not be autosaved locally.' });
+  }
+};
 
 const defaultProperties = (): HilesNodeProperties => ({
   description: '', collapsed: false, locked: false, visible: true,
@@ -140,23 +174,43 @@ const normalizeNode = (node: HilesNode): HilesNode => ({
   },
 });
 
-const normalizeEdge = (edge: HilesEdge): HilesEdge => ({
-  ...edge,
-  data: {
-    hilesConnectionType: edge.data?.hilesConnectionType ?? HilesConnectionType.CONTINUOUS,
-    routing: edge.data?.routing ?? 'orthogonal',
-    dataType: edge.data?.dataType ?? 'real',
-    delay: edge.data?.delay ?? 0,
-    weight: edge.data?.weight ?? 1,
-  },
-});
+const normalizeEdge = (edge: HilesEdge): HilesEdge => {
+  const hilesConnectionType = edge.data?.hilesConnectionType ?? HilesConnectionType.CONTINUOUS;
+  const appearance = edgeAppearance(hilesConnectionType);
+  return {
+    ...edge,
+    type: 'hilesEdge',
+    data: {
+      hilesConnectionType,
+      routing: edge.data?.routing ?? 'orthogonal',
+      dataType: edge.data?.dataType ?? 'real',
+      delay: edge.data?.delay ?? 0,
+      weight: edge.data?.weight ?? 1,
+    },
+    style: { stroke: appearance.stroke, strokeWidth: 2.2, ...(appearance.dash ? { strokeDasharray: appearance.dash } : {}), ...edge.style },
+    markerEnd: edge.markerEnd ?? { type: appearance.marker, color: appearance.stroke },
+    labelStyle: { fill: appearance.stroke, fontWeight: 700, fontSize: 11, ...edge.labelStyle },
+    labelBgStyle: { fill: '#fff', fillOpacity: 0.94, ...edge.labelBgStyle },
+  };
+};
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   nodes: [], edges: [], selectedElementId: null, selectedConnectionId: null,
   activeConnectionType: HilesConnectionType.CONTINUOUS, connectionError: null, statusMessage: null,
+  past: [], future: [], canUndo: false, canRedo: false,
 
-  onNodesChange: (changes) => set({ nodes: applyNodeChanges(changes, get().nodes) }),
-  onEdgesChange: (changes) => set({ edges: applyEdgeChanges(changes, get().edges) }),
+  onNodesChange: (changes) => {
+    const state = get();
+    const nextNodes = applyNodeChanges(changes, state.nodes);
+    const modifiesModel = changes.some((change) => change.type !== 'select' && change.type !== 'position');
+    set({ nodes: nextNodes, ...(modifiesModel && !transactionSnapshot ? historyFor(state, snapshotOf(state)) : {}) });
+  },
+  onEdgesChange: (changes) => {
+    const state = get();
+    const nextEdges = applyEdgeChanges(changes, state.edges);
+    const modifiesModel = changes.some((change) => change.type !== 'select');
+    set({ edges: nextEdges, ...(modifiesModel && !transactionSnapshot ? historyFor(state, snapshotOf(state)) : {}) });
+  },
 
   onConnect: (connection) => {
     const type = get().activeConnectionType;
@@ -179,7 +233,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       labelStyle: { fill: appearance.stroke, fontWeight: 700, fontSize: 11 },
       labelBgStyle: { fill: '#fff', fillOpacity: 0.9 },
     };
-    set({ edges: addEdge(edge, get().edges), connectionError: null });
+    const state = get();
+    set({ edges: addEdge(edge, state.edges), connectionError: null, ...historyFor(state, snapshotOf(state)) });
   },
 
   addNode: (type, position, options = {}) => {
@@ -193,33 +248,54 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...(options.parentId ? { parentId: options.parentId, extent: 'parent' as const, expandParent: true } : {}),
       zIndex: isStructural ? 0 : 1,
     };
-    set({ nodes: [...get().nodes, newNode], selectedElementId: id, selectedConnectionId: null });
+    const state = get();
+    set({ nodes: [...state.nodes, newNode], selectedElementId: id, selectedConnectionId: null, ...historyFor(state, snapshotOf(state)) });
   },
 
-  updateNodeName: (id, name) => set({ nodes: get().nodes.map((node) => node.id === id ? { ...node, data: { ...node.data, name } } : node) }),
-  updateNodeProperties: (id, properties) => set({ nodes: get().nodes.map((node) => {
+  updateNodeName: (id, name) => {
+    const state = get();
+    set({ nodes: state.nodes.map((node) => node.id === id ? { ...node, data: { ...node.data, name } } : node), ...historyFor(state, snapshotOf(state)) });
+  },
+  updateNodeProperties: (id, properties) => {
+    const state = get();
+    set({ nodes: state.nodes.map((node) => {
     if (node.id !== id) return node;
     const mergedProperties = { ...node.data.properties, ...properties };
     const isOperator = node.data.hilesType === HilesElementType.SAMPLE || node.data.hilesType === HilesElementType.HOLD;
     return { ...node, data: { ...node.data, properties: mergedProperties, ...(isOperator && properties.operatorDirection ? { ports: operatorPorts(node.data.hilesType, properties.operatorDirection) } : {}) } };
-  }) }),
-  addPort: (nodeId, direction) => set({ nodes: get().nodes.map((node) => node.id === nodeId
-    ? { ...node, data: { ...node.data, ports: [...node.data.ports, createPort(direction)] } } : node) }),
-  updatePort: (nodeId, portId, patch) => set({ nodes: get().nodes.map((node) => node.id === nodeId
-    ? { ...node, data: { ...node.data, ports: node.data.ports.map((port) => port.id === portId ? { ...port, ...patch } : port) } } : node) }),
-  removePort: (nodeId, portId) => set({
-    nodes: get().nodes.map((node) => node.id === nodeId ? { ...node, data: { ...node.data, ports: node.data.ports.filter((port) => port.id !== portId) } } : node),
-    edges: get().edges.filter((edge) => edge.sourceHandle !== portId && edge.targetHandle !== portId),
-  }),
-  updateConnection: (id, patch) => set({ edges: get().edges.map((edge) => {
+    }), ...historyFor(state, snapshotOf(state)) });
+  },
+  addPort: (nodeId, direction) => {
+    const state = get();
+    set({ nodes: state.nodes.map((node) => node.id === nodeId
+      ? { ...node, data: { ...node.data, ports: [...node.data.ports, createPort(direction)] } } : node), ...historyFor(state, snapshotOf(state)) });
+  },
+  updatePort: (nodeId, portId, patch) => {
+    const state = get();
+    set({ nodes: state.nodes.map((node) => node.id === nodeId
+      ? { ...node, data: { ...node.data, ports: node.data.ports.map((port) => port.id === portId ? { ...port, ...patch } : port) } } : node), ...historyFor(state, snapshotOf(state)) });
+  },
+  removePort: (nodeId, portId) => {
+    const state = get();
+    set({
+      nodes: state.nodes.map((node) => node.id === nodeId ? { ...node, data: { ...node.data, ports: node.data.ports.filter((port) => port.id !== portId) } } : node),
+      edges: state.edges.filter((edge) => edge.sourceHandle !== portId && edge.targetHandle !== portId),
+      ...historyFor(state, snapshotOf(state)),
+    });
+  },
+  updateConnection: (id, patch) => {
+    const state = get();
+    set({ edges: state.edges.map((edge) => {
     if (edge.id !== id) return edge;
     const routing = patch.data?.routing ?? edge.data?.routing ?? 'orthogonal';
     const edgeType = routing === 'straight' ? 'straight' : routing === 'curved' ? 'bezier' : 'smoothstep';
     return { ...edge, type: edgeType, ...(patch.label !== undefined ? { label: patch.label } : {}), data: { ...edge.data!, ...patch.data } };
-  }) }),
+    }), ...historyFor(state, snapshotOf(state)) });
+  },
 
   deleteElement: (id) => {
-    const nodes = get().nodes;
+    const state = get();
+    const nodes = state.nodes;
     const removed = new Set<string>([id]);
     let changed = true;
     while (changed) {
@@ -230,44 +306,50 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }
     set({
       nodes: nodes.filter((node) => !removed.has(node.id)),
-      edges: get().edges.filter((edge) => !removed.has(edge.source) && !removed.has(edge.target)),
-      selectedElementId: removed.has(get().selectedElementId ?? '') ? null : get().selectedElementId,
+      edges: state.edges.filter((edge) => !removed.has(edge.source) && !removed.has(edge.target)),
+      selectedElementId: removed.has(state.selectedElementId ?? '') ? null : state.selectedElementId,
+      ...historyFor(state, snapshotOf(state)),
     });
   },
-  deleteConnection: (id) => set({ edges: get().edges.filter((edge) => edge.id !== id), selectedConnectionId: null }),
+  deleteConnection: (id) => {
+    const state = get();
+    set({ edges: state.edges.filter((edge) => edge.id !== id), selectedConnectionId: null, ...historyFor(state, snapshotOf(state)) });
+  },
   setSelectedElement: (id) => set({ selectedElementId: id, selectedConnectionId: null }),
   setSelectedConnection: (id) => set({ selectedConnectionId: id, selectedElementId: null }),
   setActiveConnectionType: (type) => set({ activeConnectionType: type, connectionError: null }),
   clearConnectionError: () => set({ connectionError: null }),
+  beginHistoryTransaction: () => {
+    if (!transactionSnapshot) transactionSnapshot = snapshotOf(get());
+  },
+  endHistoryTransaction: () => {
+    const before = transactionSnapshot;
+    transactionSnapshot = null;
+    if (!before) return;
+    const state = get();
+    const after = snapshotOf(state);
+    if (!sameSnapshot(before, after)) set(historyFor(state, before));
+  },
+  undo: () => {
+    const state = get();
+    const previous = state.past.at(-1);
+    if (!previous) return;
+    const current = snapshotOf(state);
+    set({ ...cloneSnapshot(previous), past: state.past.slice(0, -1), future: [current, ...state.future].slice(0, HISTORY_LIMIT), canUndo: state.past.length > 1, canRedo: true, selectedElementId: null, selectedConnectionId: null });
+  },
+  redo: () => {
+    const state = get();
+    const next = state.future[0];
+    if (!next) return;
+    const current = snapshotOf(state);
+    set({ ...cloneSnapshot(next), past: [...state.past, current].slice(-HISTORY_LIMIT), future: state.future.slice(1), canUndo: true, canRedo: state.future.length > 1, selectedElementId: null, selectedConnectionId: null });
+  },
+  clearModel: () => {
+    const state = get();
+    if (!state.nodes.length && !state.edges.length) return;
+    set({ nodes: [], edges: [], selectedElementId: null, selectedConnectionId: null, past: [], future: [], canUndo: false, canRedo: false, statusMessage: 'New empty project' });
+  },
 
-  saveModel: () => {
-    const { nodes, edges } = get();
-    localStorage.setItem('hiles_mvp_model', JSON.stringify(serializeModel(nodes, edges)));
-    set({ statusMessage: 'Model saved locally' });
-  },
-  loadModel: () => {
-    const saved = localStorage.getItem('hiles_mvp_model');
-    if (!saved) return;
-    try {
-      const model = JSON.parse(saved);
-      if (isModelDocument(model)) {
-        const errors = validateModelDocument(model);
-        if (errors.length) throw new Error(errors[0]);
-      }
-      const rawNodes = isModelDocument(model)
-        ? model.allElements.map((element) => ({
-          id: element.id, type: 'hilesNode', position: { x: element.layout.x, y: element.layout.y },
-          ...(element.parentId ? { parentId: element.parentId, extent: 'parent' as const, expandParent: true } : {}),
-          ...(element.layout.width || element.layout.height ? { style: { width: element.layout.width, height: element.layout.height } } : {}),
-          data: { hilesType: element.type, name: element.name, ports: element.ports, properties: element.properties },
-        })) as HilesNode[]
-        : (model.nodes ?? []) as HilesNode[];
-      const rawEdges = (model.connections ?? model.edges ?? []) as HilesEdge[];
-      set({ nodes: rawNodes.map(normalizeNode), edges: rawEdges.map(normalizeEdge), selectedElementId: null, selectedConnectionId: null, connectionError: null, statusMessage: 'Local model loaded' });
-    } catch {
-      set({ connectionError: 'The saved model is not valid JSON.' });
-    }
-  },
   exportModel: () => JSON.stringify(serializeModel(get().nodes, get().edges), null, 2),
   importModel: (json) => {
     try {
@@ -275,11 +357,49 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!isModelDocument(model)) throw new Error('Unsupported document version.');
       const errors = validateModelDocument(model);
       if (errors.length) throw new Error(errors[0]);
-      localStorage.setItem('hiles_mvp_model', json);
-      get().loadModel();
+      const nodes = model.allElements.map((element) => ({
+        id: element.id, type: 'hilesNode', position: { x: element.layout.x, y: element.layout.y },
+        ...(element.parentId ? { parentId: element.parentId, extent: 'parent' as const, expandParent: true } : {}),
+        ...(element.layout.width || element.layout.height ? { style: { width: element.layout.width, height: element.layout.height } } : {}),
+        data: { hilesType: element.type, name: element.name, ports: element.ports, properties: element.properties },
+      })) as HilesNode[];
+      set({ nodes: nodes.map(normalizeNode), edges: model.connections.map(normalizeEdge), selectedElementId: null, selectedConnectionId: null, connectionError: null, past: [], future: [], canUndo: false, canRedo: false });
+      persistAutosave();
       set({ statusMessage: 'JSON model imported' });
     } catch (error) {
       set({ connectionError: error instanceof Error ? error.message : 'The selected file is not a valid HiLeS JSON model.' });
     }
   },
+  loadAutosave: () => {
+    if (autosaveLoaded) return;
+    autosaveLoaded = true;
+    const saved = localStorage.getItem(AUTOSAVE_KEY);
+    if (!saved) return;
+    try {
+      const payload = JSON.parse(saved) as { version?: number; data?: unknown };
+      if (payload.version !== AUTOSAVE_VERSION || !isModelDocument(payload.data)) throw new Error('Invalid autosave');
+      const errors = validateModelDocument(payload.data);
+      if (errors.length) throw new Error(errors[0]);
+      const model = payload.data;
+      const nodes = model.allElements.map((element) => ({
+        id: element.id, type: 'hilesNode', position: { x: element.layout.x, y: element.layout.y },
+        ...(element.parentId ? { parentId: element.parentId, extent: 'parent' as const, expandParent: true } : {}),
+        ...(element.layout.width || element.layout.height ? { style: { width: element.layout.width, height: element.layout.height } } : {}),
+        data: { hilesType: element.type, name: element.name, ports: element.ports, properties: element.properties },
+      })) as HilesNode[];
+      set({ nodes: nodes.map(normalizeNode), edges: model.connections.map(normalizeEdge), selectedElementId: null, selectedConnectionId: null, connectionError: null, statusMessage: 'Autosaved model restored', past: [], future: [], canUndo: false, canRedo: false });
+    } catch {
+      set({ connectionError: 'The autosaved model could not be restored.' });
+    }
+  },
 }));
+
+useEditorStore.subscribe((state, previous) => {
+  if (state.nodes === previous.nodes && state.edges === previous.edges) return;
+  if (autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    persistAutosave();
+  }, 600);
+});
+
+window.addEventListener('beforeunload', persistAutosave);

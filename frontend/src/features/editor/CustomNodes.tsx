@@ -2,6 +2,7 @@ import React from 'react';
 import { Handle, NodeResizer, Position, type Node, type NodeProps } from '@xyflow/react';
 import { HilesElementType, type HilesNodeData, type HilesPort } from '../../types/hiles';
 import { HilesGlyph } from './HilesGlyph';
+import { useEditorStore } from '../../stores/useEditorStore';
 
 const positionFor = (side: HilesPort['side']) => ({ left: Position.Left, right: Position.Right, top: Position.Top, bottom: Position.Bottom })[side];
 
@@ -36,20 +37,28 @@ const PetriHandles = () => (
 );
 
 export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ data, selected }) => {
-  const { hilesType, name, ports, properties } = data;
+  const { hilesType, name, ports, properties, summaryMode } = data;
+  const { beginHistoryTransaction, endHistoryTransaction } = useEditorStore();
   const disabled = !properties.enabled;
   const locked = properties.locked;
 
   if (hilesType === HilesElementType.STRUCTURAL_BLOCK) {
     return (
-      <div className={`hiles-structural ${selected ? 'is-selected' : ''} ${locked ? 'is-locked' : ''}`}>
-        <NodeResizer isVisible={selected && !locked} minWidth={200} minHeight={130} lineClassName="hiles-resizer-line" handleClassName="hiles-resizer-handle" />
+      <div className={`hiles-structural ${summaryMode ? 'is-summary' : ''} ${selected ? 'is-selected' : ''} ${locked ? 'is-locked' : ''}`}>
+        <NodeResizer isVisible={selected && !locked} minWidth={200} minHeight={130} lineClassName="hiles-resizer-line" handleClassName="hiles-resizer-handle" onResizeStart={beginHistoryTransaction} onResizeEnd={endHistoryTransaction} />
         <PortHandles ports={ports} />
-        <div className="hiles-structural__header">
-          <strong>{name}</strong>
-          <span>{properties.collapsed ? '▸ Collapsed' : locked ? '🔒 Locked' : 'Structural Block'}</span>
-        </div>
-        {properties.description && <div className="hiles-structural__description">{properties.description}</div>}
+        {summaryMode ? (
+          <div className="hiles-structural__summary">
+            <strong>{name}</strong>
+            <span>{properties.description || 'Structural Block'}</span>
+          </div>
+        ) : <>
+          <div className="hiles-structural__header">
+            <strong>{name}</strong>
+            <span>{properties.collapsed ? '▸ Collapsed' : locked ? '🔒 Locked' : 'Structural Block'}</span>
+          </div>
+          {properties.description && <div className="hiles-structural__description">{properties.description}</div>}
+        </>}
       </div>
     );
   }

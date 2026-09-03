@@ -1,12 +1,28 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Palette } from './Palette';
 import { Canvas } from './Canvas';
 import { PropertiesPanel } from './PropertiesPanel';
 import { useEditorStore } from '../../stores/useEditorStore';
 
 export const Editor: React.FC = () => {
-  const { saveModel, loadModel, exportModel, importModel, statusMessage } = useEditorStore();
+  const { exportModel, importModel, statusMessage, loadAutosave, undo, redo, canUndo, canRedo, clearModel, nodes, edges } = useEditorStore();
   const importInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => { loadAutosave(); }, [loadAutosave]);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.key.toLowerCase() !== 'z' && event.key.toLowerCase() !== 'y') return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, [contenteditable="true"]')) return;
+      if (event.key.toLowerCase() === 'y' || event.shiftKey) {
+        event.preventDefault(); redo();
+      } else {
+        event.preventDefault(); undo();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [redo, undo]);
 
   const downloadJson = () => {
     const blob = new Blob([exportModel()], { type: 'application/json' });
@@ -22,6 +38,11 @@ export const Editor: React.FC = () => {
     event.target.value = '';
   };
 
+  const newProject = () => {
+    if ((nodes.length || edges.length) && !window.confirm('Clear this project? This cannot be undone.')) return;
+    clearModel();
+  };
+
   return (
     <div style={styles.container}>
       <header style={styles.header}>
@@ -29,10 +50,12 @@ export const Editor: React.FC = () => {
         <div style={styles.actions}>
           {statusMessage && <span style={styles.status}>✓ {statusMessage}</span>}
           <input ref={importInput} type="file" accept="application/json,.json" onChange={uploadJson} style={{ display: 'none' }} />
+          <button style={styles.button} onClick={undo} disabled={!canUndo} title="Undo (Ctrl/Cmd + Z)">↶ Undo</button>
+          <button style={styles.button} onClick={redo} disabled={!canRedo} title="Redo (Ctrl/Cmd + Shift + Z or Ctrl + Y)">↷ Redo</button>
+          <button style={styles.button} onClick={newProject} title="Clear the current project">New Project</button>
           <button style={styles.button} onClick={() => importInput.current?.click()}>Import JSON</button>
           <button style={styles.button} onClick={downloadJson}>Export JSON</button>
-          <button style={styles.button} onClick={loadModel}>Load (Local)</button>
-          <button style={{ ...styles.button, ...styles.primaryButton }} onClick={saveModel}>Save (Local)</button>
+          <span style={styles.autosave}>Autosaved locally</span>
         </div>
       </header>
       
@@ -84,10 +107,11 @@ const styles = {
     borderRadius: '4px',
     fontWeight: 'bold'
   },
-  primaryButton: {
-    background: '#007bff',
-    color: 'white',
-    border: 'none'
+  autosave: {
+    color: '#bfdbfe',
+    fontSize: '11px',
+    fontWeight: 600,
+    whiteSpace: 'nowrap' as const,
   },
   editorArea: {
     display: 'flex',
