@@ -8,9 +8,11 @@ import {
   type HilesNodeData,
   type HilesNodeProperties,
   type HilesPort,
+  type OperatorDirection,
   type PortDirection,
 } from '../types/hiles';
 import { HilesElementTranslations } from '../types/translations';
+import { isModelDocument, serializeModel, validateModelDocument } from '../domain/modelDocument';
 
 type HilesNode = Node<HilesNodeData>;
 type HilesEdge = Edge<HilesEdgeData>;
@@ -43,12 +45,14 @@ interface EditorState {
   clearConnectionError: () => void;
   saveModel: () => void;
   loadModel: () => void;
+  exportModel: () => string;
+  importModel: (json: string) => void;
 }
 
 const defaultProperties = (): HilesNodeProperties => ({
   description: '', collapsed: false, locked: false, visible: true,
   expression: '', executionDelay: 0, enabled: true,
-  tokens: 0, maxTokens: 1, delay: 0, condition: '', heldValue: '',
+  tokens: 0, maxTokens: 1, delay: 0, condition: '', heldValue: '', operatorDirection: 'right',
 });
 
 const createPort = (direction: PortDirection, name?: string, nature: HilesPort['nature'] = 'continuous'): HilesPort => ({
@@ -63,9 +67,21 @@ const createPort = (direction: PortDirection, name?: string, nature: HilesPort['
 
 const defaultPorts = (type: HilesElementType): HilesPort[] => {
   if (type === HilesElementType.FUNCTIONAL_BLOCK) return [createPort('input'), createPort('output')];
-  if (type === HilesElementType.SAMPLE) return [createPort('input', 'Data'), createPort('input', 'Control', 'control'), createPort('output')];
-  if (type === HilesElementType.HOLD) return [createPort('input'), createPort('output')];
+  if (type === HilesElementType.SAMPLE || type === HilesElementType.HOLD) return operatorPorts(type, 'right');
   return [];
+};
+
+const operatorPorts = (type: HilesElementType, direction: OperatorDirection): HilesPort[] => {
+  const sides: Record<OperatorDirection, { input: HilesPort['side']; output: HilesPort['side'] }> = {
+    right: { input: 'left', output: 'right' }, left: { input: 'right', output: 'left' }, up: { input: 'bottom', output: 'top' }, down: { input: 'top', output: 'bottom' },
+  };
+  const { input, output } = sides[direction];
+  if (type === HilesElementType.SAMPLE) return [
+    { ...createPort('input', 'Data'), side: input, offset: 0.32 },
+    { ...createPort('input', 'Control', 'control'), side: input, offset: 0.68 },
+    { ...createPort('output', 'Sampled'), side: output, offset: 0.5 },
+  ];
+  return [{ ...createPort('input', 'Data'), side: input, offset: 0.5 }, { ...createPort('output', 'Held'), side: output, offset: 0.5 }];
 };
 
 const edgeAppearance = (type: HilesConnectionType) => {
@@ -181,8 +197,12 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
 
   updateNodeName: (id, name) => set({ nodes: get().nodes.map((node) => node.id === id ? { ...node, data: { ...node.data, name } } : node) }),
-  updateNodeProperties: (id, properties) => set({ nodes: get().nodes.map((node) => node.id === id
-    ? { ...node, data: { ...node.data, properties: { ...node.data.properties, ...properties } } } : node) }),
+  updateNodeProperties: (id, properties) => set({ nodes: get().nodes.map((node) => {
+    if (node.id !== id) return node;
+    const mergedProperties = { ...node.data.properties, ...properties };
+    const isOperator = node.data.hilesType === HilesElementType.SAMPLE || node.data.hilesType === HilesElementType.HOLD;
+    return { ...node, data: { ...node.data, properties: mergedProperties, ...(isOperator && properties.operatorDirection ? { ports: operatorPorts(node.data.hilesType, properties.operatorDirection) } : {}) } };
+  }) }),
   addPort: (nodeId, direction) => set({ nodes: get().nodes.map((node) => node.id === nodeId
     ? { ...node, data: { ...node.data, ports: [...node.data.ports, createPort(direction)] } } : node) }),
   updatePort: (nodeId, portId, patch) => set({ nodes: get().nodes.map((node) => node.id === nodeId
@@ -222,7 +242,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   saveModel: () => {
     const { nodes, edges } = get();
-    localStorage.setItem('hiles_mvp_model', JSON.stringify({ version: 2, metadata: { savedAt: new Date().toISOString() }, nodes, connections: edges }));
+    localStorage.setItem('hiles_mvp_model', JSON.stringify(serializeModel(nodes, edges)));
     set({ statusMessage: 'Model saved locally' });
   },
   loadModel: () => {
@@ -230,11 +250,36 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!saved) return;
     try {
       const model = JSON.parse(saved);
-      const rawNodes = (model.nodes ?? []) as HilesNode[];
+      if (isModelDocument(model)) {
+        const errors = validateModelDocument(model);
+        if (errors.length) throw new Error(errors[0]);
+      }
+      const rawNodes = isModelDocument(model)
+        ? model.allElements.map((element) => ({
+          id: element.id, type: 'hilesNode', position: { x: element.layout.x, y: element.layout.y },
+          ...(element.parentId ? { parentId: element.parentId, extent: 'parent' as const, expandParent: true } : {}),
+          ...(element.layout.width || element.layout.height ? { style: { width: element.layout.width, height: element.layout.height } } : {}),
+          data: { hilesType: element.type, name: element.name, ports: element.ports, properties: element.properties },
+        })) as HilesNode[]
+        : (model.nodes ?? []) as HilesNode[];
       const rawEdges = (model.connections ?? model.edges ?? []) as HilesEdge[];
       set({ nodes: rawNodes.map(normalizeNode), edges: rawEdges.map(normalizeEdge), selectedElementId: null, selectedConnectionId: null, connectionError: null, statusMessage: 'Local model loaded' });
     } catch {
       set({ connectionError: 'The saved model is not valid JSON.' });
+    }
+  },
+  exportModel: () => JSON.stringify(serializeModel(get().nodes, get().edges), null, 2),
+  importModel: (json) => {
+    try {
+      const model = JSON.parse(json);
+      if (!isModelDocument(model)) throw new Error('Unsupported document version.');
+      const errors = validateModelDocument(model);
+      if (errors.length) throw new Error(errors[0]);
+      localStorage.setItem('hiles_mvp_model', json);
+      get().loadModel();
+      set({ statusMessage: 'JSON model imported' });
+    } catch (error) {
+      set({ connectionError: error instanceof Error ? error.message : 'The selected file is not a valid HiLeS JSON model.' });
     }
   },
 }));

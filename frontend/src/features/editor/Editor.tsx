@@ -1,11 +1,26 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Palette } from './Palette';
 import { Canvas } from './Canvas';
 import { PropertiesPanel } from './PropertiesPanel';
 import { useEditorStore } from '../../stores/useEditorStore';
 
 export const Editor: React.FC = () => {
-  const { saveModel, loadModel, statusMessage } = useEditorStore();
+  const { saveModel, loadModel, exportModel, importModel, statusMessage } = useEditorStore();
+  const importInput = useRef<HTMLInputElement>(null);
+
+  const downloadJson = () => {
+    const blob = new Blob([exportModel()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = 'hiles-model.json'; link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const uploadJson = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) importModel(await file.text());
+    event.target.value = '';
+  };
 
   return (
     <div style={styles.container}>
@@ -13,6 +28,9 @@ export const Editor: React.FC = () => {
         <h1 style={styles.logo}>HiLeS Web</h1>
         <div style={styles.actions}>
           {statusMessage && <span style={styles.status}>✓ {statusMessage}</span>}
+          <input ref={importInput} type="file" accept="application/json,.json" onChange={uploadJson} style={{ display: 'none' }} />
+          <button style={styles.button} onClick={() => importInput.current?.click()}>Import JSON</button>
+          <button style={styles.button} onClick={downloadJson}>Export JSON</button>
           <button style={styles.button} onClick={loadModel}>Load (Local)</button>
           <button style={{ ...styles.button, ...styles.primaryButton }} onClick={saveModel}>Save (Local)</button>
         </div>

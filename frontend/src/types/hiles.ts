@@ -25,6 +25,7 @@ export type PortDataType = 'boolean' | 'integer' | 'real' | 'string' | 'vector' 
 export type PortNature = 'continuous' | 'control';
 export type PortSide = 'left' | 'right' | 'top' | 'bottom';
 export type ConnectionRouting = 'straight' | 'curved' | 'orthogonal';
+export type OperatorDirection = 'left' | 'right' | 'up' | 'down';
 
 export interface HilesPort {
   id: string;
@@ -49,6 +50,7 @@ export interface HilesNodeProperties {
   delay: number;
   condition: string;
   heldValue: string;
+  operatorDirection: OperatorDirection;
 }
 
 export interface HilesNodeData extends Record<string, unknown> {

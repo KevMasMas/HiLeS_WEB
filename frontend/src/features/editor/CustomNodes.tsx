@@ -60,7 +60,7 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ data, sele
     <div className={`hiles-node ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''}`}>
       {isPetri ? <PetriHandles /> : <PortHandles ports={ports} />}
       <div className="hiles-node__symbol">
-        <HilesGlyph type={hilesType} width={isFunctional ? 154 : 84} height={isFunctional ? 66 : 56} />
+        <HilesGlyph type={hilesType} width={isFunctional ? 154 : 84} height={isFunctional ? 66 : 56} direction={properties.operatorDirection} />
         {isFunctional && properties.expression && <span className="hiles-node__expression">{properties.expression}</span>}
         {hilesType === HilesElementType.PLACE && properties.tokens > 0 && <span className="hiles-place-token" aria-label={`${properties.tokens} token`} />}
       </div>

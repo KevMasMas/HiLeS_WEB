@@ -72,7 +72,7 @@ export const PropertiesPanel: React.FC = () => {
 
   const { hilesType, name, properties, ports } = selectedNode.data;
   const update = store.updateNodeProperties;
-  const portCapableTypes: HilesElementType[] = [HilesElementType.STRUCTURAL_BLOCK, HilesElementType.FUNCTIONAL_BLOCK, HilesElementType.SAMPLE, HilesElementType.HOLD, HilesElementType.SERVICE];
+  const portCapableTypes: HilesElementType[] = [HilesElementType.STRUCTURAL_BLOCK, HilesElementType.FUNCTIONAL_BLOCK, HilesElementType.SERVICE];
   const supportsPorts = portCapableTypes.includes(hilesType);
 
   return (
@@ -105,6 +105,14 @@ export const PropertiesPanel: React.FC = () => {
         <label style={styles.check}><input type="checkbox" checked={properties.enabled} onChange={(event) => update(selectedNode.id, { enabled: event.target.checked })} /> Enabled</label>
       </>}
 
+      {(hilesType === HilesElementType.SAMPLE || hilesType === HilesElementType.HOLD) && <>
+        <Field label="Orientation">
+          <select style={styles.input} value={properties.operatorDirection} onChange={(event) => update(selectedNode.id, { operatorDirection: event.target.value as 'left' | 'right' | 'up' | 'down' })}>
+            <option value="right">Pointing right</option><option value="left">Pointing left</option><option value="up">Pointing up</option><option value="down">Pointing down</option>
+          </select>
+        </Field>
+        <p style={styles.help}>{hilesType === HilesElementType.SAMPLE ? 'Data and control inputs stay on the wide side; the sampled output stays on the tip.' : 'The input stays on the wide side; the held output stays on the tip.'}</p>
+      </>}
       {hilesType === HilesElementType.SAMPLE && <Field label="Description"><TextArea value={properties.description} onChange={(event) => update(selectedNode.id, { description: event.target.value })} /></Field>}
       {hilesType === HilesElementType.HOLD && <Field label="Held Value"><TextInput value={properties.heldValue} onChange={(event) => update(selectedNode.id, { heldValue: event.target.value })} /></Field>}
       {supportsPorts && <PortEditor nodeId={selectedNode.id} ports={ports} />}
@@ -119,6 +127,7 @@ const styles: Record<string, React.CSSProperties> = {
   aside: { width: 310, background: '#f8fafc', borderLeft: '1px solid #d8e0ea', padding: 15, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflowY: 'auto' },
   title: { margin: '0 0 8px', fontSize: 16, color: '#172033' },
   empty: { fontSize: 12, color: '#64748b', fontStyle: 'italic', lineHeight: 1.5 },
+  help: { margin: '-3px 0 12px', color: '#64748b', fontSize: 10, lineHeight: 1.4 },
   typePill: { alignSelf: 'flex-start', marginBottom: 15, padding: '3px 7px', borderRadius: 999, background: '#e2e8f0', color: '#475569', fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.05em' },
   field: { display: 'block', marginBottom: 12 },
   label: { display: 'block', marginBottom: 5, color: '#475569', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.04em' },
