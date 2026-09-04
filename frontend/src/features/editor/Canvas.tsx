@@ -11,7 +11,8 @@ import { HilesElementType, type HilesNodeData } from '../../types/hiles';
 
 const nodeTypes = { hilesNode: HilesNode };
 const edgeTypes = { hilesEdge: HilesEdge };
-const DETAIL_ZOOM = 0.9;
+const MIN_ZOOM = 0.08;
+const DETAIL_ZOOM = 0.5;
 
 const nodeSize = (node: Node) => ({ width: Number(node.style?.width ?? node.measured?.width ?? 160), height: Number(node.style?.height ?? node.measured?.height ?? 80) });
 
@@ -115,7 +116,7 @@ const CanvasInner: React.FC = () => {
         onNodeClick={onNodeClick} onEdgeClick={onEdgeClick} onPaneClick={onPaneClick}
         onNodeDragStart={onNodeDragStart} onNodeDragStop={onNodeDragStop}
         onDrop={onDrop} onDragOver={onDragOver} onViewportChange={(viewport) => setZoom(viewport.zoom)}
-        nodeTypes={nodeTypes} edgeTypes={edgeTypes} minZoom={0.2} maxZoom={2.5} defaultViewport={{ x: 0, y: 0, zoom: 1 }} snapToGrid snapGrid={[10, 10]}
+        nodeTypes={nodeTypes} edgeTypes={edgeTypes} minZoom={MIN_ZOOM} maxZoom={2.5} defaultViewport={{ x: 0, y: 0, zoom: 1 }} snapToGrid snapGrid={[10, 10]}
         deleteKeyCode={null}
       >
         <Background color="#cbd5e1" gap={20} />
