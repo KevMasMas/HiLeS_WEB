@@ -15,8 +15,16 @@ const trianglePointForPort = (port: HilesPort, direction: NonNullable<HilesNodeD
   const [first, second, tip] = triangleVertices(direction);
   const wideSide = direction === 'right' ? 'left' : direction === 'left' ? 'right' : direction === 'up' ? 'bottom' : 'top';
   if (port.side === wideSide) return port.offset <= 0.5 ? first : second;
-  if (port.side === ({ left: 'right', right: 'left', up: 'bottom', down: 'top' } as const)[direction]) return tip;
+  if (port.side === ({ left: 'left', right: 'right', up: 'top', down: 'bottom' } as const)[direction]) return tip;
   return null;
+};
+
+const rectanglePointForPort = (port: HilesPort, bounds: { x: number; y: number; width: number; height: number }) => {
+  const offset = Math.max(0, Math.min(1, port.offset));
+  if (port.side === 'top') return { x: bounds.x + bounds.width * offset, y: bounds.y };
+  if (port.side === 'bottom') return { x: bounds.x + bounds.width * offset, y: bounds.y + bounds.height };
+  if (port.side === 'left') return { x: bounds.x, y: bounds.y + bounds.height * offset };
+  return { x: bounds.x + bounds.width, y: bounds.y + bounds.height * offset };
 };
 
 const svgPointStyle = (point: { x: number; y: number }, width: number, height: number): React.CSSProperties => {
@@ -32,7 +40,11 @@ const svgPointStyle = (point: { x: number; y: number }, width: number, height: n
   };
 };
 
-const PortHandles: React.FC<{ ports: HilesPort[]; triangle?: { direction: HilesNodeData['properties']['operatorDirection']; width: number; height: number } }> = ({ ports, triangle }) => (
+const PortHandles: React.FC<{
+  ports: HilesPort[];
+  triangle?: { direction: HilesNodeData['properties']['operatorDirection']; width: number; height: number };
+  rectangle?: { bounds: { x: number; y: number; width: number; height: number }; width: number; height: number };
+}> = ({ ports, triangle, rectangle }) => (
   <>
     {ports.map((port) => (
       <React.Fragment key={port.id}>
@@ -41,7 +53,11 @@ const PortHandles: React.FC<{ ports: HilesPort[]; triangle?: { direction: HilesN
           type={port.direction === 'input' ? 'target' : 'source'}
           position={positionFor(port.side)}
           className={`hiles-port hiles-port--${port.direction} hiles-port--${port.nature}`}
-          style={triangle ? (() => { const point = trianglePointForPort(port, triangle.direction); return point ? svgPointStyle(point, triangle.width, triangle.height) : offsetStyle(port); })() : offsetStyle(port)}
+          style={triangle
+            ? (() => { const point = trianglePointForPort(port, triangle.direction); return point ? svgPointStyle(point, triangle.width, triangle.height) : offsetStyle(port); })()
+            : rectangle
+              ? svgPointStyle(rectanglePointForPort(port, rectangle.bounds), rectangle.width, rectangle.height)
+              : offsetStyle(port)}
         />
         <span className={`hiles-port-label hiles-port-label--${port.side}`} style={offsetStyle(port)}>
           {port.direction === 'input' ? 'IN' : 'OUT'} · {port.name}
@@ -88,13 +104,18 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ data, sele
   const isPetri = hilesType === HilesElementType.PLACE || hilesType === HilesElementType.TRANSITION;
   const isFunctional = hilesType === HilesElementType.FUNCTIONAL_BLOCK;
   const isTriangle = hilesType === HilesElementType.SAMPLE || hilesType === HilesElementType.HOLD;
+  const isGlyphRectangle = hilesType === HilesElementType.FUNCTIONAL_BLOCK || hilesType === HilesElementType.SERVICE;
   const glyphWidth = isFunctional ? 120 : hilesType === HilesElementType.TRANSITION ? 12 : 44;
   const glyphHeight = isFunctional ? 52 : hilesType === HilesElementType.TRANSITION ? 48 : 44;
+  const rectangleBounds = hilesType === HilesElementType.FUNCTIONAL_BLOCK
+    ? { x: 7, y: 8, width: 86, height: 44 }
+    : { x: 32, y: 12, width: 36, height: 36 };
   return (
     <div className={`hiles-node ${isPetri ? 'hiles-node--petri' : ''} ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''}`}>
-      {isPetri ? <PetriHandles /> : !isTriangle && <PortHandles ports={ports} />}
+      {isPetri ? <PetriHandles /> : !isTriangle && !isGlyphRectangle && <PortHandles ports={ports} />}
       <div className="hiles-node__symbol">
         {isTriangle && <PortHandles ports={ports} triangle={{ direction: properties.operatorDirection, width: glyphWidth, height: glyphHeight }} />}
+        {isGlyphRectangle && <PortHandles ports={ports} rectangle={{ bounds: rectangleBounds, width: glyphWidth, height: glyphHeight }} />}
         <HilesGlyph type={hilesType} width={glyphWidth} height={glyphHeight} direction={properties.operatorDirection} />
         {isFunctional && properties.expression && <span className="hiles-node__expression">{properties.expression}</span>}
         {hilesType === HilesElementType.PLACE && properties.tokens > 0 && <span className="hiles-place-token" aria-label={`${properties.tokens} token`} />}
