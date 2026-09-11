@@ -7,7 +7,7 @@ import './editor.css';
 import { getConnectionValidation, useEditorStore } from '../../stores/useEditorStore';
 import { HilesNode } from './CustomNodes';
 import { HilesEdge } from './HilesEdge';
-import { HilesElementType, type HilesNodeData } from '../../types/hiles';
+import { HilesConnectionType, HilesElementType, type HilesNodeData } from '../../types/hiles';
 
 const nodeTypes = { hilesNode: HilesNode };
 const edgeTypes = { hilesEdge: HilesEdge };
@@ -72,11 +72,24 @@ const CanvasInner: React.FC = () => {
     groups.forEach((group) => group
       .sort((left, right) => left.id.localeCompare(right.id))
       .forEach((edge, index) => lanes.set(edge.id, (index - (group.length - 1) / 2) * 34)));
+    const targetGroups = new Map<string, typeof edges>();
+    edges.forEach((edge) => {
+      const key = `${edge.target}:${edge.targetHandle ?? ''}`;
+      targetGroups.set(key, [...(targetGroups.get(key) ?? []), edge]);
+    });
+    const targetLanes = new Map<string, number>();
+    targetGroups.forEach((group) => group
+      .sort((left, right) => {
+        const leftIsLogical = left.data?.hilesConnectionType === HilesConnectionType.PETRI || left.data?.hilesConnectionType === HilesConnectionType.TOKEN_FLOW;
+        const rightIsLogical = right.data?.hilesConnectionType === HilesConnectionType.PETRI || right.data?.hilesConnectionType === HilesConnectionType.TOKEN_FLOW;
+        return Number(rightIsLogical) - Number(leftIsLogical) || left.id.localeCompare(right.id);
+      })
+      .forEach((edge, index) => targetLanes.set(edge.id, (index - (group.length - 1) / 2) * 16)));
     return edges.map((edge) => ({
       ...edge,
       type: 'hilesEdge',
       zIndex: 2,
-      data: { ...edge.data!, laneOffset: lanes.get(edge.id) ?? 0 },
+      data: { ...edge.data!, laneOffset: lanes.get(edge.id) ?? 0, targetLaneOffset: targetLanes.get(edge.id) ?? 0 },
       hidden: hiddenNodeIds.has(edge.source) || hiddenNodeIds.has(edge.target),
     }));
   }, [edges, hiddenNodeIds]);

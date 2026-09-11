@@ -27,13 +27,18 @@ const rectanglePointForPort = (port: HilesPort, bounds: { x: number; y: number; 
   return { x: bounds.x + bounds.width, y: bounds.y + bounds.height * offset };
 };
 
-const svgPointStyle = (point: { x: number; y: number }, width: number, height: number): React.CSSProperties => {
-  const scale = Math.min(width / TRIANGLE_VIEWBOX.width, height / TRIANGLE_VIEWBOX.height);
-  const renderedWidth = TRIANGLE_VIEWBOX.width * scale;
-  const renderedHeight = TRIANGLE_VIEWBOX.height * scale;
+const svgPointStyle = (
+  point: { x: number; y: number },
+  width: number,
+  height: number,
+  viewBox: { x: number; y: number; width: number; height: number } = { x: 0, y: 0, ...TRIANGLE_VIEWBOX },
+): React.CSSProperties => {
+  const scale = Math.min(width / viewBox.width, height / viewBox.height);
+  const renderedWidth = viewBox.width * scale;
+  const renderedHeight = viewBox.height * scale;
   return {
-    left: (width - renderedWidth) / 2 + point.x * scale,
-    top: (height - renderedHeight) / 2 + point.y * scale,
+    left: (width - renderedWidth) / 2 + (point.x - viewBox.x) * scale,
+    top: (height - renderedHeight) / 2 + (point.y - viewBox.y) * scale,
     right: 'auto',
     bottom: 'auto',
     transform: 'translate(-50%, -50%)',
@@ -74,9 +79,71 @@ const PetriHandles = () => (
   </>
 );
 
-export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ data, selected }) => {
+const absoluteNodePosition = (node: Node, nodes: Node[]) => {
+  let x = node.position.x;
+  let y = node.position.y;
+  let parentId = node.parentId;
+  while (parentId) {
+    const parent = nodes.find((candidate) => candidate.id === parentId);
+    if (!parent) break;
+    x += parent.position.x;
+    y += parent.position.y;
+    parentId = parent.parentId;
+  }
+  return { x, y };
+};
+
+const sideTowardNode = (node: Node, other: Node | undefined, nodes: Node[], fallback: 'left' | 'right'): 'left' | 'right' | 'top' | 'bottom' => {
+  if (!other) return fallback;
+  const nodePosition = absoluteNodePosition(node, nodes);
+  const otherPosition = absoluteNodePosition(other, nodes);
+  const dx = otherPosition.x - nodePosition.x;
+  const dy = otherPosition.y - nodePosition.y;
+  if (Math.abs(dx) >= Math.abs(dy)) return dx < 0 ? 'left' : 'right';
+  return dy < 0 ? 'top' : 'bottom';
+};
+
+const circlePointForSide = (side: 'left' | 'right' | 'top' | 'bottom') => ({
+  left: { x: 28, y: 30 },
+  right: { x: 72, y: 30 },
+  top: { x: 50, y: 8 },
+  bottom: { x: 50, y: 52 },
+}[side]);
+
+const CirclePetriHandles = ({ width, height, inputSide = 'left', outputSide = 'right' }: {
+  width: number;
+  height: number;
+  inputSide?: 'left' | 'right' | 'top' | 'bottom';
+  outputSide?: 'left' | 'right' | 'top' | 'bottom';
+}) => {
+  const viewBox = { x: 25, y: 5, width: 50, height: 50 };
+  const inputPoint = svgPointStyle(circlePointForSide(inputSide), width, height, viewBox);
+  const outputPoint = svgPointStyle(circlePointForSide(outputSide), width, height, viewBox);
+  return (
+    <>
+      <Handle id="petri-in" type="target" position={positionFor(inputSide)} className="hiles-petri-handle hiles-petri-handle--in" style={inputPoint} />
+      <Handle id="petri-out" type="source" position={positionFor(outputSide)} className="hiles-petri-handle hiles-petri-handle--out" style={outputPoint} />
+    </>
+  );
+};
+
+const TransitionPetriHandles = ({ width, height }: { width: number; height: number }) => {
+  const viewBox = { x: 42, y: 2, width: 16, height: 56 };
+  const leftPoint = svgPointStyle({ x: 44, y: 30 }, width, height, viewBox);
+  const rightPoint = svgPointStyle({ x: 56, y: 30 }, width, height, viewBox);
+  return (
+    <>
+      <Handle id="petri-in" type="target" position={Position.Left} className="hiles-petri-handle hiles-petri-handle--in" style={leftPoint} />
+      <Handle id="petri-out" type="source" position={Position.Right} className="hiles-petri-handle hiles-petri-handle--out" style={rightPoint} />
+    </>
+  );
+};
+
+export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, selected }) => {
   const { hilesType, name, ports, properties, summaryMode } = data;
   const { beginHistoryTransaction, endHistoryTransaction } = useEditorStore();
+  const allNodes = useEditorStore((state) => state.nodes);
+  const allEdges = useEditorStore((state) => state.edges);
   const disabled = !properties.enabled;
   const locked = properties.locked;
 
@@ -110,10 +177,21 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ data, sele
   const rectangleBounds = hilesType === HilesElementType.FUNCTIONAL_BLOCK
     ? { x: 7, y: 8, width: 86, height: 44 }
     : { x: 32, y: 12, width: 36, height: 36 };
+  const currentNode = allNodes.find((node) => node.id === id);
+  const inputConnection = allEdges.find((edge) => edge.target === id && edge.targetHandle === 'petri-in');
+  const outputConnection = allEdges.find((edge) => edge.source === id && edge.sourceHandle === 'petri-out');
+  const inputSide = currentNode
+    ? sideTowardNode(currentNode, allNodes.find((node) => node.id === inputConnection?.source), allNodes, 'left')
+    : 'left';
+  const outputSide = currentNode
+    ? sideTowardNode(currentNode, allNodes.find((node) => node.id === outputConnection?.target), allNodes, 'right')
+    : 'right';
   return (
     <div className={`hiles-node ${isPetri ? 'hiles-node--petri' : ''} ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''}`}>
-      {isPetri ? <PetriHandles /> : !isTriangle && !isGlyphRectangle && <PortHandles ports={ports} />}
+      {isPetri && hilesType === HilesElementType.TRANSITION ? null : isPetri && hilesType !== HilesElementType.PLACE ? <PetriHandles /> : !isPetri && !isTriangle && !isGlyphRectangle && <PortHandles ports={ports} />}
       <div className="hiles-node__symbol">
+        {hilesType === HilesElementType.PLACE && <CirclePetriHandles width={44} height={44} inputSide={inputSide} outputSide={outputSide} />}
+        {hilesType === HilesElementType.TRANSITION && <TransitionPetriHandles width={glyphWidth} height={glyphHeight} />}
         {isTriangle && <PortHandles ports={ports} triangle={{ direction: properties.operatorDirection, width: glyphWidth, height: glyphHeight }} />}
         {isGlyphRectangle && <PortHandles ports={ports} rectangle={{ bounds: rectangleBounds, width: glyphWidth, height: glyphHeight }} />}
         <HilesGlyph type={hilesType} width={glyphWidth} height={glyphHeight} direction={properties.operatorDirection} />

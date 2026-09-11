@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { HilesConnectionType, HilesElementType } from '../../types/hiles';
 import { HilesElementTranslations } from '../../types/translations';
 import { useEditorStore } from '../../stores/useEditorStore';
@@ -20,6 +20,7 @@ const connections = [
 
 export const Palette: React.FC = () => {
   const { activeConnectionType, setActiveConnectionType } = useEditorStore();
+  const [open, setOpen] = useState(true);
 
   const onDragStart = (event: React.DragEvent<HTMLDivElement>, nodeType: HilesElementType) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
@@ -27,7 +28,17 @@ export const Palette: React.FC = () => {
   };
 
   return (
-    <aside style={styles.aside}>
+    <div style={styles.wrapper}>
+      <button
+        type="button"
+        aria-label={open ? 'Close HiLeS elements menu' : 'Open HiLeS elements menu'}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        style={styles.menuButton}
+      >
+        <span aria-hidden="true">☰</span>
+      </button>
+      <aside style={{ ...styles.aside, ...(open ? styles.asideOpen : styles.asideClosed) }} aria-hidden={!open}>
       <h3 style={styles.title}>HiLeS Elements</h3>
       <div style={styles.scroll}>
         {groups.map((group) => (
@@ -62,12 +73,17 @@ export const Palette: React.FC = () => {
         </section>
       </div>
       <div style={styles.help}>Drag components onto the canvas. Ports are managed from a block's Properties panel. Select a connector before joining two compatible endpoints.</div>
-    </aside>
+      </aside>
+    </div>
   );
 };
 
 const styles: Record<string, React.CSSProperties> = {
-  aside: { width: 276, background: '#f8fafc', borderRight: '1px solid #d8e0ea', padding: '14px 12px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' },
+  wrapper: { position: 'absolute', inset: 0, zIndex: 20, pointerEvents: 'none' },
+  menuButton: { position: 'absolute', zIndex: 2, top: 12, left: 12, width: 38, height: 38, display: 'grid', placeItems: 'center', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff', color: '#172033', boxShadow: '0 3px 12px rgba(15,23,42,.18)', cursor: 'pointer', pointerEvents: 'auto', fontSize: 21, lineHeight: 1 },
+  aside: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 276, background: '#f8fafc', borderRight: '1px solid #d8e0ea', padding: '60px 12px 14px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pointerEvents: 'auto', boxShadow: '5px 0 18px rgba(15,23,42,.12)', transition: 'transform 180ms ease, box-shadow 180ms ease' },
+  asideOpen: { transform: 'translateX(0)' },
+  asideClosed: { transform: 'translateX(-100%)', pointerEvents: 'none', boxShadow: 'none' },
   title: { margin: '0 0 10px', fontSize: 16, color: '#172033' },
   scroll: { overflowY: 'auto', paddingRight: 3 },
   section: { marginBottom: 16 },

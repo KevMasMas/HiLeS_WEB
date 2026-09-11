@@ -116,6 +116,7 @@ const styles = {
   editorArea: {
     display: 'flex',
     flex: 1,
-    overflow: 'hidden'
+    overflow: 'hidden',
+    position: 'relative' as const,
   }
 };
