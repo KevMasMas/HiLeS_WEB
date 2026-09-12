@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "metadata": { "savedAt": "2026-09-03T16:15:00.000Z" },
+  "network": { "topology": null, "protocol": null, "nodes": ["humidity-node", "visualization-node", "irrigation-node"] },
+  "allElements": [
+    {
+      "id": "humidity-node", "type": "STRUCTURAL_BLOCK", "name": "Humidity Node",
+      "layout": { "x": 80, "y": 70, "width": 1080, "height": 580 }, "ports": [],
+      "properties": { "description": "Scenario 4 from Figure 29. Current humidity: 79%.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right" }
+    },
+    {
+      "id": "visualization-node", "type": "STRUCTURAL_BLOCK", "name": "Visualization",
+      "layout": { "x": 80, "y": 760, "width": 260, "height": 170 },
+      "ports": [
+        { "id": "vis-humidity", "name": "Humidity", "direction": "input", "dataType": "real", "nature": "continuous", "side": "top", "offset": 0.3 },
+        { "id": "vis-irrigation", "name": "Irrigation", "direction": "input", "dataType": "boolean", "nature": "continuous", "side": "right", "offset": 0.55 },
+        { "id": "vis-request", "name": "Status request", "direction": "output", "dataType": "boolean", "nature": "control", "side": "bottom", "offset": 0.5 }
+      ],
+      "properties": { "description": "Black-box visualization node. Humidity [70%]; irrigation [True].", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right" }
+    },
+    {
+      "id": "irrigation-node", "type": "STRUCTURAL_BLOCK", "name": "Irrigation Node",
+      "layout": { "x": 670, "y": 760, "width": 390, "height": 190 }, "ports": [],
+      "properties": { "description": "Irrigation node, ON [True].", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right" }
+    },
+    {
+      "id": "humidity-sensor", "type": "SERVICE", "name": "Humidity",
+      "parentId": "humidity-node", "layout": { "x": 290, "y": 45, "width": 130, "height": 80 },
+      "ports": [
+        { "id": "sensor-value", "name": "Value [79%]", "direction": "output", "dataType": "real", "nature": "continuous", "side": "bottom", "offset": 0.55 },
+        { "id": "sensor-rate", "name": "Transmission rate", "direction": "output", "dataType": "boolean", "nature": "control", "side": "left", "offset": 0.5 }
+      ],
+      "properties": { "description": "Humidity reading shown in Figure 29.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "79", "operatorDirection": "right" }
+    },
+    {
+      "id": "humidity-sample", "type": "SAMPLE", "name": "Humidity Sample",
+      "parentId": "humidity-node", "layout": { "x": 60, "y": 220, "width": 130, "height": 85 },
+      "ports": [
+        { "id": "hs-data", "name": "Humidity", "direction": "input", "dataType": "real", "nature": "continuous", "side": "top", "offset": 0.7 },
+        { "id": "hs-rate", "name": "Rate", "direction": "input", "dataType": "boolean", "nature": "control", "side": "top", "offset": 0.3 },
+        { "id": "hs-output", "name": "Sampled [70%]", "direction": "output", "dataType": "real", "nature": "continuous", "side": "bottom", "offset": 0.5 }
+      ],
+      "properties": { "description": "Samples humidity when LCH6 arrives.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "70", "operatorDirection": "down" }
+    },
+    {
+      "id": "below-76", "type": "FUNCTIONAL_BLOCK", "name": "<76%",
+      "parentId": "humidity-node", "layout": { "x": 300, "y": 230, "width": 130, "height": 70 },
+      "ports": [{ "id": "below-in", "name": "Humidity", "direction": "input", "dataType": "real", "nature": "continuous", "side": "top", "offset": 0.5 }, { "id": "below-out", "name": "Below", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "bottom", "offset": 0.5 }],
+      "properties": { "description": "Humidity guard for T1.", "collapsed": false, "locked": false, "visible": true, "expression": "humidity < 76", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right" }
+    },
+    {
+      "id": "above-84", "type": "FUNCTIONAL_BLOCK", "name": ">84%",
+      "parentId": "humidity-node", "layout": { "x": 820, "y": 130, "width": 130, "height": 70 },
+      "ports": [{ "id": "above-in", "name": "Humidity", "direction": "input", "dataType": "real", "nature": "continuous", "side": "left", "offset": 0.5 }, { "id": "above-out", "name": "Above", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "bottom", "offset": 0.5 }],
+      "properties": { "description": "Humidity guard for T2.", "collapsed": false, "locked": false, "visible": true, "expression": "humidity > 84", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right" }
+    },
+    {
+      "id": "p1", "type": "PLACE", "name": "P1", "parentId": "humidity-node", "layout": { "x": 590, "y": 290, "width": 70, "height": 70 }, "ports": [],
+      "properties": { "description": "Irrigation-off place.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right" }
+    },
+    {
+      "id": "t1", "type": "TRANSITION", "name": "T1", "parentId": "humidity-node", "layout": { "x": 440, "y": 390, "width": 40, "height": 70 }, "ports": [],
+      "properties": { "description": "Turns irrigation on below 76%.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "humidity < 76", "heldValue": "", "operatorDirection": "right" }
+    },
+    {
+      "id": "p2", "type": "PLACE", "name": "P2", "parentId": "humidity-node", "layout": { "x": 590, "y": 390, "width": 70, "height": 70 }, "ports": [],
+      "properties": { "description": "Irrigation-on place (red token in Figure 29).", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 1, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right" }
+    },
+    {
+      "id": "t2", "type": "TRANSITION", "name": "T2", "parentId": "humidity-node", "layout": { "x": 760, "y": 290, "width": 40, "height": 70 }, "ports": [],
+      "properties": { "description": "Turns irrigation off above 84%.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "humidity > 84", "heldValue": "", "operatorDirection": "right" }
+    },
+    {
+      "id": "irrigation-sample", "type": "SAMPLE", "name": "Irrigation Sample", "parentId": "irrigation-node", "layout": { "x": 210, "y": 70, "width": 125, "height": 85 },
+      "ports": [{ "id": "is-data", "name": "Irrigation", "direction": "input", "dataType": "boolean", "nature": "continuous", "side": "right", "offset": 0.3 }, { "id": "is-request", "name": "Request", "direction": "input", "dataType": "boolean", "nature": "control", "side": "right", "offset": 0.7 }, { "id": "is-output", "name": "True", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "left", "offset": 0.5 }],
+      "properties": { "description": "Returns irrigation status after a request.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "true", "operatorDirection": "left" }
+    }
+  ],
+  "relationNode": [
+    { "nodeId": "humidity-node", "elementIds": ["humidity-sensor", "humidity-sample", "below-76", "above-84", "p1", "t1", "p2", "t2"] },
+    { "nodeId": "visualization-node", "elementIds": [] }, { "nodeId": "irrigation-node", "elementIds": ["irrigation-sample"] }
+  ],
+  "connections": [
+    { "id": "CCH1", "source": "humidity-sensor", "target": "humidity-sample", "sourceHandle": "sensor-value", "targetHandle": "hs-data", "label": "CCH1", "type": "smoothstep", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "real", "delay": 0, "weight": 1 } },
+    { "id": "CCH2", "source": "humidity-sensor", "target": "below-76", "sourceHandle": "sensor-value", "targetHandle": "below-in", "label": "CCH2 · Value Humedad [79%]", "type": "smoothstep", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "real", "delay": 0, "weight": 1 } },
+    { "id": "CCH3", "source": "humidity-sensor", "target": "above-84", "sourceHandle": "sensor-value", "targetHandle": "above-in", "label": "CCH3", "type": "smoothstep", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "real", "delay": 0, "weight": 1 } },
+    { "id": "LCH6", "source": "humidity-sensor", "target": "humidity-sample", "sourceHandle": "sensor-rate", "targetHandle": "hs-rate", "label": "LCH6 · Transmission rate", "type": "smoothstep", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1 } },
+    { "id": "CCH4", "source": "below-76", "target": "t1", "sourceHandle": "below-out", "targetHandle": "petri-in", "label": "CCH4", "type": "smoothstep", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1 } },
+    { "id": "CCH5", "source": "above-84", "target": "t2", "sourceHandle": "above-out", "targetHandle": "petri-in", "label": "CCH5", "type": "smoothstep", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1 } },
+    { "id": "LCH2", "source": "p1", "target": "t1", "sourceHandle": "petri-out", "targetHandle": "petri-in", "label": "LCH2", "type": "smoothstep", "data": { "hilesConnectionType": "TOKEN_FLOW", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1 } },
+    { "id": "LCH3", "source": "t1", "target": "p2", "sourceHandle": "petri-out", "targetHandle": "petri-in", "label": "LCH3", "type": "smoothstep", "data": { "hilesConnectionType": "TOKEN_FLOW", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1 } },
+    { "id": "LCH4", "source": "p2", "target": "t2", "sourceHandle": "petri-out", "targetHandle": "petri-in", "label": "LCH4", "type": "smoothstep", "data": { "hilesConnectionType": "TOKEN_FLOW", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1 } },
+    { "id": "LCH5", "source": "t2", "target": "p1", "sourceHandle": "petri-out", "targetHandle": "petri-in", "label": "LCH5", "type": "smoothstep", "data": { "hilesConnectionType": "TOKEN_FLOW", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1 } },
+    { "id": "DCH2-DCH6", "source": "humidity-sample", "target": "visualization-node", "sourceHandle": "hs-output", "targetHandle": "vis-humidity", "label": "DCH2 / DCH6 · Signal Humedad [70%]", "type": "smoothstep", "data": { "hilesConnectionType": "DISCRETE", "routing": "orthogonal", "dataType": "real", "delay": 0, "weight": 1 } },
+    { "id": "CCH7-CCH8-CCH6", "source": "p2", "target": "irrigation-sample", "sourceHandle": "petri-out", "targetHandle": "is-data", "label": "CCH7 / CCH8 / CCH6 · Encendido [True]", "type": "smoothstep", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1 } },
+    { "id": "DCH5-DCH4", "source": "irrigation-sample", "target": "visualization-node", "sourceHandle": "is-output", "targetHandle": "vis-irrigation", "label": "DCH5 / DCH4 · Signal Riego [True]", "type": "smoothstep", "data": { "hilesConnectionType": "DISCRETE", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1 } },
+    { "id": "LCH1-LCH7", "source": "visualization-node", "target": "irrigation-sample", "sourceHandle": "vis-request", "targetHandle": "is-request", "label": "LCH1 / LCH7 · Solicitud Estado", "type": "smoothstep", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1 } }
+  ]
+}

@@ -1,0 +1,104 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum HilesElementType {
+  STRUCTURAL_BLOCK
+  FUNCTIONAL_BLOCK
+  SERVICE
+  PORT
+  SAMPLE
+  HOLD
+  PLACE
+  TRANSITION
+}
+
+enum HilesConnectionType {
+  CONTINUOUS
+  DISCRETE
+  PETRI
+}
+
+/// Contenedor de uno o varios diagramas HiLeS. La autenticacion se incorporara
+/// cuando sea parte del alcance del producto.
+model Project {
+  id          String       @id @default(uuid()) @db.Uuid
+  name        String
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  models      HilesModel[]
+}
+
+/// Modelo HiLeS persistido independientemente de su representacion en el canvas.
+model HilesModel {
+  id            String            @id @default(uuid()) @db.Uuid
+  projectId     String            @db.Uuid
+  name          String
+  description   String?
+  configuration Json              @default("{}")
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  elements    HilesElement[]
+  connections HilesConnection[]
+
+  @@index([projectId])
+}
+
+/// Elemento del dominio HiLeS. Sus propiedades especificas permanecen flexibles
+/// en JSONB para evitar crear una tabla por cada tipo durante el MVP.
+model HilesElement {
+  id              String           @id @default(uuid()) @db.Uuid
+  modelId         String           @db.Uuid
+  parentElementId String?          @db.Uuid
+  type            HilesElementType
+  name            String
+  positionX       Float
+  positionY       Float
+  width           Float?
+  height          Float?
+  rotation        Float?
+  properties      Json             @default("{}")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  model             HilesModel        @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  parent            HilesElement?     @relation("ElementHierarchy", fields: [parentElementId], references: [id], onDelete: SetNull)
+  children          HilesElement[]    @relation("ElementHierarchy")
+  sourceConnections HilesConnection[] @relation("ConnectionSource")
+  targetConnections HilesConnection[] @relation("ConnectionTarget")
+
+  @@index([modelId])
+  @@index([parentElementId])
+}
+
+/// Canal entre dos elementos HiLeS. No es un elemento: equivale a un edge de la
+/// vista, pero su significado y propiedades pertenecen al dominio.
+model HilesConnection {
+  id              String              @id @default(uuid()) @db.Uuid
+  modelId         String              @db.Uuid
+  sourceElementId String              @db.Uuid
+  targetElementId String              @db.Uuid
+  type            HilesConnectionType
+  sourceHandle    String?
+  targetHandle    String?
+  properties      Json?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  model         HilesModel   @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  sourceElement HilesElement @relation("ConnectionSource", fields: [sourceElementId], references: [id], onDelete: Cascade)
+  targetElement HilesElement @relation("ConnectionTarget", fields: [targetElementId], references: [id], onDelete: Cascade)
+
+  @@index([modelId])
+  @@index([sourceElementId])
+  @@index([targetElementId])
+}

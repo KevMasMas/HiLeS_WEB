@@ -1,0 +1,28 @@
+.simulation-panel { z-index: 18; width: 100%; flex: 0 0 auto; overflow: hidden; box-sizing: border-box; border-bottom: 1px solid #cbd5e1; background: #fff; color: #172033; }
+.simulation-panel.is-collapsed { width: 100%; }
+.simulation-panel__header { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 0; background: #172033; color: #fff; cursor: pointer; font-size: 12px; font-weight: 800; }
+.simulation-panel__header span { display: flex; align-items: center; gap: 8px; }
+.simulation-panel__status { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.18); }
+.simulation-panel__status.is-offline { background: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,.18); }
+.simulation-panel__body { max-height: 42vh; overflow-y: auto; padding: 12px; }
+.simulation-panel__intro { margin: 0 0 11px; color: #64748b; font-size: 11px; line-height: 1.45; }
+.simulation-panel__load { width: 100%; padding: 9px; border: 1px solid #2563eb; border-radius: 6px; background: #2563eb; color: #fff; cursor: pointer; font-size: 11px; font-weight: 800; }
+.simulation-panel__controls { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.simulation-panel__controls button { padding: 9px; border: 1px solid #94a3b8; border-radius: 6px; background: #fff; color: #334155; cursor: pointer; font-size: 11px; font-weight: 800; }
+.simulation-panel__controls button.is-primary { border-color: #2563eb; background: #2563eb; color: #fff; }
+.simulation-panel button:disabled { opacity: .55; cursor: wait; }
+.simulation-panel__state { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+.simulation-panel__state div { display: grid; gap: 3px; padding: 7px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
+.simulation-panel__state span { color: #64748b; font-size: 8px; font-weight: 800; text-transform: uppercase; }
+.simulation-panel__state strong { font-size: 10px; }
+.simulation-panel__state .is-on { border-color: #86efac; background: #f0fdf4; color: #166534; }
+.simulation-panel__meta { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; color: #64748b; font-size: 9px; }
+.simulation-panel__meta button { padding: 3px 6px; border: 0; background: transparent; color: #2563eb; cursor: pointer; font-size: 9px; font-weight: 800; }
+.simulation-panel__events { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; }
+.simulation-panel__events h4 { margin: 0 0 6px; color: #475569; font-size: 9px; text-transform: uppercase; letter-spacing: .05em; }
+.simulation-panel__events > div { display: grid; gap: 1px; margin-bottom: 5px; }
+.simulation-panel__events code { color: #1d4ed8; font-size: 9px; font-weight: 700; }
+.simulation-panel__events span, .simulation-panel__events p { margin: 0; color: #64748b; font-size: 9px; line-height: 1.3; }
+.simulation-panel__error { margin: 9px 0 0; padding: 7px; border-radius: 5px; background: #fff1f2; color: #be123c; font-size: 9px; line-height: 1.35; }
+.hiles-node__runtime { margin-top: 4px; padding: 2px 6px; border-radius: 999px; background: #fee2e2; color: #991b1b; font-size: 8px; font-weight: 900; }
+.hiles-node__runtime.is-on { background: #dcfce7; color: #166534; }
