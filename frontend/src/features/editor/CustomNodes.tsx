@@ -11,6 +11,13 @@ const offsetStyle = (port: HilesPort): React.CSSProperties => port.side === 'lef
   ? { top: `${Math.round(port.offset * 100)}%` }
   : { left: `${Math.round(port.offset * 100)}%` };
 
+const portLabelStyle = (port: HilesPort, rotation: number): React.CSSProperties => ({
+  ...offsetStyle(port),
+  // The parent symbol rotates the port position. Counter-rotate only the text.
+  transform: `${port.side === 'left' || port.side === 'right' ? 'translateY(calc(-100% - 5px))' : 'translateX(-50%)'} rotate(${-rotation}deg)`,
+  transformOrigin: 'center',
+});
+
 const trianglePointForPort = (port: HilesPort, direction: NonNullable<HilesNodeData['properties']>['operatorDirection']) => {
   const [first, second, tip] = triangleVertices(direction);
   const wideSide = direction === 'right' ? 'left' : direction === 'left' ? 'right' : direction === 'up' ? 'bottom' : 'top';
@@ -47,9 +54,10 @@ const svgPointStyle = (
 
 const PortHandles: React.FC<{
   ports: HilesPort[];
+  rotation?: number;
   triangle?: { direction: HilesNodeData['properties']['operatorDirection']; width: number; height: number };
   rectangle?: { bounds: { x: number; y: number; width: number; height: number }; width: number; height: number };
-}> = ({ ports, triangle, rectangle }) => (
+}> = ({ ports, rotation = 0, triangle, rectangle }) => (
   <>
     {ports.map((port) => (
       <React.Fragment key={port.id}>
@@ -64,7 +72,7 @@ const PortHandles: React.FC<{
               ? svgPointStyle(rectanglePointForPort(port, rectangle.bounds), rectangle.width, rectangle.height)
               : offsetStyle(port)}
         />
-        <span className={`hiles-port-label hiles-port-label--${port.side}`} style={offsetStyle(port)}>
+        <span className={`hiles-port-label hiles-port-label--${port.side}`} style={portLabelStyle(port, rotation)}>
           {port.direction === 'input' ? 'IN' : 'OUT'} · {port.name}
         </span>
       </React.Fragment>
@@ -74,8 +82,8 @@ const PortHandles: React.FC<{
 
 const PetriHandles = () => (
   <>
-    <Handle id="petri-in" type="target" position={Position.Left} className="hiles-petri-handle hiles-petri-handle--in" />
-    <Handle id="petri-out" type="source" position={Position.Right} className="hiles-petri-handle hiles-petri-handle--out" />
+    <Handle id="petri-in" type="target" position={Position.Left} className="hiles-petri-handle hiles-petri-handle--in" isConnectable />
+    <Handle id="petri-out" type="source" position={Position.Right} className="hiles-petri-handle hiles-petri-handle--out" isConnectable />
   </>
 );
 
@@ -110,6 +118,8 @@ const circlePointForSide = (side: 'left' | 'right' | 'top' | 'bottom') => ({
   bottom: { x: 50, y: 52 },
 }[side]);
 
+const oppositeSide = (side: 'left' | 'right' | 'top' | 'bottom'): 'left' | 'right' | 'top' | 'bottom' => ({ left: 'right', right: 'left', top: 'bottom', bottom: 'top' } as const)[side];
+
 const CirclePetriHandles = ({ width, height, inputSide = 'left', outputSide = 'right' }: {
   width: number;
   height: number;
@@ -121,8 +131,8 @@ const CirclePetriHandles = ({ width, height, inputSide = 'left', outputSide = 'r
   const outputPoint = svgPointStyle(circlePointForSide(outputSide), width, height, viewBox);
   return (
     <>
-      <Handle id="petri-in" type="target" position={positionFor(inputSide)} className="hiles-petri-handle hiles-petri-handle--in" style={inputPoint} />
-      <Handle id="petri-out" type="source" position={positionFor(outputSide)} className="hiles-petri-handle hiles-petri-handle--out" style={outputPoint} />
+      <Handle id="petri-in" type="target" position={positionFor(inputSide)} className="hiles-petri-handle hiles-petri-handle--in" style={inputPoint} isConnectable />
+      <Handle id="petri-out" type="source" position={positionFor(outputSide)} className="hiles-petri-handle hiles-petri-handle--out" style={outputPoint} isConnectable />
     </>
   );
 };
@@ -133,8 +143,8 @@ const TransitionPetriHandles = ({ width, height }: { width: number; height: numb
   const rightPoint = svgPointStyle({ x: 56, y: 30 }, width, height, viewBox);
   return (
     <>
-      <Handle id="petri-in" type="target" position={Position.Left} className="hiles-petri-handle hiles-petri-handle--in" style={leftPoint} />
-      <Handle id="petri-out" type="source" position={Position.Right} className="hiles-petri-handle hiles-petri-handle--out" style={rightPoint} />
+      <Handle id="petri-in" type="target" position={Position.Left} className="hiles-petri-handle hiles-petri-handle--in" style={leftPoint} isConnectable />
+      <Handle id="petri-out" type="source" position={Position.Right} className="hiles-petri-handle hiles-petri-handle--out" style={rightPoint} isConnectable />
     </>
   );
 };
@@ -146,10 +156,13 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
   const allEdges = useEditorStore((state) => state.edges);
   const disabled = !properties.enabled;
   const locked = properties.locked;
+  const displayedTokens = data.runtime?.tokens ?? properties.tokens;
 
+  const rotationStyle = properties.rotation ? { transform: `rotate(${properties.rotation}deg)` } : undefined;
   if (hilesType === HilesElementType.STRUCTURAL_BLOCK) {
     return (
       <div className={`hiles-structural ${summaryMode ? 'is-summary' : ''} ${selected ? 'is-selected' : ''} ${locked ? 'is-locked' : ''}`}>
+        <div aria-hidden="true" className="hiles-structural__shape" style={rotationStyle} />
         <NodeResizer isVisible={selected && !locked} minWidth={200} minHeight={130} lineClassName="hiles-resizer-line" handleClassName="hiles-resizer-handle" onResizeStart={beginHistoryTransaction} onResizeEnd={endHistoryTransaction} />
         <PortHandles ports={ports} />
         {summaryMode ? (
@@ -179,27 +192,28 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
     : { x: 32, y: 12, width: 36, height: 36 };
   const currentNode = allNodes.find((node) => node.id === id);
   const inputConnection = allEdges.find((edge) => edge.target === id && edge.targetHandle === 'petri-in');
-  const outputConnection = allEdges.find((edge) => edge.source === id && edge.sourceHandle === 'petri-out');
   const inputSide = currentNode
     ? sideTowardNode(currentNode, allNodes.find((node) => node.id === inputConnection?.source), allNodes, 'left')
     : 'left';
-  const outputSide = currentNode
-    ? sideTowardNode(currentNode, allNodes.find((node) => node.id === outputConnection?.target), allNodes, 'right')
-    : 'right';
+  // A Place always exposes its Petri input and output on opposite sides.
+  const outputSide = oppositeSide(inputSide);
   return (
     <div className={`hiles-node ${isPetri ? 'hiles-node--petri' : ''} ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''}`}>
       {isPetri && hilesType === HilesElementType.TRANSITION ? null : isPetri && hilesType !== HilesElementType.PLACE ? <PetriHandles /> : !isPetri && !isTriangle && !isGlyphRectangle && <PortHandles ports={ports} />}
-      <div className="hiles-node__symbol">
+      <div className="hiles-node__symbol" style={hilesType === HilesElementType.TRANSITION ? undefined : rotationStyle}>
         {hilesType === HilesElementType.PLACE && <CirclePetriHandles width={44} height={44} inputSide={inputSide} outputSide={outputSide} />}
         {hilesType === HilesElementType.TRANSITION && <TransitionPetriHandles width={glyphWidth} height={glyphHeight} />}
-        {isTriangle && <PortHandles ports={ports} triangle={{ direction: properties.operatorDirection, width: glyphWidth, height: glyphHeight }} />}
-        {isGlyphRectangle && <PortHandles ports={ports} rectangle={{ bounds: rectangleBounds, width: glyphWidth, height: glyphHeight }} />}
-        <HilesGlyph type={hilesType} width={glyphWidth} height={glyphHeight} direction={properties.operatorDirection} />
-        {isFunctional && properties.expression && <span className="hiles-node__expression">{properties.expression}</span>}
-        {hilesType === HilesElementType.PLACE && properties.tokens > 0 && <span className="hiles-place-token" aria-label={`${properties.tokens} token`} />}
+        {/* Transition rotates only its SVG bar; its Condition port text stays horizontal. */}
+        {hilesType === HilesElementType.TRANSITION && <PortHandles ports={ports} />}
+        {isTriangle && <PortHandles ports={ports} rotation={properties.rotation} triangle={{ direction: properties.operatorDirection, width: glyphWidth, height: glyphHeight }} />}
+        {isGlyphRectangle && <PortHandles ports={ports} rotation={properties.rotation} rectangle={{ bounds: rectangleBounds, width: glyphWidth, height: glyphHeight }} />}
+        <HilesGlyph type={hilesType} width={glyphWidth} height={glyphHeight} direction={properties.operatorDirection} style={hilesType === HilesElementType.TRANSITION ? rotationStyle : undefined} />
+        {isFunctional && properties.expression && <span className="hiles-node__expression" style={{ transform: `rotate(${-properties.rotation}deg)`, transformOrigin: 'center' }}>{properties.expression}</span>}
+        {hilesType === HilesElementType.PLACE && displayedTokens > 0 && <span className="hiles-place-token" aria-label={`${displayedTokens} token`} />}
       </div>
-      <div className="hiles-node__name">{name}</div>
+      <div className="hiles-node__name" style={{ transform: isPetri ? 'translateX(-50%)' : undefined }}>{name}</div>
       {hilesType === HilesElementType.TRANSITION && properties.condition && <div className="hiles-node__caption">{properties.condition}</div>}
+      {data.runtime?.value !== undefined && <div className={`hiles-node__runtime ${data.runtime.value ? 'is-on' : ''}`}>{data.runtime.value ? 'ON · 1' : 'OFF · 0'}</div>}
     </div>
   );
 };

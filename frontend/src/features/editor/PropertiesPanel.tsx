@@ -72,7 +72,7 @@ export const PropertiesPanel: React.FC = () => {
 
   const { hilesType, name, properties, ports } = selectedNode.data;
   const update = store.updateNodeProperties;
-  const portCapableTypes: HilesElementType[] = [HilesElementType.STRUCTURAL_BLOCK, HilesElementType.FUNCTIONAL_BLOCK, HilesElementType.SERVICE];
+  const portCapableTypes: HilesElementType[] = [HilesElementType.STRUCTURAL_BLOCK, HilesElementType.FUNCTIONAL_BLOCK, HilesElementType.SERVICE, HilesElementType.TRANSITION];
   const supportsPorts = portCapableTypes.includes(hilesType);
 
   return (
@@ -80,6 +80,11 @@ export const PropertiesPanel: React.FC = () => {
       <h3 style={styles.title}>Properties</h3>
       <div style={styles.typePill}>{HilesElementTranslations[hilesType]}</div>
       <Field label="Name"><TextInput value={name} onChange={(event) => store.updateNodeName(selectedNode.id, event.target.value)} /></Field>
+      <Field label="Rotation">
+        <select style={styles.input} value={properties.rotation} onChange={(event) => update(selectedNode.id, { rotation: Number(event.target.value) })}>
+          <option value={0}>0°</option><option value={90}>90°</option><option value={180}>180°</option><option value={270}>270°</option>
+        </select>
+      </Field>
 
       {hilesType === HilesElementType.STRUCTURAL_BLOCK && <>
         <Field label="Description"><TextArea value={properties.description} onChange={(event) => update(selectedNode.id, { description: event.target.value })} /></Field>
@@ -124,7 +129,7 @@ export const PropertiesPanel: React.FC = () => {
 };
 
 const styles: Record<string, React.CSSProperties> = {
-  aside: { width: 310, background: '#f8fafc', borderLeft: '1px solid #d8e0ea', padding: 15, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflowY: 'auto' },
+  aside: { width: '100%', minHeight: 0, flex: '1 1 auto', background: '#f8fafc', padding: 15, display: 'flex', flexDirection: 'column', boxSizing: 'border-box', overflowY: 'auto' },
   title: { margin: '0 0 8px', fontSize: 16, color: '#172033' },
   empty: { fontSize: 12, color: '#64748b', fontStyle: 'italic', lineHeight: 1.5 },
   help: { margin: '-3px 0 12px', color: '#64748b', fontSize: 10, lineHeight: 1.4 },

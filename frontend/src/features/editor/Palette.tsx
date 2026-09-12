@@ -11,12 +11,19 @@ const groups: Array<{ title: string; elements: HilesElementType[] }> = [
   { title: 'Converters', elements: [HilesElementType.SAMPLE, HilesElementType.HOLD] },
 ];
 
+/** The three user-creatable HiLeS channel types. TOKEN_FLOW remains import-compatible only. */
 const connections = [
-  { type: HilesConnectionType.CONTINUOUS, label: 'Continuous Channel', line: 'solid', arrow: '▶' },
-  { type: HilesConnectionType.DISCRETE, label: 'Discrete Event', line: 'solid', arrow: '▷' },
-  { type: HilesConnectionType.PETRI, label: 'Logical / Petri Channel', line: 'dashed', arrow: '▷' },
-  { type: HilesConnectionType.TOKEN_FLOW, label: 'Token Arc', line: 'solid', arrow: '▷' },
+  { type: HilesConnectionType.CONTINUOUS, label: 'Continuous Channel', stroke: '#172033', arrow: 'filled' },
+  { type: HilesConnectionType.DISCRETE, label: 'Discrete Event', stroke: '#2563eb', arrow: 'outlined' },
+  { type: HilesConnectionType.PETRI, label: 'Logical / Petri Channel', stroke: '#172033', arrow: 'chevron', dashed: true },
 ] as const;
+
+const ConnectorPreview: React.FC<{ stroke: string; arrow: 'filled' | 'outlined' | 'chevron'; dashed?: boolean }> = ({ stroke, arrow, dashed }) => (
+  <svg width="55" height="18" viewBox="0 0 55 18" aria-hidden="true" focusable="false">
+    <path d="M2 9 H45" stroke={stroke} strokeWidth="2" strokeDasharray={dashed ? '6 4' : undefined} fill="none" strokeLinecap="round" />
+    <path d={arrow === 'chevron' ? 'M45 4 L53 9 L45 14' : 'M45 4 L53 9 L45 14 Z'} stroke={stroke} strokeWidth="2" fill={arrow === 'filled' ? stroke : 'none'} strokeLinejoin="round" strokeLinecap="round" />
+  </svg>
+);
 
 export const Palette: React.FC = () => {
   const { activeConnectionType, setActiveConnectionType } = useEditorStore();
@@ -62,9 +69,7 @@ export const Palette: React.FC = () => {
               const active = activeConnectionType === connection.type;
               return (
                 <button key={connection.type} onClick={() => setActiveConnectionType(connection.type)} style={{ ...styles.connector, ...(active ? styles.connectorActive : {}) }}>
-                  <span style={{ width: 55, display: 'flex', alignItems: 'center' }}>
-                    <span style={{ flex: 1, borderTop: `2px ${connection.line} currentColor` }} />{connection.arrow}
-                  </span>
+                  <span style={{ width: 55, display: 'flex', alignItems: 'center' }}><ConnectorPreview stroke={connection.stroke} arrow={connection.arrow} dashed={'dashed' in connection && connection.dashed} /></span>
                   <span>{connection.label}</span>
                 </button>
               );

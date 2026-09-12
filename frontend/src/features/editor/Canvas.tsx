@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Background, ConnectionMode, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import type { Connection, Edge, EdgeMouseHandler, Node, NodeMouseHandler, OnNodeDrag, XYPosition } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './editor.css';
@@ -119,6 +119,17 @@ const CanvasInner: React.FC = () => {
   const onPaneClick = useCallback(() => { store.setSelectedElement(null); store.clearConnectionError(); }, [store]);
   const onNodeDragStart: OnNodeDrag = useCallback(() => store.beginHistoryTransaction(), [store]);
   const onNodeDragStop: OnNodeDrag = useCallback(() => store.endHistoryTransaction(), [store]);
+  useEffect(() => {
+    const removeSelection = (event: KeyboardEvent) => {
+      if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+      const target = event.target as HTMLElement | null;
+      if (target?.matches('input, textarea, select, [contenteditable="true"]')) return;
+      if (store.selectedElementId) { event.preventDefault(); store.deleteElement(store.selectedElementId); }
+      else if (store.selectedConnectionId) { event.preventDefault(); store.deleteConnection(store.selectedConnectionId); }
+    };
+    window.addEventListener('keydown', removeSelection);
+    return () => window.removeEventListener('keydown', removeSelection);
+  }, [store]);
 
   return (
     <div style={{ flex: 1, position: 'relative' }} ref={reactFlowWrapper}>
@@ -129,7 +140,7 @@ const CanvasInner: React.FC = () => {
         onNodeClick={onNodeClick} onEdgeClick={onEdgeClick} onPaneClick={onPaneClick}
         onNodeDragStart={onNodeDragStart} onNodeDragStop={onNodeDragStop}
         onDrop={onDrop} onDragOver={onDragOver} onViewportChange={(viewport) => setZoom(viewport.zoom)}
-        nodeTypes={nodeTypes} edgeTypes={edgeTypes} minZoom={MIN_ZOOM} maxZoom={2.5} defaultViewport={{ x: 0, y: 0, zoom: 1 }} snapToGrid snapGrid={[10, 10]}
+        nodeTypes={nodeTypes} edgeTypes={edgeTypes} connectionMode={ConnectionMode.Loose} connectOnClick minZoom={MIN_ZOOM} maxZoom={2.5} defaultViewport={{ x: 0, y: 0, zoom: 1 }} snapToGrid snapGrid={[1, 1]}
         deleteKeyCode={null}
       >
         <Background color="#cbd5e1" gap={20} />

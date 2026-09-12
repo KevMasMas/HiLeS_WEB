@@ -27,6 +27,13 @@ export type PortSide = 'left' | 'right' | 'top' | 'bottom';
 export type ConnectionRouting = 'straight' | 'curved' | 'orthogonal';
 export type OperatorDirection = 'left' | 'right' | 'up' | 'down';
 
+/** A user-owned routing point. Coordinates are local when it belongs to a Block. */
+export interface ConnectionWaypoint {
+  x: number;
+  y: number;
+  parentBlockId?: string;
+}
+
 export interface HilesPort {
   id: string;
   name: string;
@@ -51,6 +58,7 @@ export interface HilesNodeProperties {
   condition: string;
   heldValue: string;
   operatorDirection: OperatorDirection;
+  rotation: number;
 }
 
 export interface HilesNodeData extends Record<string, unknown> {
@@ -60,6 +68,8 @@ export interface HilesNodeData extends Record<string, unknown> {
   properties: HilesNodeProperties;
   /** Transient canvas presentation state; it is never serialized into the model. */
   summaryMode?: boolean;
+  /** Transient values reported by a running backend simulation. */
+  runtime?: { value?: boolean; active?: boolean; tokens?: number };
 }
 
 export interface HilesEdgeData extends Record<string, unknown> {
@@ -68,6 +78,8 @@ export interface HilesEdgeData extends Record<string, unknown> {
   dataType: PortDataType;
   delay: number;
   weight: number;
+  /** Ordered route points inserted by double-clicking an edge. */
+  waypoints?: ConnectionWaypoint[];
 }
 
 export interface HilesElement {

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Module } from '@nestjs/common';
 import { createObserveModule } from '@nestjs/observe';
 import { AppController } from './app.controller.js';
@@ -7,8 +8,15 @@ import { ElementsModule } from './modules/elements/elements.module.js';
 import { ModelsModule } from './modules/models/models.module.js';
 import { PrismaModule } from './modules/prisma/prisma.module.js';
 import { ProjectsModule } from './modules/projects/projects.module.js';
+import { SimulationModule } from './modules/simulation/simulation.module.js';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
+
+const observeAppKey = process.env.OBSERVE_APP_KEY;
+const observeAppSecret = process.env.OBSERVE_APP_SECRET;
+const observeImports = observeAppKey && observeAppSecret
+  ? [ObserveModule.forRoot({ appKey: observeAppKey, appSecret: observeAppSecret, serviceId: 'backend' })]
+  : [];
 
 @Module({
   imports: [
@@ -17,13 +25,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     ModelsModule,
     ElementsModule,
     ConnectionsModule,
-    // Distributed tracing, auto-correlated logs, request/job metrics, error
-    // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com
-    ObserveModule.forRoot({
-      appKey: 'YOUR_APP_KEY',
-      appSecret: 'YOUR_APP_SECRET',
-      serviceId: 'backend',
-    }),
+    SimulationModule,
+    ...observeImports,
   ],
   controllers: [AppController],
   providers: [AppService],

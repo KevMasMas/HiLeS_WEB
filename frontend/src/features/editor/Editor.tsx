@@ -3,6 +3,7 @@ import { Palette } from './Palette';
 import { Canvas } from './Canvas';
 import { PropertiesPanel } from './PropertiesPanel';
 import { useEditorStore } from '../../stores/useEditorStore';
+import { SimulationPanel } from '../simulation/SimulationPanel';
 
 export const Editor: React.FC = () => {
   const { exportModel, importModel, statusMessage, loadAutosave, undo, redo, canUndo, canRedo, clearModel, nodes, edges } = useEditorStore();
@@ -62,7 +63,10 @@ export const Editor: React.FC = () => {
       <div style={styles.editorArea}>
         <Palette />
         <Canvas />
-        <PropertiesPanel />
+        <div style={styles.sideRail}>
+          <SimulationPanel />
+          <PropertiesPanel />
+        </div>
       </div>
     </div>
   );
@@ -118,5 +122,15 @@ const styles = {
     flex: 1,
     overflow: 'hidden',
     position: 'relative' as const,
-  }
+  },
+  sideRail: {
+    width: 310,
+    flex: '0 0 310px',
+    minHeight: 0,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    overflow: 'hidden',
+    background: '#f8fafc',
+    borderLeft: '1px solid #d8e0ea',
+  },
 };

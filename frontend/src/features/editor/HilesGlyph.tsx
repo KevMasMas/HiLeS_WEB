@@ -7,16 +7,17 @@ interface HilesGlyphProps {
   width?: number;
   height?: number;
   direction?: OperatorDirection;
+  style?: React.CSSProperties;
 }
 
-export const HilesGlyph: React.FC<HilesGlyphProps> = ({ type, width = 88, height = 54, direction = 'right' }) => {
+export const HilesGlyph: React.FC<HilesGlyphProps> = ({ type, width = 88, height = 54, direction = 'right', style }) => {
   const common = { stroke: '#172033', strokeWidth: 3, fill: '#fff' };
   const viewBox = type === HilesElementType.PLACE ? '25 5 50 50'
     : type === HilesElementType.TRANSITION ? '42 2 16 56'
     : '0 0 100 60';
 
   return (
-    <svg width={width} height={height} viewBox={viewBox} aria-hidden="true">
+    <svg width={width} height={height} viewBox={viewBox} aria-hidden="true" style={style}>
       {type === HilesElementType.STRUCTURAL_BLOCK && <rect x="7" y="6" width="86" height="48" {...common} />}
       {type === HilesElementType.FUNCTIONAL_BLOCK && <rect x="7" y="8" width="86" height="44" rx="12" {...common} />}
       {type === HilesElementType.SERVICE && (
