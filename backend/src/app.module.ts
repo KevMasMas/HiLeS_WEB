@@ -6,7 +6,6 @@ import { AppService } from './app.service.js';
 import { ConnectionsModule } from './modules/connections/connections.module.js';
 import { ElementsModule } from './modules/elements/elements.module.js';
 import { ModelsModule } from './modules/models/models.module.js';
-import { PrismaModule } from './modules/prisma/prisma.module.js';
 import { ProjectsModule } from './modules/projects/projects.module.js';
 import { SimulationModule } from './modules/simulation/simulation.module.js';
 
@@ -20,7 +19,6 @@ const observeImports = observeAppKey && observeAppSecret
 
 @Module({
   imports: [
-    PrismaModule,
     ProjectsModule,
     ModelsModule,
     ElementsModule,

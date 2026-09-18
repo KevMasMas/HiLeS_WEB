@@ -92,11 +92,11 @@ La prueba no se considera terminada sólo porque el circuito de demostración ca
 
 ### Julián Romero - backend y motor del demo (P0)
 
-- [ ] Revisar que el servidor Nest inicie sin depender de telemetría de ejemplo ni errores externos.
-- [ ] Verificar endpoints del demo: estado, entrada y reinicio.
-- [ ] Verificar la cola FIFO, movimiento atómico de token y publicación de la salida.
-- [ ] Ejecutar pruebas automáticas del servicio y registrar el resultado.
-- [ ] Confirmar que enviar dos veces el mismo valor no duplica tokens.
+- [x] Revisar que el servidor Nest inicie sin depender de telemetría de ejemplo ni errores externos.
+- [x] Verificar endpoints del demo: estado, entrada y reinicio.
+- [x] Verificar la cola FIFO, movimiento atómico de token y publicación de la salida.
+- [x] Ejecutar pruebas automáticas del servicio y registrar el resultado.
+- [x] Confirmar que enviar dos veces el mismo valor no duplica tokens.
 
 ### Juan Ramos - integración front-back y cierre técnico (P0)
 
