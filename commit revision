@@ -1,0 +1,108 @@
+[33mcommit 1cc3f931167515e9b67c1c4d761672e5cd69835e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Merge: 263ebe2 ef4b493
+Author: KevMasMas <kevindavidrincon01@gmail.com>
+Date:   Fri Sep 11 20:40:53 2026 -0500
+
+    Merge branch 'front'
+
+[33mcommit ef4b493875fe4ce34509fc2bfbe060491ac6af86[m[33m ([m[1;31morigin/front[m[33m, [m[1;32mfront[m[33m)[m
+Author: KevMasMas <kevindavidrincon01@gmail.com>
+Date:   Fri Sep 11 20:33:56 2026 -0500
+
+     Se implementaron arreglos visuales como pliegues en las flechas, rotacion de elementos, queda pendiente revision de conexcion de cada elemento con las flechas. De igual forma se realizo primera version de back con la creacion de un demo para probar el paso del token
+
+[33mcommit 0efa00331baaf8b1a6bc64d50f0cbe580db5223e[m
+Author: JulianRomero17 <julianromerob.17@gmail.com>
+Date:   Thu Sep 10 22:17:43 2026 -0500
+
+    se continuo con la incorporacion de las conexiones hacia los componentes + se implemento el menu hamburguesa
+
+[33mcommit eaf6bcb370b9ca0abee0a6cabef1e3cef8c8ad41[m
+Author: JulianRomero17 <julianromerob.17@gmail.com>
+Date:   Thu Sep 10 20:30:36 2026 -0500
+
+    Se corrigio desfase visual en los conectores de los nodos
+
+[33mcommit 05bc9f912b35df99b02c3c578b4233d897844290[m
+Author: JulianRomero17 <julianromerob.17@gmail.com>
+Date:   Thu Sep 10 14:46:01 2026 -0500
+
+    Se ajusto la figura de los triangulos
+
+[33mcommit 3a593688c6523df2e5dda266b0fb0d4831118aa5[m
+Author: juandav08 <juandavidromero2003@gmail.com>
+Date:   Fri Sep 4 11:11:24 2026 -0500
+
+    arregle un problema con el zoom
+
+[33mcommit a4204c8a74bb6ab06c386f6cd62b2026b1d2bc22[m
+Author: Juandav08 <juandavidromero2003@gmail.com>
+Date:   Thu Sep 3 11:31:27 2026 -0500
+
+    agregue controlz, undo, redo, new project, persistencia despues del f5, recree nuevamente la figura 29,y mejore zoomout
+
+[33mcommit 75ea6c1d0484ec51fc56f7845673c64d22902dbc[m
+Author: JulianRomero17 <julianromerob.17@gmail.com>
+Date:   Thu Sep 3 10:44:55 2026 -0500
+
+    Correccion de texto
+
+[33mcommit b4184febfad007ac39e55fbbed289d9c8277a1a8[m
+Author: IvanPrado23 <ivanfelipeskate@hotmail.com>
+Date:   Wed Sep 2 23:38:25 2026 -0500
+
+    Tighter space within components in the circuit
+
+[33mcommit 74ce8220386e17cdad7abff26c85b5eaa04e8ac8[m
+Author: juandav08 <juandavidromero2003@gmail.com>
+Date:   Wed Sep 2 21:34:51 2026 -0500
+
+    recree la figura 29 en la carpeta output
+
+[33mcommit 8bbac7bdc4eb8ba07791f3d420174cf01049aebb[m
+Author: KevMasMas <kevindavidrincon01@gmail.com>
+Date:   Wed Sep 2 19:09:27 2026 -0500
+
+     Se edito un pedazo visual de de los Converters y se agrego exportacion e importacion por JSON
+
+[33mcommit 868cc3b22155fdf254a1719b87925887cc1ca1ec[m
+Author: juandav08 <juandavidromero2003@gmail.com>
+Date:   Tue Sep 1 23:57:44 2026 -0500
+
+    se mejoro la logica y se corrigeiron errores visuales
+
+[33mcommit 79cc49558561eea8b0dee8a4f078dce15069665c[m
+Author: juandav08 <juandavidromero2003@gmail.com>
+Date:   Tue Sep 1 23:35:42 2026 -0500
+
+    se agregaron componentes, conexiones, se corriegieron figuras, vista con zoom, blñoque estructural
+
+[33mcommit 6e24bf4e5bde87d378771c0405d69fb2c84fc758[m
+Author: KevMasMas <kevindavidrincon01@gmail.com>
+Date:   Tue Sep 1 20:18:13 2026 -0500
+
+    Se agrego documento de referencia de hiles y se elimino el .env.example, para que configuren sus .env a una base de datos local
+
+[33mcommit 3c89ef76961ba38491264eed515bd525497a2f9b[m
+Author: SalasinformaticaUD <adminsalas@udistrital.edu.co>
+Date:   Thu Aug 27 19:22:06 2026 -0500
+
+    Avance front pipipipe
+
+[33mcommit a9ef667bfd34463a7a04fd0c49dc7c774fa5f16c[m[33m ([m[1;31morigin/master[m[33m, [m[1;32mmaster[m[33m)[m
+Author: Juandav08 <juandavidromero2003@gmail.com>
+Date:   Thu Aug 27 11:53:05 2026 -0500
+
+    feat: add initial HiLeS persistence model
+
+[33mcommit a8baa7ff25c9efb355905a231fbbca65022394d1[m
+Author: valeld <vlariosd@udistrital.edu.co>
+Date:   Thu Aug 27 11:45:56 2026 -0500
+
+     no deja subir
+
+[33mcommit 263ebe2ab7af87d006024bcacf9970f448a07fa0[m[33m ([m[1;31morigin/Prueba[m[33m)[m
+Author: KevMasMas <Kevindavidrincon01@gmail.com>
+Date:   Thu Aug 27 06:58:07 2026 -0500
+
+    Initial commit
