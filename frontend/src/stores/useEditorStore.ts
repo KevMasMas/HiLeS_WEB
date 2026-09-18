@@ -107,9 +107,16 @@ const createPort = (direction: PortDirection, name?: string, nature: HilesPort['
 
 const defaultPorts = (type: HilesElementType): HilesPort[] => {
   if (type === HilesElementType.FUNCTIONAL_BLOCK) return [createPort('input'), createPort('output')];
-  // A transition may be enabled by a data/condition signal in addition to its
-  // Petri arcs. It is a normal input port, not a Petri token handle.
-  if (type === HilesElementType.TRANSITION) return [{ ...createPort('input', 'Condition'), id: 'transition-condition-in', dataType: 'boolean', side: 'top', offset: 0.5 }];
+  // A transition may be enabled by a data/condition signal (top) in addition to its
+  // Petri arcs, and emit an action/signal (bottom) when fired towards the circuit output.
+  if (type === HilesElementType.TRANSITION) return [
+    { ...createPort('input', 'Condition'), id: 'transition-condition-in', dataType: 'boolean', side: 'top', offset: 0.5 },
+    { ...createPort('output', 'Action'), id: 'transition-action-out', dataType: 'boolean', side: 'bottom', offset: 0.5 },
+  ];
+  if (type === HilesElementType.SERVICE) return [
+    { ...createPort('input', 'In'), id: `IN_${crypto.randomUUID()}`, dataType: 'boolean', side: 'left', offset: 0.5 },
+    { ...createPort('output', 'Out'), id: `OUT_${crypto.randomUUID()}`, dataType: 'boolean', side: 'right', offset: 0.5 },
+  ];
   if (type === HilesElementType.SAMPLE || type === HilesElementType.HOLD) return operatorPorts(type, 'right');
   return [];
 };
@@ -152,19 +159,19 @@ export const getConnectionValidation = (nodes: HilesNode[], connection: Connecti
   const sourceType = asData(source).hilesType;
   const targetType = asData(target).hilesType;
 
-  if (type === HilesConnectionType.TOKEN_FLOW) {
-    const validPair = (sourceType === HilesElementType.PLACE && targetType === HilesElementType.TRANSITION)
-      || (sourceType === HilesElementType.TRANSITION && targetType === HilesElementType.PLACE);
-    return validPair
-      ? { valid: true, reason: '' }
-      : { valid: false, reason: 'Token Arcs must alternate Place and Transition.' };
+  // Unify Petri and Token Flow validation: places and transitions alternate.
+  const isPetriPair = (sourceType === HilesElementType.PLACE && targetType === HilesElementType.TRANSITION)
+    || (sourceType === HilesElementType.TRANSITION && targetType === HilesElementType.PLACE);
+
+  if (type === HilesConnectionType.TOKEN_FLOW || type === HilesConnectionType.PETRI) {
+    if (isPetriPair) return { valid: true, reason: '' };
+    if (type === HilesConnectionType.TOKEN_FLOW) {
+      return { valid: false, reason: 'Token Arcs must alternate Place and Transition.' };
+    }
   }
 
-  // Petri places and transitions expose dedicated invisible handles rather
-  // than data ports. The selected Petri connector must therefore accept them.
-  if (type === HilesConnectionType.PETRI
-    && ((sourceType === HilesElementType.PLACE && targetType === HilesElementType.TRANSITION)
-      || (sourceType === HilesElementType.TRANSITION && targetType === HilesElementType.PLACE))) {
+  // If a Petri handle was dragged directly, accept if it alternates Place/Transition
+  if (isPetriPair && (connection.sourceHandle?.startsWith('petri') || connection.targetHandle?.startsWith('petri'))) {
     return { valid: true, reason: '' };
   }
 
@@ -178,7 +185,11 @@ export const getConnectionValidation = (nodes: HilesNode[], connection: Connecti
   if (type !== HilesConnectionType.PETRI && (sourcePort.nature === 'control' || targetPort.nature === 'control')) {
     return { valid: false, reason: 'Data channels cannot connect control ports.' };
   }
-  const typesMatch = sourcePort.dataType === targetPort.dataType || sourcePort.dataType === 'custom' || targetPort.dataType === 'custom';
+  const typesMatch = sourcePort.dataType === targetPort.dataType
+    || sourcePort.dataType === 'custom'
+    || targetPort.dataType === 'custom'
+    || (sourcePort.dataType === 'boolean' && targetPort.dataType === 'real')
+    || (sourcePort.dataType === 'real' && targetPort.dataType === 'boolean');
   return typesMatch ? { valid: true, reason: '' } : { valid: false, reason: 'Port data types are incompatible.' };
 };
 
@@ -324,16 +335,13 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
     const appearance = edgeAppearance(type);
     const count = get().edges.filter((edge) => edge.data?.hilesConnectionType === type).length + 1;
-    const edge: HilesEdge = {
+    const edge: HilesEdge = normalizeEdge({
       ...connection,
       id: `${type}-${crypto.randomUUID()}`,
-      type: 'smoothstep', label: `${appearance.prefix}${count}`,
+      type: 'hilesEdge',
+      label: `${appearance.prefix}${count}`,
       data: { hilesConnectionType: type, routing: 'orthogonal', dataType: 'real', delay: 0, weight: 1, waypoints: [] },
-      style: { stroke: appearance.stroke, strokeWidth: 2.2, strokeDasharray: appearance.dash },
-      markerEnd: { type: appearance.marker, color: appearance.stroke },
-      labelStyle: { fill: appearance.stroke, fontWeight: 700, fontSize: 11 },
-      labelBgStyle: { fill: '#fff', fillOpacity: 0.9 },
-    };
+    } as HilesEdge);
     const state = get();
     set({ edges: addEdge(edge, state.edges), connectionError: null, ...historyFor(state, snapshotOf(state)) });
   },

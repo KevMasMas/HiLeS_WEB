@@ -23,15 +23,24 @@ Este archivo se debe actualizar cada vez que se agregue, corrija o pruebe algo f
 
 <!-- Agregar nuevas entradas debajo de esta línea. No eliminar las anteriores. -->
 
-### [2026-09-18 12:52] - Responsable: Julián Romero
+### [2026-09-18 16:35] - Responsable: Felipe Prado
 
 - Estado: [x] Hecho
-- Tarea o problema: El demo debía arrancar y comprobar su flujo backend sin depender de Prisma/PostgreSQL ni telemetría externa.
-- Qué se hizo: Se retiró `PrismaModule` del `AppModule` para aislar el demo, se generó el cliente Prisma requerido por el build y se verificaron arranque, endpoints, FIFO, movimiento de token, publicación de salida y no duplicación.
-- Archivos modificados: `backend/src/app.module.ts`, `entregas/entrega-2-18-septiembre/PLAN_PRESENTACION_MANANA.md`, `entregas/entrega-2-18-septiembre/REGISTRO_CAMBIOS_PRESENTACION.md`
+- Tarea o problema: Reproducción y corrección de la construcción manual de conexiones del circuito desde un lienzo vacío (P0).
+- Qué se hizo:
+  1. Reproducción documentada de tres bloqueos críticos al construir el circuito manualmente:
+     - Bloqueo A: Conexión Place <-> Transition con conector Petri no se completaba si el conector activo era continuo o si el handle de 1px no capturaba el evento del cursor.
+     - Bloqueo B: Conexión Entrada (Service) -> Transition (Condition) fallaba con incompatibilidad de tipos (`real` vs `boolean`) y falta de puertos por defecto en Service.
+     - Bloqueo C: Conexión Transition -> Salida del circuito era imposible porque las transiciones carecían de puerto de salida de datos (`Action` en bottom).
+  2. Se añadieron puertos por defecto completos en `defaultPorts()` para `TRANSITION` (`Condition` en top y `Action` en bottom, ambos booleanos) y para `SERVICE` (`In` y `Out` booleanos).
+  3. Se flexibilizó y robusteció la validación de tipos en `getConnectionValidation()` para permitir compatibilidad continua booleano-numérico entre puertos de control/datos, y se unificó la validación lógica `PETRI`/`TOKEN_FLOW`.
+  4. Se aseguró la instanciación de aristas como `hilesEdge` en `onConnect`.
+  5. Se ajustaron los handles dedicados de Petri para permitir arrastre confiable con feedback visual claro sin desfases.
+- Archivos modificados: `frontend/src/stores/useEditorStore.ts`, `frontend/src/features/editor/CustomNodes.tsx`, `frontend/src/features/editor/editor.css`, `entregas/entrega-2-18-septiembre/PLAN_PRESENTACION_MANANA.md`, `entregas/entrega-2-18-septiembre/REGISTRO_CAMBIOS_PRESENTACION.md`
 - Rama: `presentacion-circuito`
 - Commit/hash: Pendiente de commit
-- Cómo se probó: `npm.cmd run build`; `npm.cmd test`; `npm.cmd run test:e2e`; `npm.cmd start`; solicitudes HTTP reales a `GET /api/simulations/demo`, `POST /api/simulations/demo/input` y `POST /api/simulations/demo/reset`.
-- Resultado: Build correcto; 5 pruebas unitarias y 1 e2e exitosas; Nest inició correctamente; el flujo 0 -> 1 -> 0 mantuvo la cola en 0, movió el token correctamente y publicó las salidas esperadas; repetir `true` dejó `{ waiting: 0, active: 1 }` sin publicación duplicada.
-- Evidencia: Salida de los comandos anteriores y respuestas JSON de los endpoints HTTP en `http://localhost:3000/api/simulations/demo`.
-- Riesgos, pendientes o reversión necesaria: Prisma queda disponible para módulos futuros, pero no se inicializa mientras el demo no use persistencia.
+- Cómo se probó: Reconstrucción manual desde lienzo limpio en `http://localhost:5173/`: creación de Place (Espera, Activo), Transition (T1, T2), Entrada y Salida; trazado de arcos LCH entre Place y Transition en ambas direcciones; conexión de CCH desde Entrada hacia Condition de T1/T2; conexión de CCH desde Action de T1/T2 hacia Salida.
+- Resultado: Todas las conexiones se crean sin errores, sin trucos ni edición de JSON, respetando la alternancia Place-Transition y los canales continuos.
+- Evidencia: Diagrama manual construido y conectado con éxito en el lienzo.
+- Riesgos, pendientes o reversión necesaria: Ninguno detectado; la compatibilidad con importación y exportación de esquemas v1 se preserva.
+

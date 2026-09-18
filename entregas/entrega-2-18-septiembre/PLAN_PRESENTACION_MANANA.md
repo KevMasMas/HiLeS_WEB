@@ -76,10 +76,10 @@ La prueba no se considera terminada sólo porque el circuito de demostración ca
 
 ### Felipe Prado - conexiones y reproducción del fallo (P0)
 
-- [ ] Reproducir el fallo de construcción manual desde un lienzo vacío.
-- [ ] Escribir pasos exactos de reproducción en el registro: elemento, conector, handle y mensaje obtenido.
-- [ ] Corregir la validación o los handles necesarios para que Place/Transition y puertos de datos se conecten correctamente.
-- [ ] Probar las tres familias de conexión: continua, discreta y lógica/Petri.
+- [x] Reproducir el fallo de construcción manual desde un lienzo vacío.
+- [x] Escribir pasos exactos de reproducción en el registro: elemento, conector, handle y mensaje obtenido.
+- [x] Corregir la validación o los handles necesarios para que Place/Transition y puertos de datos se conecten correctamente.
+- [x] Probar las tres familias de conexión: continua, discreta y lógica/Petri.
 - [ ] Entregar captura o video corto del circuito recreado manualmente y el hash del commit.
 
 ### Juan Romero - movimiento, rutas y presentación visual (P0)

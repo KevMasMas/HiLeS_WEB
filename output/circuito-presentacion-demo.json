@@ -1,0 +1,349 @@
+{
+  "schemaVersion": 1,
+  "metadata": {
+    "savedAt": "2026-09-18T21:40:00.000Z",
+    "description": "Circuito HiLeS de Demostración y Presentación (0 -> 1 -> 0)"
+  },
+  "network": {
+    "topology": null,
+    "protocol": null,
+    "nodes": []
+  },
+  "allElements": [
+    {
+      "id": "demo-input",
+      "type": "SERVICE",
+      "name": "Entrada",
+      "layout": { "x": 280, "y": 200 },
+      "ports": [
+        {
+          "id": "demo-input-out",
+          "name": "Valor",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Entrada booleana enviada al backend.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "demo-waiting",
+      "type": "PLACE",
+      "name": "Espera",
+      "layout": { "x": 440, "y": 120 },
+      "ports": [],
+      "properties": {
+        "description": "Estado inactivo inicial con token.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "demo-activate",
+      "type": "TRANSITION",
+      "name": "T1 · Activar",
+      "layout": { "x": 580, "y": 120 },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "demo-activate-out",
+          "name": "Salida",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Dispara cuando la entrada es 1 y el token está en Espera.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "entrada == true",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "demo-active",
+      "type": "PLACE",
+      "name": "Activo",
+      "layout": { "x": 720, "y": 120 },
+      "ports": [],
+      "properties": {
+        "description": "Estado activo cuando el circuito está ON.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "demo-deactivate",
+      "type": "TRANSITION",
+      "name": "T2 · Desactivar",
+      "layout": { "x": 580, "y": 340 },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "demo-deactivate-out",
+          "name": "Salida",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Dispara cuando la entrada es 0 y el token está en Activo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "entrada == false",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "demo-output",
+      "type": "SERVICE",
+      "name": "Salida",
+      "layout": { "x": 860, "y": 200 },
+      "ports": [
+        {
+          "id": "demo-output-in",
+          "name": "Estado",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Salida calculada por el runtime del backend.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    }
+  ],
+  "relationNode": [],
+  "connections": [
+    {
+      "id": "demo-cch1-on",
+      "label": "CCH1",
+      "source": "demo-input",
+      "target": "demo-activate",
+      "sourceHandle": "demo-input-out",
+      "targetHandle": "transition-condition-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "demo-cch1-off",
+      "label": "CCH1",
+      "source": "demo-input",
+      "target": "demo-deactivate",
+      "sourceHandle": "demo-input-out",
+      "targetHandle": "transition-condition-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "demo-lch1",
+      "label": "LCH1",
+      "source": "demo-waiting",
+      "target": "demo-activate",
+      "sourceHandle": "petri-out",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "demo-lch2",
+      "label": "LCH2",
+      "source": "demo-activate",
+      "target": "demo-active",
+      "sourceHandle": "petri-out",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "demo-lch3",
+      "label": "LCH3",
+      "source": "demo-active",
+      "target": "demo-deactivate",
+      "sourceHandle": "petri-out",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "demo-lch4",
+      "label": "LCH4",
+      "source": "demo-deactivate",
+      "target": "demo-waiting",
+      "sourceHandle": "petri-out",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "demo-cch2-on",
+      "label": "CCH2",
+      "source": "demo-activate",
+      "target": "demo-output",
+      "sourceHandle": "demo-activate-out",
+      "targetHandle": "demo-output-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "demo-cch2-off",
+      "label": "CCH2",
+      "source": "demo-deactivate",
+      "target": "demo-output",
+      "sourceHandle": "demo-deactivate-out",
+      "targetHandle": "demo-output-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    }
+  ]
+}
