@@ -34,4 +34,4 @@ Este archivo se debe actualizar cada vez que se agregue, corrija o pruebe algo f
 - Cómo se probó: `npm.cmd run build`; `npm.cmd test`; `npm.cmd run test:e2e`; `npm.cmd start`; solicitudes HTTP reales a `GET /api/simulations/demo`, `POST /api/simulations/demo/input` y `POST /api/simulations/demo/reset`.
 - Resultado: Build correcto; 5 pruebas unitarias y 1 e2e exitosas; Nest inició correctamente; el flujo 0 -> 1 -> 0 mantuvo la cola en 0, movió el token correctamente y publicó las salidas esperadas; repetir `true` dejó `{ waiting: 0, active: 1 }` sin publicación duplicada.
 - Evidencia: Salida de los comandos anteriores y respuestas JSON de los endpoints HTTP en `http://localhost:3000/api/simulations/demo`.
-- Riesgos, pendientes o reversión necesaria: Prisma queda disponible para módulos futuros, pero no se inicializa mientras el demo no use persistencia; no se realizó commit ni push.
+- Riesgos, pendientes o reversión necesaria: Prisma queda disponible para módulos futuros, pero no se inicializa mientras el demo no use persistencia.
