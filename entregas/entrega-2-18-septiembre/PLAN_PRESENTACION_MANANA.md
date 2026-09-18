@@ -84,11 +84,11 @@ La prueba no se considera terminada sólo porque el circuito de demostración ca
 
 ### Juan Romero - movimiento, rutas y presentación visual (P0)
 
-- [ ] Revisar arrastre de nodos, aristas y bloques estructurales con el circuito manual armado.
-- [ ] Corregir rutas que se desprendan, se inviertan, se oculten o crucen de forma ilegible al mover un nodo.
-- [ ] Revisar waypoints, etiquetas y handles visuales.
-- [ ] Corregir advertencias/errores de consola de las aristas sin cambiar su semántica.
-- [ ] Preparar una disposición limpia y legible del circuito para la demostración.
+- [x] Revisar arrastre de nodos, aristas y bloques estructurales con el circuito manual armado.
+- [x] Corregir rutas que se desprendan, se inviertan, se oculten o crucen de forma ilegible al mover un nodo.
+- [x] Revisar waypoints, etiquetas y handles visuales.
+- [x] Corregir advertencias/errores de consola de las aristas sin cambiar su semántica.
+- [x] Preparar una disposición limpia y legible del circuito para la demostración.
 
 ### Julián Romero - backend y motor del demo (P0)
 
