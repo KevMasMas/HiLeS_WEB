@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { HilesConnectionType, HilesElementType } from '../../types/hiles';
 import { HilesElementTranslations } from '../../types/translations';
 import { useEditorStore } from '../../stores/useEditorStore';
@@ -26,8 +26,7 @@ const ConnectorPreview: React.FC<{ stroke: string; arrow: 'filled' | 'outlined' 
 );
 
 export const Palette: React.FC = () => {
-  const { activeConnectionType, setActiveConnectionType } = useEditorStore();
-  const [open, setOpen] = useState(true);
+  const { activeConnectionType, setActiveConnectionType, paletteOpen: open, setPaletteOpen } = useEditorStore();
 
   const onDragStart = (event: React.DragEvent<HTMLDivElement>, nodeType: HilesElementType) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
@@ -40,7 +39,7 @@ export const Palette: React.FC = () => {
         type="button"
         aria-label={open ? 'Close HiLeS elements menu' : 'Open HiLeS elements menu'}
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => setPaletteOpen(!open)}
         style={styles.menuButton}
       >
         <span aria-hidden="true">☰</span>

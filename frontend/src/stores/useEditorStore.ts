@@ -29,6 +29,7 @@ interface EditorState {
   activeConnectionType: HilesConnectionType;
   connectionError: string | null;
   statusMessage: string | null;
+  paletteOpen: boolean;
   past: ModelSnapshot[];
   future: ModelSnapshot[];
   canUndo: boolean;
@@ -50,6 +51,7 @@ interface EditorState {
   setSelectedElement: (id: string | null) => void;
   setSelectedConnection: (id: string | null) => void;
   setActiveConnectionType: (type: HilesConnectionType) => void;
+  setPaletteOpen: (open: boolean) => void;
   clearConnectionError: () => void;
   beginHistoryTransaction: () => void;
   endHistoryTransaction: () => void;
@@ -235,12 +237,12 @@ const demoPort = (id: string, name: string, direction: PortDirection, side: Hile
 });
 
 const DEMO_POSITIONS: Record<string, XYPosition> = {
-  'demo-input': { x: 310, y: 185 },
-  'demo-waiting': { x: 430, y: 120 },
-  'demo-activate': { x: 560, y: 120 },
-  'demo-active': { x: 690, y: 120 },
-  'demo-deactivate': { x: 560, y: 350 },
-  'demo-output': { x: 820, y: 185 },
+  'demo-input': { x: 250, y: 235 },
+  'demo-waiting': { x: 420, y: 110 },
+  'demo-activate': { x: 580, y: 110 },
+  'demo-active': { x: 740, y: 110 },
+  'demo-deactivate': { x: 580, y: 360 },
+  'demo-output': { x: 910, y: 235 },
 };
 
 const demoConnection = (
@@ -294,21 +296,21 @@ const createDemoCircuit = (): ModelSnapshot => {
     },
   ];
   const edges: HilesEdge[] = [
-    demoConnection('demo-cch1-on', 'CCH1', 'demo-input', 'demo-activate', HilesConnectionType.CONTINUOUS, 'demo-input-out', 'transition-condition-in'),
-    demoConnection('demo-cch1-off', 'CCH1', 'demo-input', 'demo-deactivate', HilesConnectionType.CONTINUOUS, 'demo-input-out', 'transition-condition-in'),
+    demoConnection('demo-cch1-on', 'CCH1 · ON', 'demo-input', 'demo-activate', HilesConnectionType.CONTINUOUS, 'demo-input-out', 'transition-condition-in'),
+    demoConnection('demo-cch1-off', 'CCH1 · OFF', 'demo-input', 'demo-deactivate', HilesConnectionType.CONTINUOUS, 'demo-input-out', 'transition-condition-in'),
     demoConnection('demo-lch1', 'LCH1', 'demo-waiting', 'demo-activate', HilesConnectionType.PETRI, 'petri-out', 'petri-in'),
     demoConnection('demo-lch2', 'LCH2', 'demo-activate', 'demo-active', HilesConnectionType.PETRI, 'petri-out', 'petri-in'),
     demoConnection('demo-lch3', 'LCH3', 'demo-active', 'demo-deactivate', HilesConnectionType.PETRI, 'petri-out', 'petri-in'),
     demoConnection('demo-lch4', 'LCH4', 'demo-deactivate', 'demo-waiting', HilesConnectionType.PETRI, 'petri-out', 'petri-in'),
-    demoConnection('demo-cch2-on', 'CCH2', 'demo-activate', 'demo-output', HilesConnectionType.CONTINUOUS, 'demo-activate-out', 'demo-output-in'),
-    demoConnection('demo-cch2-off', 'CCH2', 'demo-deactivate', 'demo-output', HilesConnectionType.CONTINUOUS, 'demo-deactivate-out', 'demo-output-in'),
+    demoConnection('demo-cch2-on', 'CCH2 · ON', 'demo-activate', 'demo-output', HilesConnectionType.CONTINUOUS, 'demo-activate-out', 'demo-output-in'),
+    demoConnection('demo-cch2-off', 'CCH2 · OFF', 'demo-deactivate', 'demo-output', HilesConnectionType.CONTINUOUS, 'demo-deactivate-out', 'demo-output-in'),
   ];
   return { nodes, edges };
 };
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   nodes: [], edges: [], selectedElementId: null, selectedConnectionId: null,
-  activeConnectionType: HilesConnectionType.CONTINUOUS, connectionError: null, statusMessage: null,
+  activeConnectionType: HilesConnectionType.CONTINUOUS, connectionError: null, statusMessage: null, paletteOpen: true,
   past: [], future: [], canUndo: false, canRedo: false,
 
   onNodesChange: (changes) => {
@@ -443,6 +445,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setSelectedElement: (id) => set({ selectedElementId: id, selectedConnectionId: null }),
   setSelectedConnection: (id) => set({ selectedConnectionId: id, selectedElementId: null }),
   setActiveConnectionType: (type) => set({ activeConnectionType: type, connectionError: null }),
+  setPaletteOpen: (open) => set({ paletteOpen: open }),
   clearConnectionError: () => set({ connectionError: null }),
   beginHistoryTransaction: () => {
     if (!transactionSnapshot) transactionSnapshot = snapshotOf(get());
@@ -483,17 +486,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedConnectionId: null,
       connectionError: null,
       statusMessage: 'Circuito demo cargado',
+      paletteOpen: false,
       ...historyFor(state, snapshotOf(state)),
     });
   },
   applyDemoState: (runtimeState) => set((state) => ({
     nodes: state.nodes.map((node) => {
-      const position = DEMO_POSITIONS[node.id] ?? node.position;
-      if (node.id === 'demo-input') return { ...node, position, data: { ...node.data, runtime: { value: runtimeState.input } } };
-      if (node.id === 'demo-output') return { ...node, position, data: { ...node.data, runtime: { value: runtimeState.output } } };
-      if (node.id === 'demo-waiting') return { ...node, position, data: { ...node.data, runtime: { tokens: runtimeState.places.waiting, active: runtimeState.places.waiting > 0 } } };
-      if (node.id === 'demo-active') return { ...node, position, data: { ...node.data, runtime: { tokens: runtimeState.places.active, active: runtimeState.places.active > 0 } } };
-      if (position !== node.position) return { ...node, position };
+      if (node.id === 'demo-input') return { ...node, data: { ...node.data, runtime: { value: runtimeState.input } } };
+      if (node.id === 'demo-output') return { ...node, data: { ...node.data, runtime: { value: runtimeState.output } } };
+      if (node.id === 'demo-waiting') return { ...node, data: { ...node.data, runtime: { tokens: runtimeState.places.waiting, active: runtimeState.places.waiting > 0 } } };
+      if (node.id === 'demo-active') return { ...node, data: { ...node.data, runtime: { tokens: runtimeState.places.active, active: runtimeState.places.active > 0 } } };
       return node;
     }),
   })),

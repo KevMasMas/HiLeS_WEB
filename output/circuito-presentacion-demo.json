@@ -14,7 +14,7 @@
       "id": "demo-input",
       "type": "SERVICE",
       "name": "Entrada",
-      "layout": { "x": 280, "y": 200 },
+      "layout": { "x": 250, "y": 235 },
       "ports": [
         {
           "id": "demo-input-out",
@@ -47,7 +47,7 @@
       "id": "demo-waiting",
       "type": "PLACE",
       "name": "Espera",
-      "layout": { "x": 440, "y": 120 },
+      "layout": { "x": 420, "y": 110 },
       "ports": [],
       "properties": {
         "description": "Estado inactivo inicial con token.",
@@ -70,7 +70,7 @@
       "id": "demo-activate",
       "type": "TRANSITION",
       "name": "T1 · Activar",
-      "layout": { "x": 580, "y": 120 },
+      "layout": { "x": 580, "y": 110 },
       "ports": [
         {
           "id": "transition-condition-in",
@@ -112,7 +112,7 @@
       "id": "demo-active",
       "type": "PLACE",
       "name": "Activo",
-      "layout": { "x": 720, "y": 120 },
+      "layout": { "x": 740, "y": 110 },
       "ports": [],
       "properties": {
         "description": "Estado activo cuando el circuito está ON.",
@@ -135,7 +135,7 @@
       "id": "demo-deactivate",
       "type": "TRANSITION",
       "name": "T2 · Desactivar",
-      "layout": { "x": 580, "y": 340 },
+      "layout": { "x": 580, "y": 360 },
       "ports": [
         {
           "id": "transition-condition-in",
@@ -177,7 +177,7 @@
       "id": "demo-output",
       "type": "SERVICE",
       "name": "Salida",
-      "layout": { "x": 860, "y": 200 },
+      "layout": { "x": 910, "y": 235 },
       "ports": [
         {
           "id": "demo-output-in",
@@ -211,7 +211,7 @@
   "connections": [
     {
       "id": "demo-cch1-on",
-      "label": "CCH1",
+      "label": "CCH1 · ON",
       "source": "demo-input",
       "target": "demo-activate",
       "sourceHandle": "demo-input-out",
@@ -228,7 +228,7 @@
     },
     {
       "id": "demo-cch1-off",
-      "label": "CCH1",
+      "label": "CCH1 · OFF",
       "source": "demo-input",
       "target": "demo-deactivate",
       "sourceHandle": "demo-input-out",
@@ -313,7 +313,7 @@
     },
     {
       "id": "demo-cch2-on",
-      "label": "CCH2",
+      "label": "CCH2 · ON",
       "source": "demo-activate",
       "target": "demo-output",
       "sourceHandle": "demo-activate-out",
@@ -330,7 +330,7 @@
     },
     {
       "id": "demo-cch2-off",
-      "label": "CCH2",
+      "label": "CCH2 · OFF",
       "source": "demo-deactivate",
       "target": "demo-output",
       "sourceHandle": "demo-deactivate-out",

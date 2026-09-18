@@ -101,7 +101,7 @@ const absoluteNodePosition = (node: Node, nodes: Node[]) => {
   return { x, y };
 };
 
-const sideTowardNode = (node: Node, other: Node | undefined, nodes: Node[], fallback: 'left' | 'right'): 'left' | 'right' | 'top' | 'bottom' => {
+const sideTowardNode = (node: Node, other: Node | undefined, nodes: Node[], fallback: 'left' | 'right' | 'top' | 'bottom'): 'left' | 'right' | 'top' | 'bottom' => {
   if (!other) return fallback;
   const nodePosition = absoluteNodePosition(node, nodes);
   const otherPosition = absoluteNodePosition(other, nodes);
@@ -192,11 +192,13 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
     : { x: 32, y: 12, width: 36, height: 36 };
   const currentNode = allNodes.find((node) => node.id === id);
   const inputConnection = allEdges.find((edge) => edge.target === id && edge.targetHandle === 'petri-in');
+  const outputConnection = allEdges.find((edge) => edge.source === id && edge.sourceHandle === 'petri-out');
   const inputSide = currentNode
     ? sideTowardNode(currentNode, allNodes.find((node) => node.id === inputConnection?.source), allNodes, 'left')
     : 'left';
-  // A Place always exposes its Petri input and output on opposite sides.
-  const outputSide = oppositeSide(inputSide);
+  const outputSide = currentNode
+    ? sideTowardNode(currentNode, allNodes.find((node) => node.id === outputConnection?.target), allNodes, oppositeSide(inputSide))
+    : 'right';
   return (
     <div className={`hiles-node ${isPetri ? 'hiles-node--petri' : ''} ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''}`}>
       {isPetri && hilesType === HilesElementType.TRANSITION ? null : isPetri && hilesType !== HilesElementType.PLACE ? <PetriHandles /> : !isPetri && !isTriangle && !isGlyphRectangle && <PortHandles ports={ports} />}
