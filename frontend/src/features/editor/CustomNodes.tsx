@@ -215,7 +215,7 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
       </div>
       <div className="hiles-node__name" style={{ transform: isPetri ? 'translateX(-50%)' : undefined }}>{name}</div>
       {hilesType === HilesElementType.TRANSITION && properties.condition && <div className="hiles-node__caption">{properties.condition}</div>}
-      {data.runtime?.value !== undefined && <div className={`hiles-node__runtime ${data.runtime.value ? 'is-on' : ''}`}>{data.runtime.value ? 'ON · 1' : 'OFF · 0'}</div>}
+      {data.runtime?.value !== undefined && <div className={`hiles-node__runtime ${data.runtime.value === true ? 'is-on' : ''}`}>{typeof data.runtime.value === 'boolean' ? (data.runtime.value ? 'ON · 1' : 'OFF · 0') : String(data.runtime.value)}</div>}
     </div>
   );
 };

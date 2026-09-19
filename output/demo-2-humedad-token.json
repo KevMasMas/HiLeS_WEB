@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "metadata": { "savedAt": "2026-09-19T02:00:00.000Z" },
+  "network": { "topology": null, "protocol": null, "nodes": ["demo2-node"] },
+  "allElements": [
+    {
+      "id": "demo2-node", "type": "STRUCTURAL_BLOCK", "name": "Nodo Humedad", "layout": { "x": 160, "y": 120, "width": 880, "height": 420 }, "ports": [],
+      "properties": { "description": "Demo 2: control de humedad con dos umbrales.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "demo2-humidity", "type": "SERVICE", "name": "Humedad", "parentId": "demo2-node", "layout": { "x": 55, "y": 160 },
+      "ports": [{ "id": "humidity-out", "name": "Valor humedad", "direction": "output", "dataType": "real", "nature": "continuous", "side": "right", "offset": 0.5 }],
+      "properties": { "description": "Entrada de prueba en porcentaje.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "demo2-low", "type": "FUNCTIONAL_BLOCK", "name": "<76%", "parentId": "demo2-node", "layout": { "x": 245, "y": 82 },
+      "ports": [{ "id": "low-in", "name": "Humedad", "direction": "input", "dataType": "real", "nature": "continuous", "side": "left", "offset": 0.5 }, { "id": "low-out", "name": "Bajo", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "right", "offset": 0.5 }],
+      "properties": { "description": "Activa T1 cuando la humedad es menor a 76%.", "collapsed": false, "locked": false, "visible": true, "expression": "humedad < 76", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "demo2-high", "type": "FUNCTIONAL_BLOCK", "name": ">84%", "parentId": "demo2-node", "layout": { "x": 245, "y": 255 },
+      "ports": [{ "id": "high-in", "name": "Humedad", "direction": "input", "dataType": "real", "nature": "continuous", "side": "left", "offset": 0.5 }, { "id": "high-out", "name": "Alto", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "right", "offset": 0.5 }],
+      "properties": { "description": "Activa T2 cuando la humedad es mayor a 84%.", "collapsed": false, "locked": false, "visible": true, "expression": "humedad > 84", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "demo2-p1", "type": "PLACE", "name": "P1 · Riego apagado", "parentId": "demo2-node", "layout": { "x": 500, "y": 72 }, "ports": [],
+      "properties": { "description": "Sin token inicialmente.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "demo2-t1", "type": "TRANSITION", "name": "T1 · Activar", "parentId": "demo2-node", "layout": { "x": 650, "y": 72 },
+      "ports": [{ "id": "transition-condition-in", "name": "Condición", "direction": "input", "dataType": "boolean", "nature": "continuous", "side": "top", "offset": 0.5 }, { "id": "transition-action-out", "name": "Acción", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "bottom", "offset": 0.5 }],
+      "properties": { "description": "Mueve el token a riego activo.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "humedad < 76", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "demo2-p2", "type": "PLACE", "name": "P2 · Riego encendido", "parentId": "demo2-node", "layout": { "x": 770, "y": 72 }, "ports": [],
+      "properties": { "description": "Token inicial: riego activo.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 1, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "demo2-t2", "type": "TRANSITION", "name": "T2 · Desactivar", "parentId": "demo2-node", "layout": { "x": 650, "y": 255 },
+      "ports": [{ "id": "transition-condition-in", "name": "Condición", "direction": "input", "dataType": "boolean", "nature": "continuous", "side": "top", "offset": 0.5 }, { "id": "transition-action-out", "name": "Acción", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "bottom", "offset": 0.5 }],
+      "properties": { "description": "Devuelve el token a riego apagado.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "humedad > 84", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    }
+  ],
+  "relationNode": [{ "nodeId": "demo2-node", "elementIds": ["demo2-humidity", "demo2-low", "demo2-high", "demo2-p1", "demo2-t1", "demo2-p2", "demo2-t2"] }],
+  "connections": [
+    { "id": "demo2-cch1", "source": "demo2-humidity", "sourceHandle": "humidity-out", "target": "demo2-low", "targetHandle": "low-in", "label": "CCH1", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "real", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "demo2-cch2", "source": "demo2-humidity", "sourceHandle": "humidity-out", "target": "demo2-high", "targetHandle": "high-in", "label": "CCH2", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "real", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "demo2-cch3", "source": "demo2-low", "sourceHandle": "low-out", "target": "demo2-t1", "targetHandle": "transition-condition-in", "label": "CCH3", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "demo2-cch4", "source": "demo2-high", "sourceHandle": "high-out", "target": "demo2-t2", "targetHandle": "transition-condition-in", "label": "CCH4", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "demo2-lch1", "source": "demo2-p1", "sourceHandle": "petri-out", "target": "demo2-t1", "targetHandle": "petri-in", "label": "LCH1", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "demo2-lch2", "source": "demo2-t1", "sourceHandle": "petri-out", "target": "demo2-p2", "targetHandle": "petri-in", "label": "LCH2", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "demo2-lch3", "source": "demo2-p2", "sourceHandle": "petri-out", "target": "demo2-t2", "targetHandle": "petri-in", "label": "LCH3", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "demo2-lch4", "source": "demo2-t2", "sourceHandle": "petri-out", "target": "demo2-p1", "targetHandle": "petri-in", "label": "LCH4", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } }
+  ]
+}

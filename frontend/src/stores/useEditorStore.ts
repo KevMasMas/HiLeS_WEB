@@ -11,6 +11,7 @@ import {
   type HilesPort,
   type OperatorDirection,
   type PortDirection,
+  type RuntimeValue,
 } from '../types/hiles';
 import { HilesElementTranslations } from '../types/translations';
 import { isModelDocument, serializeModel, validateModelDocument } from '../domain/modelDocument';
@@ -60,6 +61,8 @@ interface EditorState {
   clearModel: () => void;
   loadDemoCircuit: () => void;
   applyDemoState: (state: DemoSimulationState) => void;
+  simulateServiceInput: (id: string, value: RuntimeValue) => string[];
+  resetLocalSimulation: () => void;
   loadAutosave: () => void;
   exportModel: () => string;
   importModel: (json: string) => void;
@@ -271,6 +274,31 @@ const demoRuntimeFor = (nodeId: string, runtimeState: DemoSimulationState): Node
 
 const sameRuntime = (left: NodeRuntime | undefined, right: NodeRuntime) =>
   left?.value === right.value && left?.tokens === right.tokens && left?.active === right.active;
+
+const isDataEdge = (edge: HilesEdge) => edge.data?.hilesConnectionType !== HilesConnectionType.PETRI
+  && edge.data?.hilesConnectionType !== HilesConnectionType.TOKEN_FLOW;
+
+/** Supports the comparison expressions used by guards, e.g. `humedad < 76`. */
+const evaluateGuard = (expression: string, input: RuntimeValue | undefined): RuntimeValue | undefined => {
+  if (!expression.trim()) return input;
+  const normalized = expression.replaceAll('%', '').trim();
+  const comparison = normalized.match(/(?:[A-Za-z_$][\w$]*\s*)?(<=|>=|===|==|!==|!=|<|>)\s*(-?\d+(?:\.\d+)?|true|false)\b/i);
+  if (!comparison) return input;
+  const [, operator, rawRight] = comparison;
+  const right: RuntimeValue = rawRight.toLowerCase() === 'true' ? true
+    : rawRight.toLowerCase() === 'false' ? false
+      : Number(rawRight);
+  const left = typeof input === 'string' && input !== '' && Number.isFinite(Number(input)) ? Number(input) : input;
+  switch (operator) {
+    case '<': return typeof left === 'number' && typeof right === 'number' && left < right;
+    case '<=': return typeof left === 'number' && typeof right === 'number' && left <= right;
+    case '>': return typeof left === 'number' && typeof right === 'number' && left > right;
+    case '>=': return typeof left === 'number' && typeof right === 'number' && left >= right;
+    case '==': case '===': return left === right;
+    case '!=': case '!==': return left !== right;
+    default: return input;
+  }
+};
 
 const createDemoCircuit = (): ModelSnapshot => {
   const transitionPorts = (outputId: string): HilesPort[] => [
@@ -516,6 +544,108 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // untouched: a backend answer never rewrites the document the user saved.
     return changed ? { nodes } : {};
   }),
+
+  // The custom-circuit runner is deliberately local and limited to guard
+  // comparisons plus Place -> Transition -> Place token movement. The backend
+  // demo remains untouched and continues to own its FIFO runtime.
+  simulateServiceInput: (id, value) => {
+    const state = get();
+    const service = state.nodes.find((node) => node.id === id);
+    if (service?.data.hilesType !== HilesElementType.SERVICE || !service.data.ports.some((port) => port.direction === 'output')) {
+      return ['Selecciona un Service que tenga al menos un puerto de salida.'];
+    }
+
+    const runtimeById = new Map<string, NodeRuntime>();
+    state.nodes.forEach((node) => {
+      if (node.data.runtime) runtimeById.set(node.id, { ...node.data.runtime });
+      if (node.data.hilesType === HilesElementType.PLACE) {
+        runtimeById.set(node.id, { ...runtimeById.get(node.id), tokens: node.data.runtime?.tokens ?? node.data.properties.tokens });
+      }
+    });
+    runtimeById.set(id, { ...runtimeById.get(id), value });
+
+    const valueFor = (nodeId: string) => runtimeById.get(nodeId)?.value;
+    const dataInputsFor = (nodeId: string) => state.edges
+      .filter((edge) => edge.target === nodeId && isDataEdge(edge))
+      .map((edge) => valueFor(edge.source))
+      .filter((input): input is RuntimeValue => input !== undefined);
+
+    // Functional blocks can be chained, so evaluate them until no output
+    // changes (or the small network settles after a bounded number of passes).
+    for (let pass = 0; pass < state.nodes.length; pass += 1) {
+      let changed = false;
+      state.nodes.filter((node) => node.data.hilesType === HilesElementType.FUNCTIONAL_BLOCK).forEach((block) => {
+        const input = dataInputsFor(block.id)[0];
+        if (input === undefined) return;
+        const result = evaluateGuard(block.data.properties.expression || block.data.name, input);
+        if (result === undefined || valueFor(block.id) === result) return;
+        runtimeById.set(block.id, { ...runtimeById.get(block.id), value: result });
+        changed = true;
+      });
+      if (!changed) break;
+    }
+
+    const events: string[] = [`${service.data.name}: ${String(value)}.`];
+    const transitions = state.nodes.filter((node) => node.data.hilesType === HilesElementType.TRANSITION);
+    const activeTransitions = transitions.filter((transition) => {
+      const conditionValues = dataInputsFor(transition.id);
+      const enabled = conditionValues.some((condition) => condition === true);
+      runtimeById.set(transition.id, { ...runtimeById.get(transition.id), value: enabled });
+      return enabled;
+    });
+    if (activeTransitions.length === 0) {
+      events.push('Ninguna transición está activa; el token se conserva.');
+    } else if (activeTransitions.length > 1) {
+      events.push('Hay más de una transición activa; el token se conserva para evitar un movimiento ambiguo.');
+    } else {
+      const transition = activeTransitions[0];
+
+      const inputPlaces = state.edges
+        .filter((edge) => edge.data?.hilesConnectionType === HilesConnectionType.PETRI && edge.target === transition.id)
+        .map((edge) => state.nodes.find((node) => node.id === edge.source))
+        .filter((node): node is HilesNode => node?.data.hilesType === HilesElementType.PLACE);
+      const outputPlaces = state.edges
+        .filter((edge) => edge.data?.hilesConnectionType === HilesConnectionType.PETRI && edge.source === transition.id)
+        .map((edge) => state.nodes.find((node) => node.id === edge.target))
+        .filter((node): node is HilesNode => node?.data.hilesType === HilesElementType.PLACE);
+      if (!inputPlaces.length || !outputPlaces.length) {
+        events.push(`${transition.data.name} está habilitada, pero le falta un arco Petri de entrada o salida.`);
+      } else {
+        const canFire = inputPlaces.every((place) => (runtimeById.get(place.id)?.tokens ?? place.data.properties.tokens) > 0)
+          && outputPlaces.every((place) => (runtimeById.get(place.id)?.tokens ?? place.data.properties.tokens) < place.data.properties.maxTokens);
+        if (!canFire) {
+          events.push(`${transition.data.name} está habilitada, pero no hay token disponible en su Place de entrada.`);
+        } else {
+          inputPlaces.forEach((place) => {
+            const tokens = (runtimeById.get(place.id)?.tokens ?? place.data.properties.tokens) - 1;
+            runtimeById.set(place.id, { ...runtimeById.get(place.id), tokens, active: tokens > 0 });
+          });
+          outputPlaces.forEach((place) => {
+            const tokens = (runtimeById.get(place.id)?.tokens ?? place.data.properties.tokens) + 1;
+            runtimeById.set(place.id, { ...runtimeById.get(place.id), tokens, active: tokens > 0 });
+          });
+          events.push(`${transition.data.name} disparó y movió el token.`);
+        }
+      }
+    }
+
+    set({ nodes: state.nodes.map((node) => {
+      const runtime = runtimeById.get(node.id);
+      return runtime ? { ...node, data: { ...node.data, runtime } } : node;
+    }) });
+    return events;
+  },
+  resetLocalSimulation: () => set((state) => ({
+    nodes: state.nodes.map((node) => {
+      if (node.data.hilesType === HilesElementType.PLACE) {
+        return { ...node, data: { ...node.data, runtime: { tokens: node.data.properties.tokens, active: node.data.properties.tokens > 0 } } };
+      }
+      if (node.data.hilesType === HilesElementType.SERVICE || node.data.hilesType === HilesElementType.FUNCTIONAL_BLOCK || node.data.hilesType === HilesElementType.TRANSITION) {
+        return { ...node, data: { ...node.data, runtime: undefined } };
+      }
+      return node;
+    }),
+  })),
 
   exportModel: () => JSON.stringify(serializeModel(get().nodes, get().edges), null, 2),
   importModel: (json) => {

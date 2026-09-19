@@ -26,6 +26,7 @@ export type PortNature = 'continuous' | 'control';
 export type PortSide = 'left' | 'right' | 'top' | 'bottom';
 export type ConnectionRouting = 'straight' | 'curved' | 'orthogonal';
 export type OperatorDirection = 'left' | 'right' | 'up' | 'down';
+export type RuntimeValue = boolean | number | string;
 
 /** A user-owned routing point. Coordinates are local when it belongs to a Block. */
 export interface ConnectionWaypoint {
@@ -69,7 +70,7 @@ export interface HilesNodeData extends Record<string, unknown> {
   /** Transient canvas presentation state; it is never serialized into the model. */
   summaryMode?: boolean;
   /** Transient values reported by a running backend simulation. */
-  runtime?: { value?: boolean; active?: boolean; tokens?: number };
+  runtime?: { value?: RuntimeValue; active?: boolean; tokens?: number };
 }
 
 export interface HilesEdgeData extends Record<string, unknown> {
