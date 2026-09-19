@@ -100,11 +100,11 @@ La prueba no se considera terminada sólo porque el circuito de demostración ca
 
 ### Juan Ramos - integración front-back y cierre técnico (P0)
 
-- [ ] Verificar que los botones `Enviar 0`, `Enviar 1` y `Reiniciar` actualicen el canvas con la respuesta real del backend.
-- [ ] Verificar que los valores runtime no dañen el documento guardado del usuario.
-- [ ] Verificar el proxy/API local y mensajes claros cuando el backend esté desconectado.
-- [ ] Ejecutar build y lint de frontend antes de entregar.
-- [ ] Integrar únicamente cambios revisados de la rama de presentación y dejar el circuito listo para probar.
+- [x] Verificar que los botones `Enviar 0`, `Enviar 1` y `Reiniciar` actualicen el canvas con la respuesta real del backend.
+- [x] Verificar que los valores runtime no dañen el documento guardado del usuario.
+- [x] Verificar el proxy/API local y mensajes claros cuando el backend esté desconectado.
+- [x] Ejecutar build y lint de frontend antes de entregar.
+- [x] Integrar únicamente cambios revisados de la rama de presentación y dejar el circuito listo para probar.
 
 ### Encargado de pruebas - propietario de la presentación
 

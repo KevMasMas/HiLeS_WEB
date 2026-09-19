@@ -258,6 +258,20 @@ const demoConnection = (
   data: { hilesConnectionType, routing: 'orthogonal', dataType: 'boolean', delay: 0, weight: 1, waypoints: [] },
 });
 
+type NodeRuntime = NonNullable<HilesNodeData['runtime']>;
+
+/** Runtime values are transient: they live on the node, never in the serialized document. */
+const demoRuntimeFor = (nodeId: string, runtimeState: DemoSimulationState): NodeRuntime | null => {
+  if (nodeId === 'demo-input') return { value: runtimeState.input };
+  if (nodeId === 'demo-output') return { value: runtimeState.output };
+  if (nodeId === 'demo-waiting') return { tokens: runtimeState.places.waiting, active: runtimeState.places.waiting > 0 };
+  if (nodeId === 'demo-active') return { tokens: runtimeState.places.active, active: runtimeState.places.active > 0 };
+  return null;
+};
+
+const sameRuntime = (left: NodeRuntime | undefined, right: NodeRuntime) =>
+  left?.value === right.value && left?.tokens === right.tokens && left?.active === right.active;
+
 const createDemoCircuit = (): ModelSnapshot => {
   const transitionPorts = (outputId: string): HilesPort[] => [
     { ...demoPort('transition-condition-in', 'Condición', 'input', 'top'), id: 'transition-condition-in' },
@@ -490,15 +504,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...historyFor(state, snapshotOf(state)),
     });
   },
-  applyDemoState: (runtimeState) => set((state) => ({
-    nodes: state.nodes.map((node) => {
-      if (node.id === 'demo-input') return { ...node, data: { ...node.data, runtime: { value: runtimeState.input } } };
-      if (node.id === 'demo-output') return { ...node, data: { ...node.data, runtime: { value: runtimeState.output } } };
-      if (node.id === 'demo-waiting') return { ...node, data: { ...node.data, runtime: { tokens: runtimeState.places.waiting, active: runtimeState.places.waiting > 0 } } };
-      if (node.id === 'demo-active') return { ...node, data: { ...node.data, runtime: { tokens: runtimeState.places.active, active: runtimeState.places.active > 0 } } };
-      return node;
-    }),
-  })),
+  applyDemoState: (runtimeState) => set((state) => {
+    let changed = false;
+    const nodes = state.nodes.map((node) => {
+      const runtime = demoRuntimeFor(node.id, runtimeState);
+      if (!runtime || sameRuntime(node.data.runtime, runtime)) return node;
+      changed = true;
+      return { ...node, data: { ...node.data, runtime } };
+    });
+    // Keeping the same array when nothing moved leaves the autosave subscription
+    // untouched: a backend answer never rewrites the document the user saved.
+    return changed ? { nodes } : {};
+  }),
 
   exportModel: () => JSON.stringify(serializeModel(get().nodes, get().edges), null, 2),
   importModel: (json) => {

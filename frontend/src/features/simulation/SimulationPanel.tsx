@@ -22,16 +22,22 @@ export const SimulationPanel: React.FC = () => {
     setError(null);
   }, [applyDemoState]);
 
+  // Every failure surfaces the message thrown by the API layer, so a disconnected
+  // backend always reads the same way whether it failed on load or on a button.
+  const fail = useCallback((requestError: unknown) => {
+    setError(requestError instanceof Error ? requestError.message : 'No fue posible ejecutar el circuito.');
+  }, []);
+
   useEffect(() => {
-    getDemoState().then(acceptState).catch(() => setError('Backend desconectado. Inicia Nest en el puerto 3000.'));
-  }, [acceptState]);
+    getDemoState().then(acceptState).catch(fail);
+  }, [acceptState, fail]);
 
   const run = async (operation: () => Promise<DemoSimulationState>) => {
     setBusy(true);
     try {
       acceptState(await operation());
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'No fue posible ejecutar el circuito.');
+      fail(requestError);
     } finally {
       setBusy(false);
     }
@@ -59,7 +65,7 @@ export const SimulationPanel: React.FC = () => {
             <button type="button" disabled={busy} onClick={() => void run(() => publishDemoInput(false))}>Enviar 0</button>
             <button type="button" disabled={busy} className="is-primary" onClick={() => void run(() => publishDemoInput(true))}>Enviar 1</button>
           </div>
-          <div className="simulation-panel__state">
+          <div className={`simulation-panel__state ${error && state ? 'is-stale' : ''}`}>
             <div><span>Espera</span><strong>{state?.places.waiting ?? '–'} token</strong></div>
             <div><span>Activo</span><strong>{state?.places.active ?? '–'} token</strong></div>
             <div className={state?.output ? 'is-on' : ''}><span>Salida</span><strong>{state?.output ? 'ON · 1' : 'OFF · 0'}</strong></div>
@@ -72,7 +78,7 @@ export const SimulationPanel: React.FC = () => {
             ))}
           </div>
         </>}
-        {error && <p className="simulation-panel__error">{error}</p>}
+        {error && <p className="simulation-panel__error">{error}{state ? ' Los valores mostrados son los de la última respuesta recibida.' : ''}</p>}
       </div>}
     </section>
   );

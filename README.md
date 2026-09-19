@@ -99,6 +99,8 @@ El backend debe iniciarse primero, porque el frontend redirige las peticiones `/
    npx prisma migrate deploy
    ```
 
+   > `npm run prisma:generate` es obligatorio aunque no vayas a usar la base de datos: sin el cliente generado el backend no compila y `npm run start:dev` falla con `Cannot find module '../../generated/prisma/client.js'`.
+
 5. Iniciar el backend en modo desarrollo. Por defecto queda disponible en `http://localhost:3000`:
 
    ```powershell
@@ -106,6 +108,10 @@ El backend debe iniciarse primero, porque el frontend redirige las peticiones `/
    ```
 
 Mantén esta terminal abierta mientras trabajas. Si el backend no inicia, revisa primero que PostgreSQL esté encendido y que `DATABASE_URL` sea correcta.
+
+### Sólo para la demostración del circuito
+
+El circuito demo no toca la base de datos: su estado vive en memoria dentro del backend. Para probarlo basta con un `.env` que tenga cualquier `DATABASE_URL` con formato válido, `npm run prisma:generate` y `npm run start:dev`; no hace falta que PostgreSQL esté encendido ni ejecutar `npx prisma migrate deploy`. Esos dos pasos sí son necesarios para el resto del backend.
 
 ## Configurar e iniciar el frontend
 
