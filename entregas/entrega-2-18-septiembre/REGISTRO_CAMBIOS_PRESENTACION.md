@@ -81,7 +81,7 @@ Este archivo se debe actualizar cada vez que se agregue, corrija o pruebe algo f
   4. **Protección del documento del usuario.** `applyDemoState` reconstruía el array de nodos en cada respuesta del backend, incluso sin el circuito demo cargado, lo que despertaba la suscripción de autoguardado. Ahora compara el runtime anterior con el nuevo y devuelve el mismo array cuando nada cambió: una respuesta del backend no puede reescribir el documento guardado.
 - Archivos modificados: `frontend/src/features/simulation/simulationApi.ts`, `frontend/src/features/simulation/SimulationPanel.tsx`, `frontend/src/features/simulation/simulation.css`, `frontend/src/stores/useEditorStore.ts`, `README.md`, `entregas/entrega-2-18-septiembre/PLAN_PRESENTACION_MANANA.md`, `entregas/entrega-2-18-septiembre/REGISTRO_CAMBIOS_PRESENTACION.md`.
 - Rama: `presentacion-circuito`
-- Commit/hash: Pendiente de commit. Los cambios están en el árbol de trabajo de `presentacion-circuito`, sin comitear.
+- Commit/hash: `818ad45` (`Integracion front-back: mensajes del backend y proteccion del documento`).
 - Cómo se probó:
   - `npm ci`-equivalente (`npm install`) en `backend` y `frontend` sobre un árbol sin `node_modules`.
   - `npm test` en `backend`: 2 archivos, 5 pruebas.
