@@ -224,7 +224,7 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 
 ---
 
-### Persona 1 — Motor de Simulación y Orquestación
+### Juan Ramos — Motor de Simulación y Orquestación
 
 **Archivos a crear:**
 - `src/engine/tipos.ts`
@@ -233,31 +233,31 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 - `src/stores/useSimulationStore.ts`
 
 **Tareas:**
-- [ ] Crear `tipos.ts` con interfaces del motor: `EventoSimulacion`, `EstadoElemento`, `EstadoSimulacion`, `ValorRuntime`.
-- [ ] Crear `GrafoDatos.ts`:
-  - [ ] `construirOrdenTopologico(nodos, aristas)`: ordena nodos de datos para evaluación secuencial.
-  - [ ] `detectarCiclos(nodos, aristas)`: detecta ciclos en flujo de datos y reporta error.
-  - [ ] `propagarValores(orden, estadoRuntime, ejecutor)`: recorre nodos en orden topológico, evalúa cada uno, propaga resultados.
-- [ ] Crear `MotorSimulacion.ts`:
-  - [ ] `construirGrafo(nodos, aristas)`: construye instancias `IElementoHiLeS` para cada nodo.
-  - [ ] `inyectarEntrada(servicioId, valor)`: punto de entrada del usuario.
-  - [ ] `paso()`: un ciclo completo (propagar datos → evaluar transitions → mover tokens).
-  - [ ] `ejecutar()`: pasos hasta estabilización.
-  - [ ] `reiniciar()`: restaurar estado inicial.
-  - [ ] Cola de `EventoSimulacion[]` para auditoría.
-- [ ] Crear `useSimulationStore.ts`:
-  - [ ] Estado: `estado`, `eventos[]`, `valoresRuntime`, `contadorPasos`.
-  - [ ] Acciones que invocan al `MotorSimulacion`.
-  - [ ] Suscripción a `useEditorStore` para sincronizar runtime con el canvas.
+- [x] Crear `tipos.ts` con interfaces del motor: `EventoSimulacion`, `EstadoElemento`, `EstadoSimulacion`, `ValorRuntime`.
+- [x] Crear `GrafoDatos.ts`:
+  - [x] `construirOrdenTopologico(nodos, aristas)`: ordena nodos de datos para evaluación secuencial.
+  - [x] `detectarCiclos(nodos, aristas)`: detecta ciclos en flujo de datos y reporta error.
+  - [x] `propagarValores(orden, estadoRuntime, ejecutor)`: recorre nodos en orden topológico, evalúa cada uno, propaga resultados.
+- [x] Crear `MotorSimulacion.ts`:
+  - [x] `construirGrafo(nodos, aristas)`: construye instancias `IElementoHiLeS` para cada nodo.
+  - [x] `inyectarEntrada(servicioId, valor)`: punto de entrada del usuario.
+  - [x] `paso()`: un ciclo completo (propagar datos → evaluar transitions → mover tokens).
+  - [x] `ejecutar()`: pasos hasta estabilización.
+  - [x] `reiniciar()`: restaurar estado inicial.
+  - [x] Cola de `EventoSimulacion[]` para auditoría.
+- [x] Crear `useSimulationStore.ts`:
+  - [x] Estado: `estado`, `eventos[]`, `valoresRuntime`, `contadorPasos`.
+  - [x] Acciones que invocan al `MotorSimulacion`.
+  - [x] Suscripción a `useEditorStore` para sincronizar runtime con el canvas.
 - [x] Documentar todo el código con comentarios en español.
 
 **Plazo:** Martes + Miércoles mañana.
 
 **Criterios de aceptación:**
-- [ ] Un circuito con 2 Places, 2 Transitions y 1 Functional Block ejecuta correctamente.
-- [ ] La cola de eventos registra cada paso en orden.
-- [ ] `reiniciar()` restaura el estado exacto del inicio.
-- [ ] Sin dependencia de IDs hardcodeados.
+- [x] Un circuito con 2 Places, 2 Transitions y 1 Functional Block ejecuta correctamente.
+- [x] La cola de eventos registra cada paso en orden.
+- [x] `reiniciar()` restaura el estado exacto del inicio.
+- [x] Sin dependencia de IDs hardcodeados.
 
 ---
 
@@ -384,7 +384,7 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 
 **Plazo:** Miércoles + Jueves.
 
-> Persona 4 depende de que Persona 1 (store de simulación) y Julian Dario Romero Buitrago (ejecutor de código) estén al menos parcialmente funcionales para el miércoles.
+> Persona 4 depende de que Juan Ramos (store de simulación) y Julian Dario Romero Buitrago (ejecutor de código) estén al menos parcialmente funcionales para el miércoles.
 
 **Criterios de aceptación:**
 - [ ] Se puede escribir código JS en un Functional Block con syntax highlighting.
@@ -439,9 +439,9 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 ```text
               Martes 23          Miércoles 24        Jueves 25          Viernes 26
               ─────────          ────────────        ──────────         ──────────
-Persona 1 │ tipos.ts            │ MotorSimulacion   │ Ajustes          │
-          │ GrafoDatos.ts       │ useSimulationStore│ por feedback     │ BUFFER
-          │                     │                   │                  │
+Juan Ramos │ tipos.ts            │ MotorSimulacion   │ Ajustes          │
+           │ GrafoDatos.ts       │ useSimulationStore│ por feedback     │ BUFFER
+           │                     │                   │                  │
 Juan David Romero │ interfaces.ts       │ EvaluadorPetri    │ Ajustes          │
                   │ ElementoLugar       │ index.ts          │ por feedback     │ BUFFER
                   │ ElementoTransicion  │                   │                  │
@@ -462,9 +462,9 @@ Persona 5 │ Config Vitest       │ Tests Petri       │ Integración      �
 
 **Dependencias entre personas:**
 
-- Persona 4 (UI) depende de Persona 1 (store) y Julian Dario Romero Buitrago (ejecutor) para miércoles.
+- Persona 4 (UI) depende de Juan Ramos (store) y Julian Dario Romero Buitrago (ejecutor) para miércoles.
 - Persona 5 (integración) depende de todas las demás para jueves.
-- Persona 1, Juan David Romero y Julian Dario Romero Buitrago pueden trabajar en paralelo desde el martes.
+- Juan Ramos, Juan David Romero y Julian Dario Romero Buitrago pueden trabajar en paralelo desde el martes.
 
 ---
 
