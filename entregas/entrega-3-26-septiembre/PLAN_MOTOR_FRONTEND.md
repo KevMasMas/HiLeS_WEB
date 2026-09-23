@@ -261,7 +261,7 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 
 ---
 
-### Persona 2 — Lógica de Place, Transition y EvaluadorPetri
+### Juan David Romero — Lógica de Place, Transition y EvaluadorPetri
 
 **Archivos a crear:**
 - `src/engine/elementos/interfaces.ts`
@@ -271,30 +271,30 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 - `src/engine/elementos/index.ts`
 
 **Tareas:**
-- [ ] Crear `interfaces.ts` con `IElementoHiLeS` y tipos compartidos (`EstadoElemento`, `PuertoInfo`).
-- [ ] Implementar `ElementoLugar.ts` (Place):
-  - [ ] `tieneTokens()`, `tieneEspacio()`, `consumirToken()`, `producirToken()`.
-  - [ ] Respetar `maxTokens`, no permitir tokens negativos.
-  - [ ] `reiniciar()` restaura `tokensIniciales`.
-- [ ] Implementar `ElementoTransicion.ts` (Transition):
-  - [ ] `recibirEntrada()` para el puerto de condición.
-  - [ ] `estaHabilitada()` retorna si la condición es `true`.
-  - [ ] `marcarDisparo()` y `evaluar()` para enviar la acción.
-- [ ] Crear `EvaluadorPetri.ts`:
-  - [ ] `obtenerTransicionesHabilitadas(elementos, aristas)`: filtra Transitions con condición + tokens.
-  - [ ] `dispararTransicion(transicionId, elementos, aristas)`: consume y produce tokens atómicamente.
-  - [ ] Manejo de conflicto: más de 1 Transition habilitada → conservar tokens, registrar evento.
-- [ ] Crear `index.ts` con fábrica `crearElemento(tipo, config)`.
-- [ ] Documentar todo el código con comentarios en español.
+- [x] Crear `interfaces.ts` con `IElementoHiLeS` y tipos compartidos (`EstadoElemento`, `PuertoInfo`).
+- [x] Implementar `ElementoLugar.ts` (Place):
+  - [x] `tieneTokens()`, `tieneEspacio()`, `consumirToken()`, `producirToken()`.
+  - [x] Respetar `maxTokens`, no permitir tokens negativos.
+  - [x] `reiniciar()` restaura `tokensIniciales`.
+- [x] Implementar `ElementoTransicion.ts` (Transition):
+  - [x] `recibirEntrada()` para el puerto de condición.
+  - [x] `estaHabilitada()` retorna si la condición es `true`.
+  - [x] `marcarDisparo()` y `evaluar()` para enviar la acción.
+- [x] Crear `EvaluadorPetri.ts`:
+  - [x] `obtenerTransicionesHabilitadas(elementos, aristas)`: filtra Transitions con condición + tokens.
+  - [x] `dispararTransicion(transicionId, elementos, aristas)`: consume y produce tokens atómicamente.
+  - [x] Manejo de conflicto: más de 1 Transition habilitada → conservar tokens, registrar evento.
+- [x] Crear `index.ts` con fábrica `crearElemento(tipo, config)`.
+- [x] Documentar todo el código con comentarios en español.
 
 **Plazo:** Martes + Miércoles mañana.
 
 **Criterios de aceptación:**
-- [ ] Place con 1 token + Transition habilitada → token consumido y producido.
-- [ ] Place con 0 tokens → Transition NO dispara.
-- [ ] Place de salida con maxTokens alcanzado → Transition NO dispara.
-- [ ] Ciclo P1→T1→P2→T2→P1 funciona ida y vuelta.
-- [ ] Conflicto con 2 transitions → tokens conservados.
+- [x] Place con 1 token + Transition habilitada → token consumido y producido.
+- [x] Place con 0 tokens → Transition NO dispara.
+- [x] Place de salida con maxTokens alcanzado → Transition NO dispara.
+- [x] Ciclo P1→T1→P2→T2→P1 funciona ida y vuelta.
+- [x] Conflicto con 2 transitions → tokens conservados.
 
 ---
 
@@ -441,10 +441,10 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 Persona 1 │ tipos.ts            │ MotorSimulacion   │ Ajustes          │
           │ GrafoDatos.ts       │ useSimulationStore│ por feedback     │ BUFFER
           │                     │                   │                  │
-Persona 2 │ interfaces.ts       │ EvaluadorPetri    │ Ajustes          │
-          │ ElementoLugar       │ index.ts          │ por feedback     │ BUFFER
-          │ ElementoTransicion  │                   │                  │
-          │                     │                   │                  │
+Juan David Romero │ interfaces.ts       │ EvaluadorPetri    │ Ajustes          │
+                  │ ElementoLugar       │ index.ts          │ por feedback     │ BUFFER
+                  │ ElementoTransicion  │                   │                  │
+                  │                     │                   │                  │
 Persona 3 │ ElementoService     │ EjecutorCodigo    │ Pyodide Worker   │
           │ ElementoBloqueFun.  │ (sandbox completo)│ (si da tiempo)   │ BUFFER
           │ ElementoMuestreo    │                   │                  │
@@ -463,7 +463,7 @@ Persona 5 │ Config Vitest       │ Tests Petri       │ Integración      �
 
 - Persona 4 (UI) depende de Persona 1 (store) y Persona 3 (ejecutor) para miércoles.
 - Persona 5 (integración) depende de todas las demás para jueves.
-- Personas 1, 2 y 3 pueden trabajar en paralelo desde el martes.
+- Persona 1, Juan David Romero y Persona 3 pueden trabajar en paralelo desde el martes.
 
 ---
 
