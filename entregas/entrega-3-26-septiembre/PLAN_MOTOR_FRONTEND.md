@@ -342,7 +342,7 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 
 ---
 
-### Persona 4 — UI: Editor de Código + Panel de Simulación Refactorizado
+### Persona 4 Ivan Felipe Prado Blanco UI: Editor de Código + Panel de Simulación Refactorizado
 
 **Archivos a crear o modificar:**
 - [NUEVO] `src/features/editor/CodeEditor.tsx`
@@ -355,44 +355,44 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 **Dependencia nueva:** `codemirror`, `@codemirror/lang-javascript`, `@codemirror/lang-python`, `@codemirror/theme-one-dark`.
 
 **Tareas:**
-- [ ] Instalar dependencias de CodeMirror 6: `npm install codemirror @codemirror/lang-javascript @codemirror/lang-python @codemirror/theme-one-dark`.
-- [ ] Crear `CodeEditor.tsx`:
-  - [ ] Wrapper React para CodeMirror 6.
-  - [ ] Props: `codigo`, `lenguaje`, `onChange`, `onProbar`.
-  - [ ] Resaltado de sintaxis JS y Python.
-  - [ ] Tema oscuro.
-  - [ ] Altura auto-ajustable (3-15 líneas).
-  - [ ] Indicador de error si el ejecutor reportó fallo.
-  - [ ] Toggle para cambiar entre JS y Python.
-- [ ] Modificar `PropertiesPanel.tsx`:
-  - [ ] Para `FUNCTIONAL_BLOCK`: mostrar `CodeEditor` en lugar del campo `expression`.
-  - [ ] Toggle de lenguaje: JavaScript / Python.
-  - [ ] Lista de variables disponibles (nombres de puertos de entrada).
-  - [ ] Botón "Probar código" → ejecutar con valores de prueba y mostrar resultado.
-- [ ] Refactorizar `SimulationPanel.tsx`:
-  - [ ] Eliminar **toda** referencia al backend (`getDemoState`, `publishDemoInput`, `resetDemo`, `DemoSimulationState`, `DEMO_NODE_IDS`, `usesDemoBackend`).
-  - [ ] Usar `useSimulationStore` para todo.
-  - [ ] Controles: Inyectar valor, Paso a paso, Ejecutar, Reiniciar.
-  - [ ] Lista de eventos de simulación.
-  - [ ] Indicador de estado (inactivo/ejecutando/error).
-- [ ] Eliminar `simulationApi.ts`.
-- [ ] Modificar `CustomNodes.tsx`:
-  - [ ] Badge de último valor calculado en Functional Blocks.
-  - [ ] Badge de error (rojo) si hay error de código.
-  - [ ] Ícono de lenguaje (JS/Python) en la esquina del bloque.
-- [ ] Actualizar `editor.css`.
+- [x] Instalar dependencias de CodeMirror 6: `npm install codemirror @codemirror/lang-javascript @codemirror/lang-python @codemirror/theme-one-dark`.
+- [x] Crear `CodeEditor.tsx`:
+  - [x] Wrapper React para CodeMirror 6.
+  - [x] Props: `codigo`, `lenguaje`, `onChange`, `onProbar`.
+  - [x] Resaltado de sintaxis JS y Python.
+  - [x] Tema oscuro.
+  - [x] Altura auto-ajustable (3-15 líneas).
+  - [x] Indicador de error si el ejecutor reportó fallo.
+  - [x] Toggle para cambiar entre JS y Python.
+- [x] Modificar `PropertiesPanel.tsx`:
+  - [x] Para `FUNCTIONAL_BLOCK`: mostrar `CodeEditor` en lugar del campo `expression`.
+  - [x] Toggle de lenguaje: JavaScript / Python.
+  - [x] Lista de variables disponibles (nombres de puertos de entrada).
+  - [x] Botón "Probar código" → ejecutar con valores de prueba y mostrar resultado.
+- [x] Refactorizar `SimulationPanel.tsx`:
+  - [x] Eliminar **toda** referencia al backend (`getDemoState`, `publishDemoInput`, `resetDemo`, `DemoSimulationState`, `DEMO_NODE_IDS`, `usesDemoBackend`).
+  - [x] Usar `useSimulationStore` para todo.
+  - [x] Controles: Inyectar valor, Paso a paso, Ejecutar, Reiniciar.
+  - [x] Lista de eventos de simulación.
+  - [x] Indicador de estado (inactivo/ejecutando/error).
+- [x] Eliminar `simulationApi.ts`.
+- [x] Modificar `CustomNodes.tsx`:
+  - [x] Badge de último valor calculado en Functional Blocks.
+  - [x] Badge de error (rojo) si hay error de código.
+  - [x] Ícono de lenguaje (JS/Python) en la esquina del bloque.
+- [x] Actualizar `editor.css`.
 
 **Plazo:** Miércoles + Jueves.
 
 > Persona 4 depende de que Juan Ramos (store de simulación) y Julian Dario Romero Buitrago (ejecutor de código) estén al menos parcialmente funcionales para el miércoles.
 
 **Criterios de aceptación:**
-- [ ] Se puede escribir código JS en un Functional Block con syntax highlighting.
-- [ ] Se puede cambiar a Python y el highlighting cambia.
-- [ ] El botón "Probar código" ejecuta y muestra resultado.
-- [ ] El panel de simulación funciona sin backend.
-- [ ] Se puede inyectar un valor, ver eventos, paso a paso, y reiniciar.
-- [ ] Ninguna referencia al backend queda en el código.
+- [x] Se puede escribir código JS en un Functional Block con syntax highlighting.
+- [x] Se puede cambiar a Python y el highlighting cambia.
+- [x] El botón "Probar código" ejecuta y muestra resultado.
+- [x] El panel de simulación funciona sin backend.
+- [x] Se puede inyectar un valor, ver eventos, paso a paso, y reiniciar.
+- [x] Ninguna referencia al backend queda en el código.
 
 ---
 

@@ -22,6 +22,12 @@ type HilesEdge = Edge<HilesEdgeData>;
 
 interface AddNodeOptions { parentId?: string }
 
+interface DemoSimulationState {
+  input: boolean;
+  output: boolean;
+  places: { waiting: number; active: number };
+}
+
 interface EditorState {
   nodes: HilesNode[];
   edges: HilesEdge[];

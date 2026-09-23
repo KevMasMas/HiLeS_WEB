@@ -201,6 +201,14 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
     : 'right';
   return (
     <div className={`hiles-node ${isPetri ? 'hiles-node--petri' : ''} ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''}`}>
+      {isFunctional && data.runtime?.error && (
+        <span className="hiles-node__error-badge" title={data.runtime.error}>⚠</span>
+      )}
+      {isFunctional && properties.codeLanguage && (
+        <span className="hiles-node__lang-badge">
+          {properties.codeLanguage === 'python' ? 'Py' : 'JS'}
+        </span>
+      )}
       {isPetri && hilesType === HilesElementType.TRANSITION ? null : isPetri && hilesType !== HilesElementType.PLACE ? <PetriHandles /> : !isPetri && !isTriangle && !isGlyphRectangle && <PortHandles ports={ports} />}
       <div className="hiles-node__symbol" style={hilesType === HilesElementType.TRANSITION ? undefined : rotationStyle}>
         {hilesType === HilesElementType.PLACE && <CirclePetriHandles width={44} height={44} inputSide={inputSide} outputSide={outputSide} />}
@@ -210,7 +218,7 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
         {isTriangle && <PortHandles ports={ports} rotation={properties.rotation} triangle={{ direction: properties.operatorDirection, width: glyphWidth, height: glyphHeight }} />}
         {isGlyphRectangle && <PortHandles ports={ports} rotation={properties.rotation} rectangle={{ bounds: rectangleBounds, width: glyphWidth, height: glyphHeight }} />}
         <HilesGlyph type={hilesType} width={glyphWidth} height={glyphHeight} direction={properties.operatorDirection} style={hilesType === HilesElementType.TRANSITION ? rotationStyle : undefined} />
-        {isFunctional && properties.expression && <span className="hiles-node__expression" style={{ transform: `rotate(${-properties.rotation}deg)`, transformOrigin: 'center' }}>{properties.expression}</span>}
+        {isFunctional && (properties.code || properties.expression) && <span className="hiles-node__expression" style={{ transform: `rotate(${-properties.rotation}deg)`, transformOrigin: 'center' }}>{String(properties.code || properties.expression).slice(0, 30)}</span>}
         {hilesType === HilesElementType.PLACE && displayedTokens > 0 && <span className="hiles-place-token" aria-label={`${displayedTokens} token`} />}
       </div>
       <div className="hiles-node__name" style={{ transform: isPetri ? 'translateX(-50%)' : undefined }}>{name}</div>

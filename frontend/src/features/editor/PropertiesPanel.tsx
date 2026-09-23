@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
+import { useSimulationStore } from '../../stores/useSimulationStore';
+import { ejecutarJS } from '../../engine/EjecutorCodigo';
+import { CodeEditor } from './CodeEditor';
 import { HilesElementTranslations } from '../../types/translations';
 import { HilesElementType, type ConnectionRouting, type HilesPort, type PortDataType, type PortNature } from '../../types/hiles';
 
@@ -45,8 +48,17 @@ const PortEditor: React.FC<{ nodeId: string; ports: HilesPort[] }> = ({ nodeId, 
 
 export const PropertiesPanel: React.FC = () => {
   const store = useEditorStore();
+  const [resultadoPrueba, setResultadoPrueba] = useState<string | null>(null);
+  
   const selectedNode = store.nodes.find((node) => node.id === store.selectedElementId);
   const selectedEdge = store.edges.find((edge) => edge.id === store.selectedConnectionId);
+
+  const [prevNodeId, setPrevNodeId] = useState(selectedNode?.id);
+  
+  if (selectedNode?.id !== prevNodeId) {
+    setPrevNodeId(selectedNode?.id);
+    setResultadoPrueba(null);
+  }
 
   if (selectedEdge) {
     const data = selectedEdge.data!;
@@ -93,10 +105,56 @@ export const PropertiesPanel: React.FC = () => {
       </>}
 
       {hilesType === HilesElementType.FUNCTIONAL_BLOCK && <>
-        <Field label="Expression"><TextInput placeholder="A * B" value={properties.expression} onChange={(event) => update(selectedNode.id, { expression: event.target.value })} /></Field>
-        <Field label="Execution Delay"><TextInput type="number" min={0} step="0.1" value={properties.executionDelay} onChange={(event) => update(selectedNode.id, { executionDelay: Number(event.target.value) })} /></Field>
-        <Field label="Description"><TextArea value={properties.description} onChange={(event) => update(selectedNode.id, { description: event.target.value })} /></Field>
-        <label style={styles.check}><input type="checkbox" checked={properties.enabled} onChange={(event) => update(selectedNode.id, { enabled: event.target.checked })} /> Enabled</label>
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={styles.label}>Code</span>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button 
+                style={properties.codeLanguage === 'javascript' || !properties.codeLanguage ? styles.activeLang : styles.inactiveLang} 
+                onClick={() => update(selectedNode.id, { codeLanguage: 'javascript' })}
+              >
+                JS
+              </button>
+              <button 
+                style={properties.codeLanguage === 'python' ? styles.activeLang : styles.inactiveLang} 
+                onClick={() => update(selectedNode.id, { codeLanguage: 'python' })}
+              >
+                Py
+              </button>
+            </div>
+          </div>
+          <CodeEditor
+            codigo={String(properties.code ?? properties.expression ?? '')}
+            lenguaje={(properties.codeLanguage as 'javascript' | 'python') ?? 'javascript'}
+            onChange={(code) => update(selectedNode.id, { code })}
+            variablesDisponibles={ports.filter(p => p.direction === 'input').map(p => p.name)}
+            onProbar={async () => {
+              setResultadoPrueba('Ejecutando...');
+              try {
+                const edges = store.edges.filter(e => e.target === selectedNode.id);
+                const simState = useSimulationStore.getState();
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const entradas: Record<string, any> = {};
+                ports.filter(p => p.direction === 'input').forEach(port => {
+                  const edge = edges.find(e => e.targetHandle === port.id);
+                  if (edge) {
+                    const val = simState.valoresRuntime[edge.source];
+                    if (val !== undefined) entradas[port.name] = val;
+                  }
+                });
+                const code = String(properties.code ?? properties.expression ?? '');
+                const res = await ejecutarJS(code, entradas);
+                setResultadoPrueba(`Resultado: ${String(res)}`);
+              } catch (e: unknown) {
+                setResultadoPrueba(`Error: ${e instanceof Error ? e.message : String(e)}`);
+              }
+            }}
+            resultadoPrueba={resultadoPrueba}
+          />
+        </div>
+        <Field label="Execution Delay"><TextInput type="number" min={0} step="0.1" value={Number(properties.executionDelay)} onChange={(event) => update(selectedNode.id, { executionDelay: Number(event.target.value) })} /></Field>
+        <Field label="Description"><TextArea value={String(properties.description)} onChange={(event) => update(selectedNode.id, { description: event.target.value })} /></Field>
+        <label style={styles.check}><input type="checkbox" checked={Boolean(properties.enabled)} onChange={(event) => update(selectedNode.id, { enabled: event.target.checked })} /> Enabled</label>
       </>}
 
       {hilesType === HilesElementType.PLACE && <>
@@ -151,4 +209,6 @@ const styles: Record<string, React.CSSProperties> = {
   secondaryButton: { padding: '7px', border: '1px solid #94a3b8', borderRadius: 5, background: '#fff', color: '#334155', cursor: 'pointer', fontSize: 10, fontWeight: 750 },
   id: { marginTop: 15, overflow: 'hidden', textOverflow: 'ellipsis', color: '#94a3b8', fontSize: 8, whiteSpace: 'nowrap' },
   deleteButton: { marginTop: 12, padding: 9, border: '1px solid #fecaca', borderRadius: 5, background: '#fff1f2', color: '#be123c', cursor: 'pointer', fontWeight: 800 },
+  activeLang: { padding: '2px 8px', fontSize: 10, borderRadius: 4, background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800 },
+  inactiveLang: { padding: '2px 8px', fontSize: 10, borderRadius: 4, background: '#e2e8f0', color: '#64748b', border: 'none', cursor: 'pointer', fontWeight: 800 },
 };

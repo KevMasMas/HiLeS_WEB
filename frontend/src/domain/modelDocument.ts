@@ -36,12 +36,14 @@ export const serializeModel = (nodes: HilesNode[], connections: Edge<HilesEdgeDa
   connections,
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const migrateV1toV2 = (document: any): HilesModelDocument => {
   if (document.schemaVersion === 2) return document as HilesModelDocument;
   
   // Migrate from v1
   const v2Doc = { ...document, schemaVersion: 2 };
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   v2Doc.allElements = v2Doc.allElements.map((element: any) => {
     const props = { ...element.properties };
     if (element.type === 'FUNCTIONAL_BLOCK') {
@@ -51,6 +53,7 @@ export const migrateV1toV2 = (document: any): HilesModelDocument => {
     return { ...element, properties: props };
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   v2Doc.connections = v2Doc.connections.map((conn: any) => {
     const data = { ...conn.data };
     if (data.hilesConnectionType === 'CONTINUOUS') {

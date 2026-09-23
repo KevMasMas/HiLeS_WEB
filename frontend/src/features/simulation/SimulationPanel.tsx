@@ -1,147 +1,123 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { useEditorStore } from '../../stores/useEditorStore';
-import { HilesElementType } from '../../types/hiles';
-
+import React, { useState } from 'react';
+import { useSimulationStore } from '../../stores/useSimulationStore';
 import './simulation.css';
-
-const DEMO_NODE_IDS = ['demo-input', 'demo-waiting', 'demo-activate', 'demo-active', 'demo-deactivate', 'demo-output'];
 
 export const SimulationPanel: React.FC = () => {
   const [expanded, setExpanded] = useState(true);
-  const [state, setState] = useState<DemoSimulationState | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [selectedServiceId, setSelectedServiceId] = useState('');
-  const [localEvent, setLocalEvent] = useState<string | null>(null);
-  const [testValue, setTestValue] = useState('');
-  const nodes = useEditorStore((store) => store.nodes);
-  const edges = useEditorStore((store) => store.edges);
-  const selectedElementId = useEditorStore((store) => store.selectedElementId);
-  const setSelectedElement = useEditorStore((store) => store.setSelectedElement);
-  const loadDemoCircuit = useEditorStore((store) => store.loadDemoCircuit);
-  const applyDemoState = useEditorStore((store) => store.applyDemoState);
-  const simulateServiceInput = useEditorStore((store) => store.simulateServiceInput);
-  const resetLocalSimulation = useEditorStore((store) => store.resetLocalSimulation);
-  const demoLoaded = DEMO_NODE_IDS.every((id) => nodes.some((node) => node.id === id));
-  const injectableServices = nodes.filter((node) => node.data.hilesType === HilesElementType.SERVICE
-    && node.data.ports.some((port) => port.direction === 'output'));
-  const canvasSelectedService = injectableServices.find((node) => node.id === selectedElementId);
-  const selectedService = canvasSelectedService
-    ?? injectableServices.find((node) => node.id === selectedServiceId)
-    ?? injectableServices[0];
-  const usesDemoBackend = demoLoaded && selectedService?.id === 'demo-input';
-  const outputPort = selectedService?.data.ports.find((port) => port.direction === 'output');
-  const acceptsBoolean = outputPort?.dataType === 'boolean';
-  const displayServiceValue = (value: unknown) => typeof value === 'boolean'
-    ? (value ? 'ON · 1' : 'OFF · 0')
-    : value === undefined ? '–' : String(value);
+  const [numericValue, setNumericValue] = useState('');
 
-  const acceptState = useCallback((nextState: DemoSimulationState) => {
-    setState(nextState);
-    applyDemoState(nextState);
-    setError(null);
-  }, [applyDemoState]);
+  const { estado, eventos, servicios, mensaje, inyectarEntrada, paso, ejecutar, reiniciar } = useSimulationStore();
 
-  // Every failure surfaces the message thrown by the API layer, so a disconnected
-  // backend always reads the same way whether it failed on load or on a button.
-  const fail = useCallback((requestError: unknown) => {
-    setError(requestError instanceof Error ? requestError.message : 'No fue posible ejecutar el circuito.');
-  }, []);
+  const selectedService = servicios.find(s => s.id === selectedServiceId) ?? servicios[0];
 
-  useEffect(() => {
-    getDemoState().then(acceptState).catch(fail);
-  }, [acceptState, fail]);
+  // Mostrar los últimos 10 eventos, el más reciente arriba
+  const recentEvents = eventos.slice().reverse().slice(0, 10);
 
-  const run = async (operation: () => Promise<DemoSimulationState>) => {
-    setBusy(true);
-    try {
-      acceptState(await operation());
-    } catch (requestError) {
-      fail(requestError);
-    } finally {
-      setBusy(false);
+  const getStatusColor = () => {
+    switch (estado) {
+      case 'lista': return '#3b82f6';
+      case 'ejecutando': return '#eab308';
+      case 'estabilizada': return '#22c55e';
+      case 'error': return '#ef4444';
+      default: return '#94a3b8'; // inactiva
     }
   };
-
-  const loadCircuit = () => {
-    if (!demoLoaded && (nodes.length > 0 || edges.length > 0) && !window.confirm('¿Reemplazar el circuito actual por la demostración conectada al backend?')) return;
-    loadDemoCircuit();
-    void run(resetDemo);
-  };
-
-  const sendServiceValue = (value: boolean) => {
-    if (!selectedService) return;
-    setLocalEvent(null);
-    if (usesDemoBackend) {
-      void run(() => publishDemoInput(value));
-      return;
-    }
-    const events = simulateServiceInput(selectedService.id, value);
-    setError(null);
-    setLocalEvent(events.join(' '));
-  };
-
-  const sendNumericServiceValue = () => {
-    if (!selectedService) return;
-    const value = Number(testValue);
-    if (!Number.isFinite(value)) {
-      setLocalEvent('Escribe un valor numérico válido antes de enviarlo.');
-      return;
-    }
-    const events = simulateServiceInput(selectedService.id, value);
-    setError(null);
-    setLocalEvent(events.join(' '));
-  };
-
-  const recentEvents = state?.events.slice(-6).reverse() ?? [];
 
   return (
-    <section className={`simulation-panel ${expanded ? 'is-expanded' : 'is-collapsed'}`} aria-label="Simulación del backend">
-      <button className="simulation-panel__header" type="button" onClick={() => setExpanded((current) => !current)} aria-expanded={expanded}>
-        <span><i className={`simulation-panel__status ${error ? 'is-offline' : ''}`} />Backend runtime</span>
+    <section className={`simulation-panel ${expanded ? 'is-expanded' : 'is-collapsed'}`} aria-label="Simulación del motor local">
+      <button className="simulation-panel__header" type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
+        <span>
+          <i className="simulation-panel__status" style={{ backgroundColor: getStatusColor(), opacity: 1, borderColor: getStatusColor() }} />
+          Motor local
+        </span>
         <strong>{expanded ? '−' : '+'}</strong>
       </button>
-      {expanded && <div className="simulation-panel__body">
-        <p className="simulation-panel__intro">Selecciona un Service con puerto de salida para inyectar un valor booleano de prueba.</p>
-        {!demoLoaded && <button className="simulation-panel__load" type="button" onClick={loadCircuit}>Cargar circuito demo</button>}
-        {injectableServices.length > 0 && <>
-          <label className="simulation-panel__service">
-            <span>Service de entrada</span>
-            <select value={selectedService?.id ?? ''} onChange={(event) => {
-              setSelectedServiceId(event.target.value);
-              setSelectedElement(event.target.value);
-              setTestValue('');
-            }}>
-              {injectableServices.map((service) => <option key={service.id} value={service.id}>{service.data.name}</option>)}
-            </select>
-          </label>
-          {(usesDemoBackend || acceptsBoolean) ? <div className="simulation-panel__controls">
-            <button type="button" disabled={busy} onClick={() => sendServiceValue(false)}>Enviar 0</button>
-            <button type="button" disabled={busy} className="is-primary" onClick={() => sendServiceValue(true)}>Enviar 1</button>
-          </div> : <div className="simulation-panel__numeric-control">
-            <input type="number" step="any" value={testValue} placeholder="Ej.: 79" onChange={(event) => setTestValue(event.target.value)} aria-label="Valor de prueba" />
-            <button type="button" disabled={busy || testValue.trim() === ''} className="is-primary" onClick={sendNumericServiceValue}>Enviar valor</button>
-          </div>}
-          {usesDemoBackend ? <div className={`simulation-panel__state ${error && state ? 'is-stale' : ''}`}>
-            <div><span>Espera</span><strong>{state?.places.waiting ?? '–'} token</strong></div>
-            <div><span>Activo</span><strong>{state?.places.active ?? '–'} token</strong></div>
-            <div className={state?.output ? 'is-on' : ''}><span>Salida</span><strong>{state?.output ? 'ON · 1' : 'OFF · 0'}</strong></div>
-          </div> : <div className="simulation-panel__state simulation-panel__state--service">
-            <div className={selectedService?.data.runtime?.value === true ? 'is-on' : ''}><span>Valor inyectado</span><strong>{displayServiceValue(selectedService?.data.runtime?.value)}</strong></div>
-          </div>}
-          {usesDemoBackend && <div className="simulation-panel__meta"><span>Cola: {state?.queueDepth ?? 0}</span><button type="button" disabled={busy} onClick={() => void run(resetDemo)}>Reiniciar</button></div>}
-          {!usesDemoBackend && <div className="simulation-panel__meta"><span>Simulación local</span><button type="button" onClick={() => { resetLocalSimulation(); setLocalEvent('Se restauraron los tokens iniciales.'); }}>Reiniciar</button></div>}
-          {usesDemoBackend && <div className="simulation-panel__events" aria-live="polite">
-            <h4>Última ejecución</h4>
-            {recentEvents.length === 0 ? <p>Envía una entrada para ver los tópicos.</p> : recentEvents.map((event) => (
-              <div key={event.sequence}><code>#{event.sequence} {event.topic}</code><span>{event.description}</span></div>
-            ))}
-          </div>}
-          {!usesDemoBackend && localEvent && <p className="simulation-panel__local-event" aria-live="polite">{localEvent}</p>}
-        </>}
-        {injectableServices.length === 0 && <p className="simulation-panel__empty">Agrega un Service con al menos un puerto de salida para habilitar la prueba.</p>}
-        {error && <p className="simulation-panel__error">{error}{state ? ' Los valores mostrados son los de la última respuesta recibida.' : ''}</p>}
-      </div>}
+      
+      {expanded && (
+        <div className="simulation-panel__body">
+          {/* Indicador de Estado */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: '#64748b' }}>Estado</span>
+            <span style={{ fontSize: 11, fontWeight: 800, color: getStatusColor() }}>{estado.toUpperCase()}</span>
+          </div>
+
+          {/* Selector de Entrada */}
+          {servicios.length > 0 ? (
+            <>
+              <label className="simulation-panel__service">
+                <span>Service</span>
+                <select value={selectedService?.id ?? ''} onChange={(e) => setSelectedServiceId(e.target.value)}>
+                  {servicios.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                </select>
+              </label>
+
+              {selectedService?.tipoDato === 'boolean' ? (
+                <div className="simulation-panel__controls">
+                  <button type="button" onClick={() => inyectarEntrada(selectedService.id, false)}>Enviar 0</button>
+                  <button type="button" className="is-primary" onClick={() => inyectarEntrada(selectedService.id, true)}>Enviar 1</button>
+                </div>
+              ) : (
+                <div className="simulation-panel__numeric-control">
+                  <input type="number" step="any" value={numericValue} placeholder="Ej.: 42" onChange={(e) => setNumericValue(e.target.value)} />
+                  <button type="button" className="is-primary" disabled={numericValue.trim() === ''} onClick={() => inyectarEntrada(selectedService.id, Number(numericValue))}>Enviar</button>
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="simulation-panel__empty">Agrega un Service con salida para inyectar datos.</p>
+          )}
+
+          {/* Botones de Control de Simulación */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, margin: '16px 0' }}>
+            <button 
+              style={{ padding: '6px', fontSize: 11, borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }} 
+              onClick={paso} 
+              disabled={estado === 'inactiva' || estado === 'error'}
+            >
+              ▶ Paso
+            </button>
+            <button 
+              style={{ padding: '6px', fontSize: 11, borderRadius: 4, border: '1px solid #bae6fd', background: '#e0f2fe', color: '#0284c7', cursor: 'pointer', fontWeight: 700 }} 
+              onClick={ejecutar} 
+              disabled={estado === 'inactiva' || estado === 'error'}
+            >
+              ⏩ Ejecutar
+            </button>
+          </div>
+          <button 
+            style={{ width: '100%', padding: '6px', fontSize: 11, borderRadius: 4, border: '1px solid #fecaca', background: '#fff1f2', color: '#be123c', cursor: 'pointer' }} 
+            onClick={reiniciar}
+          >
+            ↺ Reiniciar
+          </button>
+
+          {/* Visor de Eventos */}
+          <div className="simulation-panel__events">
+            <h4 style={{ margin: '16px 0 8px', fontSize: 11, textTransform: 'uppercase', color: '#64748b' }}>Eventos recientes</h4>
+            {recentEvents.length === 0 ? <p style={{ fontSize: 11, color: '#94a3b8' }}>No hay eventos.</p> : (
+              <div style={{ maxHeight: 150, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, paddingRight: 4 }}>
+                {recentEvents.map((evt) => (
+                  <div key={evt.id} style={{ fontSize: 10, lineHeight: 1.4, borderBottom: '1px solid #f1f5f9', paddingBottom: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#0f172a' }}>
+                      <strong>#{evt.indice} {evt.tipo}</strong>
+                      <span style={{ color: '#94a3b8', fontSize: 9 }}>paso {evt.paso}</span>
+                    </div>
+                    <div style={{ color: '#475569', marginTop: 2 }}>{evt.mensaje}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Mensaje de Feedback */}
+          {mensaje && (
+            <p style={{ marginTop: 12, padding: 8, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 11, color: '#0f172a' }}>
+              {mensaje}
+            </p>
+          )}
+        </div>
+      )}
     </section>
   );
 };

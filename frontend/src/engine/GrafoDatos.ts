@@ -1,6 +1,7 @@
 import { HilesConnectionType } from '../types/hiles';
 import type { IElementoHiLeS } from './elementos/interfaces';
 import type { AristaHiLeS, NodoHiLeS, ValorRuntime } from './tipos';
+import type { BusObserver } from './BusObserver';
 
 /**
  * Una arista transporta datos (CCH/DCH) si no es un arco de la red de Petri.
@@ -196,6 +197,7 @@ export const propagarValores = (
   orden: readonly string[],
   estadoRuntime: EstadoRuntimeGrafo,
   ejecutor: EjecutorElemento = ejecutorPorDefecto,
+  bus?: BusObserver
 ): ResultadoPropagacion => {
   const { elementos, valores } = estadoRuntime;
   const aristasDatos = estadoRuntime.aristas.filter(esAristaDatos);
@@ -218,8 +220,6 @@ export const propagarValores = (
       return;
     }
 
-    // Un elemento puede reportar un error sin lanzar excepción (por ejemplo, un
-    // Functional Block cuyo código falló); se recoge de su propio estado.
     const errorInterno = elemento.obtenerEstado().error;
     if (errorInterno) errores.push({ elementoId, mensaje: errorInterno });
 
@@ -229,36 +229,42 @@ export const propagarValores = (
         if (!nodosActualizados.includes(elementoId)) nodosActualizados.push(elementoId);
       }
 
-      aristasDatos
-        // Una arista sin `sourceHandle` se considera conectada a cualquier salida.
-        .filter((arista) => arista.source === elementoId
-          && (!arista.sourceHandle || arista.sourceHandle === puertoOrigenId))
-        .forEach((arista) => {
-          const destino = elementos.get(arista.target);
-          if (!destino) return;
+      if (bus) {
+        // Uso del patrón Observer: el bus notifica a todos los suscriptores conectados.
+        bus.notificar(elementoId, puertoOrigenId, valor);
+      } else {
+        // Lógica legacy: acoplamiento directo iterando aristas.
+        aristasDatos
+          .filter((arista) => arista.source === elementoId
+            && (!arista.sourceHandle || arista.sourceHandle === puertoOrigenId))
+          .forEach((arista) => {
+            const destino = elementos.get(arista.target);
+            if (!destino) return;
 
-          const puertoDestinoId = arista.targetHandle
-            ?? estadoRuntime.puertoEntradaPorDefecto?.(arista.target);
-          if (!puertoDestinoId) {
-            errores.push({
-              elementoId: arista.target,
-              mensaje: 'La conexión de datos no indica a qué puerto de entrada llega el valor.',
+            const puertoDestinoId = arista.targetHandle
+              ?? estadoRuntime.puertoEntradaPorDefecto?.(arista.target);
+            if (!puertoDestinoId) {
+              errores.push({
+                elementoId: arista.target,
+                mensaje: 'La conexión de datos no indica a qué puerto de entrada llega el valor.',
+              });
+              return;
+            }
+
+            destino.recibirEntrada(puertoDestinoId, valor);
+            entregas.push({
+              aristaId: arista.id,
+              origenId: elementoId,
+              puertoOrigenId,
+              destinoId: arista.target,
+              puertoDestinoId,
+              valor,
             });
-            return;
-          }
-
-          destino.recibirEntrada(puertoDestinoId, valor);
-          entregas.push({
-            aristaId: arista.id,
-            origenId: elementoId,
-            puertoOrigenId,
-            destinoId: arista.target,
-            puertoDestinoId,
-            valor,
           });
-        });
+      }
     });
   });
 
   return { valores, nodosActualizados, entregas, errores };
 };
+

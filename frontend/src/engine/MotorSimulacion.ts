@@ -1,4 +1,5 @@
 import { HilesElementType } from '../types/hiles';
+import { BusObserver } from './BusObserver';
 import { crearElemento } from './elementos';
 import { ElementoService } from './elementos/ElementoService';
 import type { IElementoHiLeS } from './elementos/interfaces';
@@ -51,6 +52,7 @@ const TIPOS_SIN_LOGICA: readonly HilesElementType[] = [
 export class MotorSimulacion {
   private readonly limitePasos: number;
   private readonly ejecutor?: EjecutorElemento;
+  private readonly bus = new BusObserver();
 
   private nodos: NodoHiLeS[] = [];
   private aristas: AristaHiLeS[] = [];
@@ -143,6 +145,10 @@ export class MotorSimulacion {
       this.estado = EstadoSimulacion.ERROR;
       return;
     }
+
+    // El bus vincula a los observadores ahora que todos los elementos existen.
+    this.bus.construirDesdeAristas(this.aristas, this.elementos, (nodoId) => this.primerPuertoEntrada(nodoId));
+
     this.estado = this.elementos.size > 0 ? EstadoSimulacion.LISTA : EstadoSimulacion.INACTIVA;
   }
 
@@ -219,6 +225,7 @@ export class MotorSimulacion {
         puertoEntradaPorDefecto: (nodoId) => this.primerPuertoEntrada(nodoId),
       },
       this.ejecutor,
+      this.bus
     );
 
     propagacion.nodosActualizados.forEach((nodoId) => {
@@ -332,6 +339,7 @@ export class MotorSimulacion {
     this.contadorEventos = 0;
     this.contadorPasos = 0;
     this.estado = this.elementos.size > 0 ? EstadoSimulacion.LISTA : EstadoSimulacion.INACTIVA;
+    this.bus.limpiar();
     this.registrar({ tipo: TipoEventoSimulacion.REINICIO, mensaje: 'Simulación reiniciada al estado inicial.' });
   }
 
