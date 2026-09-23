@@ -1,10 +1,16 @@
-import type { HilesElementType, RuntimeValue } from '../../types/hiles';
+import type { HilesElementType, HilesPort, RuntimeValue } from '../../types/hiles';
+
+/** Valor que puede circular durante una simulación HiLeS. */
+export type ValorRuntime = RuntimeValue;
+
+/** Información mínima de un puerto que necesita el motor de simulación. */
+export type PuertoInfo = Pick<HilesPort, 'id' | 'name' | 'direction' | 'dataType' | 'nature'>;
 
 export interface EstadoElemento {
   activo?: boolean;
   tokens?: number;
   error?: string;
-  valor?: RuntimeValue;
+  valor?: ValorRuntime;
 }
 
 /**
@@ -16,10 +22,10 @@ export interface IElementoHiLeS {
   readonly tipo: HilesElementType;
 
   /** Recibe un valor en un puerto de entrada específico */
-  recibirEntrada(puertoId: string, valor: RuntimeValue): void;
+  recibirEntrada(puertoId: string, valor: ValorRuntime): void;
 
   /** Evalúa el estado actual y retorna los valores de salida por puerto */
-  evaluar(): Map<string, RuntimeValue>;
+  evaluar(): Map<string, ValorRuntime>;
 
   /** Reinicia al estado inicial (tokens originales, sin valores) */
   reiniciar(): void;
