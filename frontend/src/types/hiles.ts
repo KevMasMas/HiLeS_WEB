@@ -28,6 +28,9 @@ export type ConnectionRouting = 'straight' | 'curved' | 'orthogonal';
 export type OperatorDirection = 'left' | 'right' | 'up' | 'down';
 export type RuntimeValue = boolean | number | string;
 
+export type CCHPropagationMode = 'push' | 'pull' | 'flag';
+export type CodeLanguage = 'javascript' | 'python';
+
 /** A user-owned routing point. Coordinates are local when it belongs to a Block. */
 export interface ConnectionWaypoint {
   x: number;
@@ -60,6 +63,8 @@ export interface HilesNodeProperties {
   heldValue: string;
   operatorDirection: OperatorDirection;
   rotation: number;
+  code?: string;
+  codeLanguage?: CodeLanguage;
 }
 
 export interface HilesNodeData extends Record<string, unknown> {
@@ -69,8 +74,15 @@ export interface HilesNodeData extends Record<string, unknown> {
   properties: HilesNodeProperties;
   /** Transient canvas presentation state; it is never serialized into the model. */
   summaryMode?: boolean;
-  /** Transient values reported by a running backend simulation. */
-  runtime?: { value?: RuntimeValue; active?: boolean; tokens?: number };
+  /** Transient values reported by a running simulation. */
+  runtime?: {
+    value?: RuntimeValue;
+    active?: boolean;
+    tokens?: number;
+    stale?: boolean;
+    lastInput?: RuntimeValue;
+    error?: string;
+  };
 }
 
 export interface HilesEdgeData extends Record<string, unknown> {
@@ -81,6 +93,8 @@ export interface HilesEdgeData extends Record<string, unknown> {
   weight: number;
   /** Ordered route points inserted by double-clicking an edge. */
   waypoints?: ConnectionWaypoint[];
+  propagationMode?: CCHPropagationMode;
+  stale?: boolean;
 }
 
 export interface HilesElement {

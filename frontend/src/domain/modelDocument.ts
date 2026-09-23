@@ -1,7 +1,7 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { HilesEdgeData, HilesNodeData } from '../types/hiles';
 
-export const HILES_DOCUMENT_VERSION = 1;
+export const HILES_DOCUMENT_VERSION = 2;
 
 export interface HilesModelDocument {
   schemaVersion: number;
@@ -36,10 +36,36 @@ export const serializeModel = (nodes: HilesNode[], connections: Edge<HilesEdgeDa
   connections,
 });
 
+export const migrateV1toV2 = (document: any): HilesModelDocument => {
+  if (document.schemaVersion === 2) return document as HilesModelDocument;
+  
+  // Migrate from v1
+  const v2Doc = { ...document, schemaVersion: 2 };
+  
+  v2Doc.allElements = v2Doc.allElements.map((element: any) => {
+    const props = { ...element.properties };
+    if (element.type === 'FUNCTIONAL_BLOCK') {
+      props.code = props.code ?? '';
+      props.codeLanguage = props.codeLanguage ?? 'javascript';
+    }
+    return { ...element, properties: props };
+  });
+
+  v2Doc.connections = v2Doc.connections.map((conn: any) => {
+    const data = { ...conn.data };
+    if (data.hilesConnectionType === 'CONTINUOUS') {
+      data.propagationMode = data.propagationMode ?? 'push';
+    }
+    return { ...conn, data };
+  });
+
+  return v2Doc as HilesModelDocument;
+};
+
 export const isModelDocument = (value: unknown): value is HilesModelDocument => {
   if (!value || typeof value !== 'object') return false;
   const document = value as Partial<HilesModelDocument>;
-  return document.schemaVersion === HILES_DOCUMENT_VERSION && Array.isArray(document.allElements) && Array.isArray(document.connections);
+  return (document.schemaVersion === 1 || document.schemaVersion === 2) && Array.isArray(document.allElements) && Array.isArray(document.connections);
 };
 
 export const validateModelDocument = (document: HilesModelDocument): string[] => {

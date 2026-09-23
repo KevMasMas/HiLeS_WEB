@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { HilesElementType } from '../../types/hiles';
-import { getDemoState, publishDemoInput, resetDemo, type DemoSimulationState } from './simulationApi';
+
 import './simulation.css';
 
 const DEMO_NODE_IDS = ['demo-input', 'demo-waiting', 'demo-activate', 'demo-active', 'demo-deactivate', 'demo-output'];

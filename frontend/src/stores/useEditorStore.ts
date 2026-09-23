@@ -15,7 +15,7 @@ import {
 } from '../types/hiles';
 import { HilesElementTranslations } from '../types/translations';
 import { isModelDocument, serializeModel, validateModelDocument } from '../domain/modelDocument';
-import type { DemoSimulationState } from '../features/simulation/simulationApi';
+
 
 type HilesNode = Node<HilesNodeData>;
 type HilesEdge = Edge<HilesEdgeData>;
