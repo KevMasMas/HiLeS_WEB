@@ -66,6 +66,30 @@ Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una t
 - Evidencia: Salida local `OK: expresiones, sandbox y timeout de 1 segundo verificados`; `npm.cmd exec tsc -- --ignoreConfig --noEmit ...`; `npm.cmd exec eslint -- src/engine/...`; `git diff --check`.
 - Riesgos, pendientes o reversión necesaria: El `npm.cmd run build` global continúa bloqueado por errores preexistentes fuera de Persona 3 en `frontend/src/features/simulation/SimulationPanel.tsx` y `frontend/src/stores/useEditorStore.ts` (`DemoSimulationState`, `getDemoState`, `resetDemo`, `publishDemoInput` y `simulateServiceInput`). El Worker opcional de Pyodide permanece pendiente porque no forma parte del alcance principal y no hay dependencias configuradas. No se modificó código de otras personas.
 
+### [2026-09-23 17:34] - Responsable: Ivan Felipe Prado Blanco
+
+- Estado: [x] Hecho
+- Tarea o problema: Completar responsabilidades de Persona 4: UI del editor de código, integración del panel de simulación sin llamadas al backend, actualización de nodos visuales con badges e implementación del patrón Observer.
+- Qué se hizo: Se instalaron las dependencias de CodeMirror 6 y se creó el componente React `CodeEditor`. Se refactorizó `PropertiesPanel` para incluir el editor interactivo y probar la lógica mediante `ejecutarJS`. Se reescribió `SimulationPanel` para conectarlo íntegramente a `useSimulationStore`. Se agregaron los badges visuales de errores, valores y lenguajes en `CustomNodes`. Se eliminaron las importaciones legacy y se borró `simulationApi.ts`. Se envolvió la app en un `ErrorBoundary` en `main.tsx` y se repararon todos los errores de tipado de la transición (ej. en `useEditorStore.ts`) permitiendo compilar exitosamente la aplicación completa.
+- Archivos creados o modificados:
+  - `frontend/src/features/editor/CodeEditor.tsx` (Creado)
+  - `frontend/src/engine/BusObserver.ts` (Creado)
+  - `frontend/src/features/editor/PropertiesPanel.tsx`
+  - `frontend/src/features/simulation/SimulationPanel.tsx`
+  - `frontend/src/features/editor/CustomNodes.tsx`
+  - `frontend/src/features/editor/editor.css`
+  - `frontend/src/main.tsx`
+  - `frontend/src/stores/useEditorStore.ts`
+  - `frontend/src/features/simulation/simulationApi.ts` (Eliminado)
+  - `entregas/entrega-3-26-septiembre/PLAN_MOTOR_FRONTEND.md`
+  - `entregas/entrega-3-26-septiembre/REGISTRO_CAMBIOS_MOTOR.md`
+- Rama: `motor-frontend`
+- Commit/hash: Pendiente de commit en la rama de trabajo.
+- Cómo se probó: Compilación integral con `npm run build` validando el esquema estricto de TypeScript en todo el proyecto. Comprobación interactiva en el navegador visualizando dinámicamente los componentes de UI y el CodeEditor. Uso de ErrorBoundary para diagnosticar errores de React en la renderización local.
+- Resultado: El frontend se empaquetó e inicializó con código 0 (sin warnings ni errores bloqueantes del Linter/Typescript de UI). La aplicación 100% frontend carga satisfactoriamente y renderiza la interfaz que envuelve CodeMirror, comunicándose en tiempo real con la lógica reactiva sin fallas al inicio.
+- Evidencia: Salida del comando de build marcando `✓ built in...` exitosamente, sin el cuelgue anterior. Pantalla sin crash ni renders en blanco en el puerto local 4173.
+- Riesgos, pendientes o reversión necesaria: Tareas de UI y simulador integradas y funcionando. Queda únicamente pendiente el paso a la Persona 5 para que escriba las pruebas en Vitest y valide los flujos E2E.
+
 ### [2026-09-23 00:13] - Responsable: Juan David Romero
 
 - Estado: [x] Hecho
