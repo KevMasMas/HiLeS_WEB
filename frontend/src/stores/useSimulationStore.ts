@@ -39,8 +39,8 @@ interface SimulationState {
   /** Reconstruye el grafo a partir del contenido actual del editor. */
   sincronizar: () => void;
   inyectarEntrada: (servicioId: string, valor: ValorRuntime) => void;
-  paso: () => void;
-  ejecutar: () => void;
+  paso: () => Promise<void>;
+  ejecutar: () => Promise<void>;
   reiniciar: () => void;
 }
 
@@ -115,13 +115,13 @@ export const useSimulationStore = create<SimulationState>((set) => ({
     set(publicarEstadoDelMotor(resultado.mensaje));
   },
 
-  paso: () => {
-    motor.paso();
+  paso: async () => {
+    await motor.paso();
     set(publicarEstadoDelMotor());
   },
 
-  ejecutar: () => {
-    const resultado = motor.ejecutar();
+  ejecutar: async () => {
+    const resultado = await motor.ejecutar();
     set(publicarEstadoDelMotor(resultado.estabilizado
       ? `El circuito se estabilizó tras ${resultado.pasosEjecutados} paso(s).`
       : 'La ejecución terminó sin estabilizarse: revisa los eventos.'));

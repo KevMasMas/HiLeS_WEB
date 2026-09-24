@@ -40,7 +40,7 @@ export const serializeModel = (nodes: HilesNode[], connections: Edge<HilesEdgeDa
 export const migrateV1toV2 = (document: any): HilesModelDocument => {
   if (document.schemaVersion === 2) return document as HilesModelDocument;
   
-  // Migrate from v1
+  // Migrar documentos de la versión 1.
   const v2Doc = { ...document, schemaVersion: 2 };
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

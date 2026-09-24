@@ -4,7 +4,7 @@ export const TRIANGLE_VIEWBOX = { width: 100, height: 60 } as const;
 
 export type TrianglePoint = { x: number; y: number };
 
-/** The polygon vertices used by both the glyph and its connection ports. */
+/** Vértices del polígono compartidos por el símbolo y sus puertos de conexión. */
 export const triangleVertices = (direction: OperatorDirection): TrianglePoint[] => ({
   right: [{ x: 16, y: 8 }, { x: 16, y: 52 }, { x: 88, y: 30 }],
   left: [{ x: 84, y: 8 }, { x: 84, y: 52 }, { x: 12, y: 30 }],

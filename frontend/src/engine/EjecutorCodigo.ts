@@ -10,11 +10,13 @@ export class ErrorEjecucionCodigo extends Error {
 }
 
 export const TIEMPO_MAXIMO_MS = 1000;
+export const TIEMPO_MAXIMO_PYTHON_MS = 15000;
 const IDENTIFICADOR = /^[A-Za-z_$][\w$]*$/;
 const EXPRESIONES_BLOQUEADAS = [
   /\b(?:window|document|globalThis|self|navigator|location)\b/i,
   /\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\b/i,
-  /\b(?:eval|Function|import|require|process|constructor|prototype)\b/i,
+  /\b(?:eval|import|require|process|constructor|prototype)\b/i,
+  /\bFunction\b/,
 ];
 const NOMBRES_BLOQUEADOS = [
   'window', 'document', 'globalThis', 'self', 'navigator', 'location',
@@ -113,6 +115,39 @@ export function ejecutarJS(codigo: string, entradas?: EntradasRuntime): RuntimeV
   const inputs = normalizarEntradas(entradas ?? {});
   return requiereWorker(codigo) ? ejecutarJSEnWorker(codigo, inputs) : ejecutarJSLocal(codigo, inputs);
 }
+
+/** Ejecuta Python dentro de Pyodide, siempre aislado en un Worker terminable. */
+export const ejecutarPython = (codigo: string, entradas: EntradasRuntime = {}): Promise<RuntimeValue> => {
+  if (!codigo.trim()) return Promise.reject(new ErrorEjecucionCodigo('El código Python del Functional Block está vacío.'));
+  if (typeof Worker === 'undefined') {
+    return Promise.reject(new ErrorEjecucionCodigo('Python requiere un Web Worker disponible.'));
+  }
+
+  return new Promise<RuntimeValue>((resolve, reject) => {
+    const worker = new Worker(new URL('../workers/pyodide.worker.ts', import.meta.url), { type: 'module' });
+    let terminado = false;
+    const finalizar = (accion: () => void): void => {
+      if (terminado) return;
+      terminado = true;
+      clearTimeout(reloj);
+      worker.terminate();
+      accion();
+    };
+    const reloj = setTimeout(() => {
+      finalizar(() => reject(new ErrorEjecucionCodigo(`La ejecución Python superó el límite de ${TIEMPO_MAXIMO_PYTHON_MS} ms.`)));
+    }, TIEMPO_MAXIMO_PYTHON_MS);
+
+    worker.onmessage = (evento: MessageEvent<{ ok: boolean; value?: RuntimeValue; error?: string }>) => {
+      if (evento.data.ok && evento.data.value !== undefined) {
+        finalizar(() => resolve(evento.data.value as RuntimeValue));
+      } else {
+        finalizar(() => reject(new ErrorEjecucionCodigo(evento.data.error ?? 'No fue posible ejecutar el código Python.')));
+      }
+    };
+    worker.onerror = () => finalizar(() => reject(new ErrorEjecucionCodigo('El Worker de Python no pudo ejecutar el código.')));
+    worker.postMessage({ codigo, inputs: normalizarEntradas(entradas) });
+  });
+};
 
 /** Evalúa la sintaxis legacy de comparaciones simples como `humedad < 76`. */
 export const evaluateGuard = (expression: string, entradas: EntradasRuntime = {}): RuntimeValue | undefined => {

@@ -12,7 +12,8 @@ const identificador = /^[A-Za-z_$][\w$]*$/;
 const patronesBloqueados = [
   /\b(?:window|document|globalThis|self|navigator|location)\b/i,
   /\b(?:fetch|XMLHttpRequest|WebSocket|EventSource)\b/i,
-  /\b(?:eval|Function|import|require|process|constructor|prototype)\b/i,
+  /\b(?:eval|import|require|process|constructor|prototype)\b/i,
+  /\bFunction\b/,
 ];
 
 const ejecutar = ({ codigo, inputs }: SolicitudWorker): boolean | number | string => {

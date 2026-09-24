@@ -4,8 +4,8 @@ import { crearElemento } from './elementos';
 import { ElementoService } from './elementos/ElementoService';
 import type { IElementoHiLeS } from './elementos/interfaces';
 import { evaluarRedPetri } from './EvaluadorPetri';
-import { construirOrdenTopologico, detectarCiclos, propagarValores } from './GrafoDatos';
-import type { EjecutorElemento } from './GrafoDatos';
+import { construirOrdenTopologico, detectarCiclos, propagarValoresAsync } from './GrafoDatos';
+import type { EjecutorElementoAsync } from './GrafoDatos';
 import {
   EstadoSimulacion,
   LIMITE_PASOS_POR_DEFECTO,
@@ -28,7 +28,7 @@ export interface OpcionesMotor {
   /** Tope de pasos de `ejecutar()` antes de declarar que el circuito oscila. */
   limitePasos?: number;
   /** Permite instrumentar o sustituir la evaluación de cada elemento (tests). */
-  ejecutor?: EjecutorElemento;
+  ejecutor?: EjecutorElementoAsync;
 }
 
 /** Tipos que existen en el editor pero no tienen lógica de ejecución propia. */
@@ -51,7 +51,7 @@ const TIPOS_SIN_LOGICA: readonly HilesElementType[] = [
  */
 export class MotorSimulacion {
   private readonly limitePasos: number;
-  private readonly ejecutor?: EjecutorElemento;
+  private readonly ejecutor?: EjecutorElementoAsync;
   private readonly bus = new BusObserver();
 
   private nodos: NodoHiLeS[] = [];
@@ -111,6 +111,7 @@ export class MotorSimulacion {
         this.elementos.set(nodo.id, crearElemento(tipo, {
           properties: nodo.data.properties,
           ports: nodo.data.ports,
+          hijos: this.nodos.filter((hijo) => hijo.parentId === nodo.id).map((hijo) => hijo.id),
         }));
       } catch (error) {
         fallidos.push(nodo.id);
@@ -194,7 +195,7 @@ export class MotorSimulacion {
    * La acción que publica una Transition al disparar viaja en el paso
    * siguiente, igual que cualquier otro dato del circuito.
    */
-  paso(): ResultadoPaso {
+  async paso(): Promise<ResultadoPaso> {
     const indiceInicial = this.eventos.length;
 
     if (this.elementos.size === 0) {
@@ -216,7 +217,7 @@ export class MotorSimulacion {
     this.registrar({ tipo: TipoEventoSimulacion.PASO, mensaje: `Inicio del paso ${this.contadorPasos}.` });
 
     // 1. Flujo de datos (CCH/DCH) en modo push.
-    const propagacion = propagarValores(
+    const propagacion = await propagarValoresAsync(
       this.orden,
       {
         elementos: this.elementos,
@@ -296,13 +297,13 @@ export class MotorSimulacion {
    * Ejecuta pasos hasta que el circuito deje de cambiar, aparezca un error o se
    * alcance el límite configurado (un circuito oscilante nunca se estabiliza).
    */
-  ejecutar(limitePasos: number = this.limitePasos): ResultadoEjecucion {
+  async ejecutar(limitePasos: number = this.limitePasos): Promise<ResultadoEjecucion> {
     const indiceInicial = this.eventos.length;
     let pasosEjecutados = 0;
     let estabilizado = false;
 
     while (pasosEjecutados < limitePasos) {
-      const resultado = this.paso();
+      const resultado = await this.paso();
       pasosEjecutados += 1;
       if (this.estado === EstadoSimulacion.ERROR) break;
       if (!resultado.cambio) {
@@ -339,7 +340,6 @@ export class MotorSimulacion {
     this.contadorEventos = 0;
     this.contadorPasos = 0;
     this.estado = this.elementos.size > 0 ? EstadoSimulacion.LISTA : EstadoSimulacion.INACTIVA;
-    this.bus.limpiar();
     this.registrar({ tipo: TipoEventoSimulacion.REINICIO, mensaje: 'Simulación reiniciada al estado inicial.' });
   }
 

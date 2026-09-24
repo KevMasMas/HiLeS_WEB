@@ -13,7 +13,6 @@ const nodeTypes = { hilesNode: HilesNode };
 const edgeTypes = { hilesEdge: HilesEdge };
 const MIN_ZOOM = 0.08;
 const DETAIL_ZOOM = 0.5;
-const DEMO_NODE_IDS = ['demo-input', 'demo-waiting', 'demo-activate', 'demo-active', 'demo-deactivate', 'demo-output'];
 
 const nodeSize = (node: Node) => ({ width: Number(node.style?.width ?? node.measured?.width ?? 160), height: Number(node.style?.height ?? node.measured?.height ?? 80) });
 
@@ -34,23 +33,12 @@ const depthOf = (node: Node, nodesById: Map<string, Node>) => {
 
 const CanvasInner: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const fittedDemo = useRef(false);
   const [zoom, setZoom] = useState(1);
-  const { fitView, screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition } = useReactFlow();
   const store = useEditorStore();
   const { nodes, edges, activeConnectionType } = store;
 
   const nodesById = useMemo(() => new Map<string, Node>(nodes.map((node) => [node.id, node])), [nodes]);
-  const demoLoaded = DEMO_NODE_IDS.every((id) => nodesById.has(id));
-  useEffect(() => {
-    if (!demoLoaded) { fittedDemo.current = false; return; }
-    if (fittedDemo.current) return;
-    fittedDemo.current = true;
-    const frame = requestAnimationFrame(() => {
-      void fitView({ padding: 0.22, minZoom: 0.2, maxZoom: 0.9, duration: 300 });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [demoLoaded, fitView]);
   const hiddenNodeIds = useMemo(() => {
     const hidden = new Set<string>();
     nodes.forEach((node) => {

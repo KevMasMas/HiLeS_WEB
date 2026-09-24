@@ -27,6 +27,9 @@ export interface IElementoHiLeS {
   /** Evalúa el estado actual y retorna los valores de salida por puerto */
   evaluar(): Map<string, ValorRuntime>;
 
+  /** Evaluación aislada opcional para elementos que ejecutan trabajo asíncrono. */
+  evaluarAsync?(): Promise<Map<string, ValorRuntime>>;
+
   /** Reinicia al estado inicial (tokens originales, sin valores) */
   reiniciar(): void;
 

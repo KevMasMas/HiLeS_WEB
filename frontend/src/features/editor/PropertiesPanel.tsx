@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { useSimulationStore } from '../../stores/useSimulationStore';
-import { ejecutarJS } from '../../engine/EjecutorCodigo';
-import { CodeEditor } from './CodeEditor';
+import { ejecutarJS, ejecutarPython } from '../../engine/EjecutorCodigo';
 import { HilesElementTranslations } from '../../types/translations';
-import { HilesElementType, type ConnectionRouting, type HilesPort, type PortDataType, type PortNature } from '../../types/hiles';
+import { HilesElementType, type CCHPropagationMode, type ConnectionRouting, type HilesPort, type PortDataType, type PortNature } from '../../types/hiles';
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <label style={styles.field}><span style={styles.label}>{label}</span>{children}</label>
@@ -12,6 +11,8 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 
 const TextInput = (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} style={styles.input} />;
 const TextArea = (props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) => <textarea {...props} style={{ ...styles.input, minHeight: 62, resize: 'vertical' }} />;
+
+const CodeEditor = React.lazy(() => import('./CodeEditor').then((module) => ({ default: module.CodeEditor })));
 
 const PortEditor: React.FC<{ nodeId: string; ports: HilesPort[] }> = ({ nodeId, ports }) => {
   const { addPort, updatePort, removePort } = useEditorStore();
@@ -72,6 +73,17 @@ export const PropertiesPanel: React.FC = () => {
             <option value="orthogonal">Orthogonal</option><option value="straight">Straight</option><option value="curved">Curved</option>
           </select>
         </Field>
+        {(data.hilesConnectionType === 'CONTINUOUS' || data.hilesConnectionType === 'DISCRETE') && (
+          <Field label="Propagation mode">
+            <select
+              style={styles.input}
+              value={data.propagationMode ?? 'push'}
+              onChange={(event) => store.updateConnection(selectedEdge.id, { data: { propagationMode: event.target.value as CCHPropagationMode } })}
+            >
+              <option value="push">Push / Observer</option>
+            </select>
+          </Field>
+        )}
         {data.hilesConnectionType === 'TOKEN_FLOW'
           ? <Field label="Weight"><TextInput type="number" min={1} value={data.weight} onChange={(event) => store.updateConnection(selectedEdge.id, { data: { weight: Number(event.target.value) } })} /></Field>
           : <Field label="Delay"><TextInput type="number" min={0} step="0.1" value={data.delay} onChange={(event) => store.updateConnection(selectedEdge.id, { data: { delay: Number(event.target.value) } })} /></Field>}
@@ -123,7 +135,8 @@ export const PropertiesPanel: React.FC = () => {
               </button>
             </div>
           </div>
-          <CodeEditor
+          <React.Suspense fallback={<div style={{ padding: 12, fontSize: 11 }}>Cargando editor…</div>}>
+            <CodeEditor
             codigo={String(properties.code ?? properties.expression ?? '')}
             lenguaje={(properties.codeLanguage as 'javascript' | 'python') ?? 'javascript'}
             onChange={(code) => update(selectedNode.id, { code })}
@@ -137,20 +150,24 @@ export const PropertiesPanel: React.FC = () => {
                 const entradas: Record<string, any> = {};
                 ports.filter(p => p.direction === 'input').forEach(port => {
                   const edge = edges.find(e => e.targetHandle === port.id);
-                  if (edge) {
-                    const val = simState.valoresRuntime[edge.source];
-                    if (val !== undefined) entradas[port.name] = val;
-                  }
+                  const valorRuntime = edge ? simState.valoresRuntime[edge.source] : undefined;
+                  const valorPrueba = valorRuntime
+                    ?? (port.dataType === 'boolean' ? false : port.dataType === 'string' ? '' : 0);
+                  entradas[port.name] = valorPrueba;
+                  entradas[nombreVariable(port.name)] = valorPrueba;
                 });
                 const code = String(properties.code ?? properties.expression ?? '');
-                const res = await ejecutarJS(code, entradas);
+                const res = properties.codeLanguage === 'python'
+                  ? await ejecutarPython(code, entradas)
+                  : await ejecutarJS(code, entradas);
                 setResultadoPrueba(`Resultado: ${String(res)}`);
               } catch (e: unknown) {
                 setResultadoPrueba(`Error: ${e instanceof Error ? e.message : String(e)}`);
               }
             }}
-            resultadoPrueba={resultadoPrueba}
-          />
+              resultadoPrueba={resultadoPrueba}
+            />
+          </React.Suspense>
         </div>
         <Field label="Execution Delay"><TextInput type="number" min={0} step="0.1" value={Number(properties.executionDelay)} onChange={(event) => update(selectedNode.id, { executionDelay: Number(event.target.value) })} /></Field>
         <Field label="Description"><TextArea value={String(properties.description)} onChange={(event) => update(selectedNode.id, { description: event.target.value })} /></Field>
@@ -212,3 +229,9 @@ const styles: Record<string, React.CSSProperties> = {
   activeLang: { padding: '2px 8px', fontSize: 10, borderRadius: 4, background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 800 },
   inactiveLang: { padding: '2px 8px', fontSize: 10, borderRadius: 4, background: '#e2e8f0', color: '#64748b', border: 'none', cursor: 'pointer', fontWeight: 800 },
 };
+const nombreVariable = (nombre: string): string => nombre.normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^A-Za-z0-9_$]+/g, '_')
+  .replace(/^([^A-Za-z_$])/, '_$1')
+  .replace(/_+$/g, '')
+  .toLowerCase();

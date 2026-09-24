@@ -59,9 +59,9 @@ const blockAt = (point: XYPosition, nodes: Node[]) => {
 };
 
 /**
- * The custom edge has an explicit SVG hit target, so double-click works even
- * over empty canvas. Once a user adds a waypoint, a polyline is used to keep
- * every waypoint an exact, draggable vertex of the route.
+ * La arista personalizada tiene un área SVG explícita, por lo que el doble clic
+ * funciona incluso sobre el lienzo vacío. Al agregar un punto se usa una polilínea
+ * para que cada punto sea un vértice exacto y arrastrable de la ruta.
  */
 export const HilesEdge: React.FC<EdgeProps<RoutedEdge>> = (props) => {
   const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, id } = props;
@@ -93,8 +93,8 @@ export const HilesEdge: React.FC<EdgeProps<RoutedEdge>> = (props) => {
     const previous = routePoints[index];
     const next = routePoints[index + 2];
     const magnetDistance = 6;
-    // Prefer an exact axis shared by either neighbouring segment. This keeps
-    // hand-routed cables clean while still allowing free placement with Alt.
+    // Preferir un eje exacto compartido por algún segmento vecino; así se mantiene
+    // limpio el cableado manual y se permite colocación libre con Alt.
     if (Math.abs(x - previous.x) <= magnetDistance) x = previous.x;
     else if (Math.abs(x - next.x) <= magnetDistance) x = next.x;
     if (Math.abs(y - previous.y) <= magnetDistance) y = previous.y;

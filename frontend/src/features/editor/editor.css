@@ -49,12 +49,13 @@
 .react-flow__node-hilesNode:hover .hiles-node:not(.is-disabled), .react-flow__node-hilesNode:hover .hiles-structural { filter: drop-shadow(0 3px 5px rgba(15,23,42,.18)); }
 .hiles-resizer-line { border-color: #2563eb !important; }
 .hiles-resizer-handle { width: 8px !important; height: 8px !important; border-radius: 2px !important; background: #2563eb !important; border: 1px solid white !important; }
-  
-/* Estilos de Persona 4 */  
-.code-editor-wrapper { border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; }  
-.code-editor-wrapper.has-error { border-color: #ef4444; }  
-.code-editor__error-msg { color: #dc2626; font-size: 10px; margin-top: 4px; }  
-.code-editor__vars { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }  
-.code-editor__var-chip { padding: 2px 7px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 9px; font-weight: 700; }  
-.hiles-node__lang-badge { position: absolute; top: 4px; right: 4px; padding: 1px 5px; border-radius: 3px; background: #fef9c3; color: #854d0e; font-size: 7px; font-weight: 900; z-index: 10; }  
-.hiles-node__error-badge { position: absolute; top: 4px; left: 4px; color: #dc2626; font-size: 14px; cursor: help; z-index: 10; } 
+
+.code-editor-wrapper { border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; }
+.code-editor-wrapper .cm-editor { min-height: calc(3 * 1.4em); max-height: calc(15 * 1.4em); }
+.code-editor-wrapper .cm-scroller { overflow: auto; }
+.code-editor-wrapper.has-error { border-color: #ef4444; }
+.code-editor__error-msg { color: #dc2626; font-size: 10px; margin-top: 4px; }
+.code-editor__vars { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+.code-editor__var-chip { padding: 2px 7px; border-radius: 999px; background: #dbeafe; color: #1d4ed8; font-size: 9px; font-weight: 700; }
+.hiles-node__lang-badge { position: absolute; top: 4px; right: 4px; padding: 1px 5px; border-radius: 3px; background: #fef9c3; color: #854d0e; font-size: 7px; font-weight: 900; z-index: 10; }
+.hiles-node__error-badge { position: absolute; top: 4px; left: 4px; color: #dc2626; font-size: 14px; cursor: help; z-index: 10; }

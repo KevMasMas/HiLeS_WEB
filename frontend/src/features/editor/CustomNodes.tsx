@@ -13,7 +13,7 @@ const offsetStyle = (port: HilesPort): React.CSSProperties => port.side === 'lef
 
 const portLabelStyle = (port: HilesPort, rotation: number): React.CSSProperties => ({
   ...offsetStyle(port),
-  // The parent symbol rotates the port position. Counter-rotate only the text.
+  // El símbolo padre rota la posición del puerto; solo el texto se contrarrota.
   transform: `${port.side === 'left' || port.side === 'right' ? 'translateY(calc(-100% - 5px))' : 'translateX(-50%)'} rotate(${-rotation}deg)`,
   transformOrigin: 'center',
 });

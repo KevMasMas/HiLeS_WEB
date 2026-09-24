@@ -11,7 +11,7 @@ const groups: Array<{ title: string; elements: HilesElementType[] }> = [
   { title: 'Converters', elements: [HilesElementType.SAMPLE, HilesElementType.HOLD] },
 ];
 
-/** The three user-creatable HiLeS channel types. TOKEN_FLOW remains import-compatible only. */
+/** Los tres tipos de canal HiLeS que puede crear el usuario; TOKEN_FLOW solo conserva compatibilidad de importación. */
 const connections = [
   { type: HilesConnectionType.CONTINUOUS, label: 'Continuous Channel', stroke: '#172033', arrow: 'filled' },
   { type: HilesConnectionType.DISCRETE, label: 'Discrete Event', stroke: '#2563eb', arrow: 'outlined' },

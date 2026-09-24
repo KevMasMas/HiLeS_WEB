@@ -11,7 +11,6 @@ import {
   type HilesPort,
   type OperatorDirection,
   type PortDirection,
-  type RuntimeValue,
 } from '../types/hiles';
 import { HilesElementTranslations } from '../types/translations';
 import { isModelDocument, serializeModel, validateModelDocument } from '../domain/modelDocument';
@@ -21,12 +20,6 @@ type HilesNode = Node<HilesNodeData>;
 type HilesEdge = Edge<HilesEdgeData>;
 
 interface AddNodeOptions { parentId?: string }
-
-interface DemoSimulationState {
-  input: boolean;
-  output: boolean;
-  places: { waiting: number; active: number };
-}
 
 interface EditorState {
   nodes: HilesNode[];
@@ -65,10 +58,6 @@ interface EditorState {
   undo: () => void;
   redo: () => void;
   clearModel: () => void;
-  loadDemoCircuit: () => void;
-  applyDemoState: (state: DemoSimulationState) => void;
-  simulateServiceInput: (id: string, value: RuntimeValue) => string[];
-  resetLocalSimulation: () => void;
   loadAutosave: () => void;
   exportModel: () => string;
   importModel: (json: string) => void;
@@ -118,8 +107,8 @@ const createPort = (direction: PortDirection, name?: string, nature: HilesPort['
 
 const defaultPorts = (type: HilesElementType): HilesPort[] => {
   if (type === HilesElementType.FUNCTIONAL_BLOCK) return [createPort('input'), createPort('output')];
-  // A transition may be enabled by a data/condition signal (top) in addition to its
-  // Petri arcs, and emit an action/signal (bottom) when fired towards the circuit output.
+  // Una Transition puede habilitarse con una señal de datos o condición superior,
+  // además de emitir una acción o señal inferior al dispararse hacia la salida.
   if (type === HilesElementType.TRANSITION) return [
     { ...createPort('input', 'Condition'), id: 'transition-condition-in', dataType: 'boolean', side: 'top', offset: 0.5 },
     { ...createPort('output', 'Action'), id: 'transition-action-out', dataType: 'boolean', side: 'bottom', offset: 0.5 },
@@ -148,7 +137,7 @@ const operatorPorts = (type: HilesElementType, direction: OperatorDirection): Hi
 const edgeAppearance = (type: HilesConnectionType) => {
   if (type === HilesConnectionType.CONTINUOUS) return { prefix: 'CCH', stroke: '#172033', dash: undefined, marker: MarkerType.ArrowClosed };
   if (type === HilesConnectionType.DISCRETE) return { prefix: 'DCH', stroke: '#2563eb', dash: undefined, marker: MarkerType.Arrow };
-  // Petri: dashed logical channel terminated by an open chevron arrowhead.
+  // Petri: canal lógico discontinuo terminado en una punta de flecha abierta.
   if (type === HilesConnectionType.PETRI) return { prefix: 'LCH', stroke: '#172033', dash: '7 5', marker: MarkerType.Arrow };
   return { prefix: 'ARC', stroke: '#172033', dash: '3 5', marker: MarkerType.Arrow };
 };
@@ -170,18 +159,17 @@ export const getConnectionValidation = (nodes: HilesNode[], connection: Connecti
   const sourceType = asData(source).hilesType;
   const targetType = asData(target).hilesType;
 
-  // Unify Petri and Token Flow validation: places and transitions alternate.
+  // Unificar la validación de Petri y Token Flow: Places y Transitions se alternan.
   const isPetriPair = (sourceType === HilesElementType.PLACE && targetType === HilesElementType.TRANSITION)
     || (sourceType === HilesElementType.TRANSITION && targetType === HilesElementType.PLACE);
 
   if (type === HilesConnectionType.TOKEN_FLOW || type === HilesConnectionType.PETRI) {
-    if (isPetriPair) return { valid: true, reason: '' };
-    if (type === HilesConnectionType.TOKEN_FLOW) {
-      return { valid: false, reason: 'Token Arcs must alternate Place and Transition.' };
-    }
+    return isPetriPair
+      ? { valid: true, reason: '' }
+      : { valid: false, reason: 'Petri channels must alternate Place and Transition.' };
   }
 
-  // If a Petri handle was dragged directly, accept if it alternates Place/Transition
+  // Si se arrastró directamente un conector Petri, aceptar cuando alterne Place/Transition.
   if (isPetriPair && (connection.sourceHandle?.startsWith('petri') || connection.targetHandle?.startsWith('petri'))) {
     return { valid: true, reason: '' };
   }
@@ -190,12 +178,6 @@ export const getConnectionValidation = (nodes: HilesNode[], connection: Connecti
   const targetPort = asData(target).ports.find((port) => port.id === connection.targetHandle);
   if (!sourcePort || !targetPort) return { valid: false, reason: 'Data and control connections must start and end at ports.' };
   if (sourcePort.direction !== 'output' || targetPort.direction !== 'input') return { valid: false, reason: 'Only Output Port → Input Port is allowed.' };
-  if (type === HilesConnectionType.PETRI && (sourcePort.nature !== 'control' || targetPort.nature !== 'control')) {
-    return { valid: false, reason: 'Logical channels require control ports at both ends.' };
-  }
-  if (type !== HilesConnectionType.PETRI && (sourcePort.nature === 'control' || targetPort.nature === 'control')) {
-    return { valid: false, reason: 'Data channels cannot connect control ports.' };
-  }
   const typesMatch = sourcePort.dataType === targetPort.dataType
     || sourcePort.dataType === 'custom'
     || targetPort.dataType === 'custom'
@@ -228,132 +210,18 @@ const normalizeEdge = (edge: HilesEdge): HilesEdge => {
       dataType: edge.data?.dataType ?? 'real',
       delay: edge.data?.delay ?? 0,
       weight: edge.data?.weight ?? 1,
+      propagationMode: edge.data?.propagationMode ?? 'push',
       waypoints: Array.isArray(edge.data?.waypoints)
         ? edge.data.waypoints.filter((point): point is ConnectionWaypoint => typeof point?.x === 'number' && typeof point?.y === 'number')
         : [],
     },
-    // The connection type is authoritative: imported/autosaved legacy styles
-    // must not turn a Petri channel back into a solid line.
+    // El tipo de conexión es la fuente de verdad: los estilos antiguos importados
+    // no deben volver a convertir un canal Petri en una línea continua.
     style: { ...edge.style, stroke: appearance.stroke, strokeWidth: 2.2, ...(appearance.dash ? { strokeDasharray: appearance.dash } : {}) },
     markerEnd: { type: appearance.marker, color: appearance.stroke },
     labelStyle: { fill: appearance.stroke, fontWeight: 700, fontSize: 11, ...edge.labelStyle },
     labelBgStyle: { fill: '#fff', fillOpacity: 0.94, ...edge.labelBgStyle },
   };
-};
-
-const demoPort = (id: string, name: string, direction: PortDirection, side: HilesPort['side'], offset = 0.5): HilesPort => ({
-  id, name, direction, side, offset, dataType: 'boolean', nature: 'continuous',
-});
-
-const DEMO_POSITIONS: Record<string, XYPosition> = {
-  'demo-input': { x: 250, y: 235 },
-  'demo-waiting': { x: 420, y: 110 },
-  'demo-activate': { x: 580, y: 110 },
-  'demo-active': { x: 740, y: 110 },
-  'demo-deactivate': { x: 580, y: 360 },
-  'demo-output': { x: 910, y: 235 },
-};
-
-const demoConnection = (
-  id: string,
-  label: string,
-  source: string,
-  target: string,
-  hilesConnectionType: HilesConnectionType,
-  sourceHandle: string,
-  targetHandle: string,
-): HilesEdge => normalizeEdge({
-  id, label, source, target, sourceHandle, targetHandle, type: 'hilesEdge',
-  data: { hilesConnectionType, routing: 'orthogonal', dataType: 'boolean', delay: 0, weight: 1, waypoints: [] },
-});
-
-type NodeRuntime = NonNullable<HilesNodeData['runtime']>;
-
-/** Runtime values are transient: they live on the node, never in the serialized document. */
-const demoRuntimeFor = (nodeId: string, runtimeState: DemoSimulationState): NodeRuntime | null => {
-  if (nodeId === 'demo-input') return { value: runtimeState.input };
-  if (nodeId === 'demo-output') return { value: runtimeState.output };
-  if (nodeId === 'demo-waiting') return { tokens: runtimeState.places.waiting, active: runtimeState.places.waiting > 0 };
-  if (nodeId === 'demo-active') return { tokens: runtimeState.places.active, active: runtimeState.places.active > 0 };
-  return null;
-};
-
-const sameRuntime = (left: NodeRuntime | undefined, right: NodeRuntime) =>
-  left?.value === right.value && left?.tokens === right.tokens && left?.active === right.active;
-
-const isDataEdge = (edge: HilesEdge) => edge.data?.hilesConnectionType !== HilesConnectionType.PETRI
-  && edge.data?.hilesConnectionType !== HilesConnectionType.TOKEN_FLOW;
-
-/** Supports the comparison expressions used by guards, e.g. `humedad < 76`. */
-const evaluateGuard = (expression: string, input: RuntimeValue | undefined): RuntimeValue | undefined => {
-  if (!expression.trim()) return input;
-  const normalized = expression.replaceAll('%', '').trim();
-  const comparison = normalized.match(/(?:[A-Za-z_$][\w$]*\s*)?(<=|>=|===|==|!==|!=|<|>)\s*(-?\d+(?:\.\d+)?|true|false)\b/i);
-  if (!comparison) return input;
-  const [, operator, rawRight] = comparison;
-  const right: RuntimeValue = rawRight.toLowerCase() === 'true' ? true
-    : rawRight.toLowerCase() === 'false' ? false
-      : Number(rawRight);
-  const left = typeof input === 'string' && input !== '' && Number.isFinite(Number(input)) ? Number(input) : input;
-  switch (operator) {
-    case '<': return typeof left === 'number' && typeof right === 'number' && left < right;
-    case '<=': return typeof left === 'number' && typeof right === 'number' && left <= right;
-    case '>': return typeof left === 'number' && typeof right === 'number' && left > right;
-    case '>=': return typeof left === 'number' && typeof right === 'number' && left >= right;
-    case '==': case '===': return left === right;
-    case '!=': case '!==': return left !== right;
-    default: return input;
-  }
-};
-
-const createDemoCircuit = (): ModelSnapshot => {
-  const transitionPorts = (outputId: string): HilesPort[] => [
-    { ...demoPort('transition-condition-in', 'Condición', 'input', 'top'), id: 'transition-condition-in' },
-    demoPort(outputId, 'Salida', 'output', 'bottom'),
-  ];
-  const nodes: HilesNode[] = [
-    {
-      id: 'demo-input', type: 'hilesNode', position: DEMO_POSITIONS['demo-input'],
-      data: {
-        hilesType: HilesElementType.SERVICE, name: 'Entrada', ports: [demoPort('demo-input-out', 'Valor', 'output', 'right')],
-        properties: { ...defaultProperties(), description: 'Entrada booleana enviada al backend.' }, runtime: { value: false },
-      },
-    },
-    {
-      id: 'demo-waiting', type: 'hilesNode', position: DEMO_POSITIONS['demo-waiting'],
-      data: { hilesType: HilesElementType.PLACE, name: 'Espera', ports: [], properties: { ...defaultProperties(), tokens: 1, maxTokens: 1 }, runtime: { tokens: 1 } },
-    },
-    {
-      id: 'demo-activate', type: 'hilesNode', position: DEMO_POSITIONS['demo-activate'],
-      data: { hilesType: HilesElementType.TRANSITION, name: 'T1 · Activar', ports: transitionPorts('demo-activate-out'), properties: { ...defaultProperties(), condition: 'entrada == true' } },
-    },
-    {
-      id: 'demo-active', type: 'hilesNode', position: DEMO_POSITIONS['demo-active'],
-      data: { hilesType: HilesElementType.PLACE, name: 'Activo', ports: [], properties: { ...defaultProperties(), tokens: 0, maxTokens: 1 }, runtime: { tokens: 0 } },
-    },
-    {
-      id: 'demo-deactivate', type: 'hilesNode', position: DEMO_POSITIONS['demo-deactivate'],
-      data: { hilesType: HilesElementType.TRANSITION, name: 'T2 · Desactivar', ports: transitionPorts('demo-deactivate-out'), properties: { ...defaultProperties(), condition: 'entrada == false' } },
-    },
-    {
-      id: 'demo-output', type: 'hilesNode', position: DEMO_POSITIONS['demo-output'],
-      data: {
-        hilesType: HilesElementType.SERVICE, name: 'Salida', ports: [demoPort('demo-output-in', 'Estado', 'input', 'left')],
-        properties: { ...defaultProperties(), description: 'Salida calculada por el runtime.' }, runtime: { value: false },
-      },
-    },
-  ];
-  const edges: HilesEdge[] = [
-    demoConnection('demo-cch1-on', 'CCH1 · ON', 'demo-input', 'demo-activate', HilesConnectionType.CONTINUOUS, 'demo-input-out', 'transition-condition-in'),
-    demoConnection('demo-cch1-off', 'CCH1 · OFF', 'demo-input', 'demo-deactivate', HilesConnectionType.CONTINUOUS, 'demo-input-out', 'transition-condition-in'),
-    demoConnection('demo-lch1', 'LCH1', 'demo-waiting', 'demo-activate', HilesConnectionType.PETRI, 'petri-out', 'petri-in'),
-    demoConnection('demo-lch2', 'LCH2', 'demo-activate', 'demo-active', HilesConnectionType.PETRI, 'petri-out', 'petri-in'),
-    demoConnection('demo-lch3', 'LCH3', 'demo-active', 'demo-deactivate', HilesConnectionType.PETRI, 'petri-out', 'petri-in'),
-    demoConnection('demo-lch4', 'LCH4', 'demo-deactivate', 'demo-waiting', HilesConnectionType.PETRI, 'petri-out', 'petri-in'),
-    demoConnection('demo-cch2-on', 'CCH2 · ON', 'demo-activate', 'demo-output', HilesConnectionType.CONTINUOUS, 'demo-activate-out', 'demo-output-in'),
-    demoConnection('demo-cch2-off', 'CCH2 · OFF', 'demo-deactivate', 'demo-output', HilesConnectionType.CONTINUOUS, 'demo-deactivate-out', 'demo-output-in'),
-  ];
-  return { nodes, edges };
 };
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -390,7 +258,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       id: `${type}-${crypto.randomUUID()}`,
       type: 'hilesEdge',
       label: `${appearance.prefix}${count}`,
-      data: { hilesConnectionType: type, routing: 'orthogonal', dataType: 'real', delay: 0, weight: 1, waypoints: [] },
+      data: { hilesConnectionType: type, routing: 'orthogonal', dataType: 'real', delay: 0, weight: 1, propagationMode: 'push', waypoints: [] },
     } as HilesEdge);
     const state = get();
     set({ edges: addEdge(edge, state.edges), connectionError: null, ...historyFor(state, snapshotOf(state)) });
@@ -525,133 +393,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!state.nodes.length && !state.edges.length) return;
     set({ nodes: [], edges: [], selectedElementId: null, selectedConnectionId: null, past: [], future: [], canUndo: false, canRedo: false, statusMessage: 'New empty project' });
   },
-
-  loadDemoCircuit: () => {
-    const state = get();
-    set({
-      ...createDemoCircuit(),
-      selectedElementId: null,
-      selectedConnectionId: null,
-      connectionError: null,
-      statusMessage: 'Circuito demo cargado',
-      paletteOpen: false,
-      ...historyFor(state, snapshotOf(state)),
-    });
-  },
-  applyDemoState: (runtimeState) => set((state) => {
-    let changed = false;
-    const nodes = state.nodes.map((node) => {
-      const runtime = demoRuntimeFor(node.id, runtimeState);
-      if (!runtime || sameRuntime(node.data.runtime, runtime)) return node;
-      changed = true;
-      return { ...node, data: { ...node.data, runtime } };
-    });
-    // Keeping the same array when nothing moved leaves the autosave subscription
-    // untouched: a backend answer never rewrites the document the user saved.
-    return changed ? { nodes } : {};
-  }),
-
-  // The custom-circuit runner is deliberately local and limited to guard
-  // comparisons plus Place -> Transition -> Place token movement. The backend
-  // demo remains untouched and continues to own its FIFO runtime.
-  simulateServiceInput: (id, value) => {
-    const state = get();
-    const service = state.nodes.find((node) => node.id === id);
-    if (service?.data.hilesType !== HilesElementType.SERVICE || !service.data.ports.some((port) => port.direction === 'output')) {
-      return ['Selecciona un Service que tenga al menos un puerto de salida.'];
-    }
-
-    const runtimeById = new Map<string, NodeRuntime>();
-    state.nodes.forEach((node) => {
-      if (node.data.runtime) runtimeById.set(node.id, { ...node.data.runtime });
-      if (node.data.hilesType === HilesElementType.PLACE) {
-        runtimeById.set(node.id, { ...runtimeById.get(node.id), tokens: node.data.runtime?.tokens ?? node.data.properties.tokens });
-      }
-    });
-    runtimeById.set(id, { ...runtimeById.get(id), value });
-
-    const valueFor = (nodeId: string) => runtimeById.get(nodeId)?.value;
-    const dataInputsFor = (nodeId: string) => state.edges
-      .filter((edge) => edge.target === nodeId && isDataEdge(edge))
-      .map((edge) => valueFor(edge.source))
-      .filter((input): input is RuntimeValue => input !== undefined);
-
-    // Functional blocks can be chained, so evaluate them until no output
-    // changes (or the small network settles after a bounded number of passes).
-    for (let pass = 0; pass < state.nodes.length; pass += 1) {
-      let changed = false;
-      state.nodes.filter((node) => node.data.hilesType === HilesElementType.FUNCTIONAL_BLOCK).forEach((block) => {
-        const input = dataInputsFor(block.id)[0];
-        if (input === undefined) return;
-        const result = evaluateGuard(block.data.properties.expression || block.data.name, input);
-        if (result === undefined || valueFor(block.id) === result) return;
-        runtimeById.set(block.id, { ...runtimeById.get(block.id), value: result });
-        changed = true;
-      });
-      if (!changed) break;
-    }
-
-    const events: string[] = [`${service.data.name}: ${String(value)}.`];
-    const transitions = state.nodes.filter((node) => node.data.hilesType === HilesElementType.TRANSITION);
-    const activeTransitions = transitions.filter((transition) => {
-      const conditionValues = dataInputsFor(transition.id);
-      const enabled = conditionValues.some((condition) => condition === true);
-      runtimeById.set(transition.id, { ...runtimeById.get(transition.id), value: enabled });
-      return enabled;
-    });
-    if (activeTransitions.length === 0) {
-      events.push('Ninguna transición está activa; el token se conserva.');
-    } else if (activeTransitions.length > 1) {
-      events.push('Hay más de una transición activa; el token se conserva para evitar un movimiento ambiguo.');
-    } else {
-      const transition = activeTransitions[0];
-
-      const inputPlaces = state.edges
-        .filter((edge) => edge.data?.hilesConnectionType === HilesConnectionType.PETRI && edge.target === transition.id)
-        .map((edge) => state.nodes.find((node) => node.id === edge.source))
-        .filter((node): node is HilesNode => node?.data.hilesType === HilesElementType.PLACE);
-      const outputPlaces = state.edges
-        .filter((edge) => edge.data?.hilesConnectionType === HilesConnectionType.PETRI && edge.source === transition.id)
-        .map((edge) => state.nodes.find((node) => node.id === edge.target))
-        .filter((node): node is HilesNode => node?.data.hilesType === HilesElementType.PLACE);
-      if (!inputPlaces.length || !outputPlaces.length) {
-        events.push(`${transition.data.name} está habilitada, pero le falta un arco Petri de entrada o salida.`);
-      } else {
-        const canFire = inputPlaces.every((place) => (runtimeById.get(place.id)?.tokens ?? place.data.properties.tokens) > 0)
-          && outputPlaces.every((place) => (runtimeById.get(place.id)?.tokens ?? place.data.properties.tokens) < place.data.properties.maxTokens);
-        if (!canFire) {
-          events.push(`${transition.data.name} está habilitada, pero no hay token disponible en su Place de entrada.`);
-        } else {
-          inputPlaces.forEach((place) => {
-            const tokens = (runtimeById.get(place.id)?.tokens ?? place.data.properties.tokens) - 1;
-            runtimeById.set(place.id, { ...runtimeById.get(place.id), tokens, active: tokens > 0 });
-          });
-          outputPlaces.forEach((place) => {
-            const tokens = (runtimeById.get(place.id)?.tokens ?? place.data.properties.tokens) + 1;
-            runtimeById.set(place.id, { ...runtimeById.get(place.id), tokens, active: tokens > 0 });
-          });
-          events.push(`${transition.data.name} disparó y movió el token.`);
-        }
-      }
-    }
-
-    set({ nodes: state.nodes.map((node) => {
-      const runtime = runtimeById.get(node.id);
-      return runtime ? { ...node, data: { ...node.data, runtime } } : node;
-    }) });
-    return events;
-  },
-  resetLocalSimulation: () => set((state) => ({
-    nodes: state.nodes.map((node) => {
-      if (node.data.hilesType === HilesElementType.PLACE) {
-        return { ...node, data: { ...node.data, runtime: { tokens: node.data.properties.tokens, active: node.data.properties.tokens > 0 } } };
-      }
-      if (node.data.hilesType === HilesElementType.SERVICE || node.data.hilesType === HilesElementType.FUNCTIONAL_BLOCK || node.data.hilesType === HilesElementType.TRANSITION) {
-        return { ...node, data: { ...node.data, runtime: undefined } };
-      }
-      return node;
-    }),
-  })),
 
   exportModel: () => JSON.stringify(serializeModel(get().nodes, get().edges), null, 2),
   importModel: (json) => {

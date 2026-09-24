@@ -6,6 +6,7 @@ export const SimulationPanel: React.FC = () => {
   const [expanded, setExpanded] = useState(true);
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [numericValue, setNumericValue] = useState('');
+  const [textValue, setTextValue] = useState('');
 
   const { estado, eventos, servicios, mensaje, inyectarEntrada, paso, ejecutar, reiniciar } = useSimulationStore();
 
@@ -57,10 +58,15 @@ export const SimulationPanel: React.FC = () => {
                   <button type="button" onClick={() => inyectarEntrada(selectedService.id, false)}>Enviar 0</button>
                   <button type="button" className="is-primary" onClick={() => inyectarEntrada(selectedService.id, true)}>Enviar 1</button>
                 </div>
-              ) : (
+              ) : selectedService?.tipoDato === 'integer' || selectedService?.tipoDato === 'real' ? (
                 <div className="simulation-panel__numeric-control">
                   <input type="number" step="any" value={numericValue} placeholder="Ej.: 42" onChange={(e) => setNumericValue(e.target.value)} />
-                  <button type="button" className="is-primary" disabled={numericValue.trim() === ''} onClick={() => inyectarEntrada(selectedService.id, Number(numericValue))}>Enviar</button>
+                  <button type="button" className="is-primary" disabled={numericValue.trim() === ''} onClick={() => inyectarEntrada(selectedService.id, selectedService.tipoDato === 'integer' ? Math.trunc(Number(numericValue)) : Number(numericValue))}>Enviar</button>
+                </div>
+              ) : (
+                <div className="simulation-panel__numeric-control">
+                  <input type="text" value={textValue} placeholder="Valor de texto" onChange={(e) => setTextValue(e.target.value)} />
+                  <button type="button" className="is-primary" disabled={textValue.length === 0} onClick={() => inyectarEntrada(selectedService.id, textValue)}>Enviar</button>
                 </div>
               )}
             </>

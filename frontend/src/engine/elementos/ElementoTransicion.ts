@@ -31,7 +31,8 @@ export class ElementoTransicion implements IElementoHiLeS {
   }
 
   recibirEntrada(puertoId: string, valor: ValorRuntime): void {
-    if (puertoId !== this.puertoCondicionId) {
+    const esPuertoCondicion = puertoId === this.puertoCondicionId || puertoId === 'petri-in';
+    if (!esPuertoCondicion) {
       this.error = `El puerto ${puertoId} no es la entrada de condición de la Transition.`;
       return;
     }

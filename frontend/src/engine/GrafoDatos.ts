@@ -48,8 +48,6 @@ export const construirOrdenTopologico = (
   const gradoEntrada = new Map<string, number>(identificadores.map((id) => [id, 0]));
 
   aristasDatosValidas(nodos, aristas).forEach((arista) => {
-    // Una autoconexión es un ciclo de longitud uno: no aporta precedencia.
-    if (arista.source === arista.target) return;
     sucesores.get(arista.source)?.push(arista.target);
     gradoEntrada.set(arista.target, (gradoEntrada.get(arista.target) ?? 0) + 1);
   });
@@ -159,8 +157,17 @@ export type EjecutorElemento = (
   elemento: IElementoHiLeS,
 ) => Map<string, ValorRuntime>;
 
+/** Variante que permite esperar código ejecutado dentro de un Web Worker. */
+export type EjecutorElementoAsync = (
+  elementoId: string,
+  elemento: IElementoHiLeS,
+) => Map<string, ValorRuntime> | Promise<Map<string, ValorRuntime>>;
+
 /** Ejecutor estándar: delega en la lógica propia de cada elemento. */
 export const ejecutorPorDefecto: EjecutorElemento = (_elementoId, elemento) => elemento.evaluar();
+
+export const ejecutorAsyncPorDefecto: EjecutorElementoAsync = (_elementoId, elemento) =>
+  elemento.evaluarAsync ? elemento.evaluarAsync() : elemento.evaluar();
 
 /** Un valor que viajó de un puerto de salida a un puerto de entrada. */
 export interface EntregaValor {
@@ -233,7 +240,7 @@ export const propagarValores = (
         // Uso del patrón Observer: el bus notifica a todos los suscriptores conectados.
         bus.notificar(elementoId, puertoOrigenId, valor);
       } else {
-        // Lógica legacy: acoplamiento directo iterando aristas.
+        // Lógica antigua: acoplamiento directo mediante recorrido de aristas.
         aristasDatos
           .filter((arista) => arista.source === elementoId
             && (!arista.sourceHandle || arista.sourceHandle === puertoOrigenId))
@@ -264,6 +271,82 @@ export const propagarValores = (
       }
     });
   });
+
+  return { valores, nodosActualizados, entregas, errores };
+};
+
+/**
+ * Propagación push equivalente a `propagarValores`, esperando en orden las
+ * evaluaciones aisladas. Una función completa termina antes de evaluar el
+ * siguiente nodo del grafo.
+ */
+export const propagarValoresAsync = async (
+  orden: readonly string[],
+  estadoRuntime: EstadoRuntimeGrafo,
+  ejecutor: EjecutorElementoAsync = ejecutorAsyncPorDefecto,
+  bus?: BusObserver,
+): Promise<ResultadoPropagacion> => {
+  const { elementos, valores } = estadoRuntime;
+  const aristasDatos = estadoRuntime.aristas.filter(esAristaDatos);
+  const nodosActualizados: string[] = [];
+  const entregas: EntregaValor[] = [];
+  const errores: ErrorPropagacion[] = [];
+
+  for (const elementoId of orden) {
+    const elemento = elementos.get(elementoId);
+    if (!elemento) continue;
+
+    let salidas: Map<string, ValorRuntime>;
+    try {
+      salidas = await ejecutor(elementoId, elemento);
+    } catch (error) {
+      errores.push({
+        elementoId,
+        mensaje: error instanceof Error ? error.message : 'Fallo desconocido al evaluar el elemento.',
+      });
+      continue;
+    }
+
+    const errorInterno = elemento.obtenerEstado().error;
+    if (errorInterno) errores.push({ elementoId, mensaje: errorInterno });
+
+    salidas.forEach((valor, puertoOrigenId) => {
+      if (valores.get(elementoId) !== valor) {
+        valores.set(elementoId, valor);
+        nodosActualizados.push(elementoId);
+      }
+
+      if (bus) {
+        bus.notificar(elementoId, puertoOrigenId, valor);
+        return;
+      }
+
+      aristasDatos
+        .filter((arista) => arista.source === elementoId
+          && (!arista.sourceHandle || arista.sourceHandle === puertoOrigenId))
+        .forEach((arista) => {
+          const destino = elementos.get(arista.target);
+          const puertoDestinoId = arista.targetHandle
+            ?? estadoRuntime.puertoEntradaPorDefecto?.(arista.target);
+          if (!destino || !puertoDestinoId) {
+            errores.push({
+              elementoId: arista.target,
+              mensaje: 'La conexión de datos no indica a qué puerto de entrada llega el valor.',
+            });
+            return;
+          }
+          destino.recibirEntrada(puertoDestinoId, valor);
+          entregas.push({
+            aristaId: arista.id,
+            origenId: elementoId,
+            puertoOrigenId,
+            destinoId: arista.target,
+            puertoDestinoId,
+            valor,
+          });
+        });
+    });
+  }
 
   return { valores, nodosActualizados, entregas, errores };
 };

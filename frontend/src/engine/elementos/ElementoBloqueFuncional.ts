@@ -1,8 +1,18 @@
 import { HilesElementType, type HilesNodeProperties, type HilesPort, type RuntimeValue } from '../../types/hiles';
-import { ejecutarJS, evaluateGuard, type EntradasRuntime } from '../EjecutorCodigo';
+import { ejecutarJS, ejecutarPython, evaluateGuard, type EntradasRuntime } from '../EjecutorCodigo';
 import type { EstadoElemento, IElementoHiLeS, ValorRuntime } from './interfaces';
 
 export interface ConfiguracionBloqueFuncional { properties?: Partial<HilesNodeProperties>; ports?: readonly HilesPort[]; }
+
+/** Convierte la etiqueta visual del puerto en un identificador usable en código. */
+const nombreVariable = (nombre: string): string => {
+  const normalizado = nombre.normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9_$]+/g, '_')
+    .replace(/^([^A-Za-z_$])/, '_$1')
+    .replace(/_+$/g, '');
+  return normalizado.toLowerCase();
+};
 
 /** Bloque que transforma entradas mediante código del usuario o expresión legacy. */
 export class ElementoBloqueFuncional implements IElementoHiLeS {
@@ -18,15 +28,17 @@ export class ElementoBloqueFuncional implements IElementoHiLeS {
     const puerto = this.puertos.find((item) => item.id === puertoId);
     if (!puerto || puerto.direction !== 'input') { this.error = `El puerto ${puertoId} no es una entrada válida.`; return; }
     this.entradas[puerto.name] = valor;
+    this.entradas[nombreVariable(puerto.name)] = valor;
     this.error = undefined;
   }
   evaluar(): Map<string, ValorRuntime> {
     if (this.properties.enabled === false) return new Map();
     try {
       const codigo = this.properties.code?.trim();
+      if (codigo && this.properties.codeLanguage === 'python') throw new Error('El código Python requiere evaluación asíncrona.');
       const resultado = codigo ? ejecutarJS(codigo, this.entradas) : evaluateGuard(this.properties.expression ?? '', this.entradas);
       if (resultado instanceof Promise) {
-        this.error = undefined;
+        this.error = 'Este código requiere evaluación asíncrona.';
         return new Map();
       }
       this.resultado = resultado;
@@ -45,7 +57,9 @@ export class ElementoBloqueFuncional implements IElementoHiLeS {
     try {
       const codigo = this.properties.code?.trim();
       const resultado = codigo
-        ? await Promise.resolve(ejecutarJS(codigo, this.entradas))
+        ? await Promise.resolve(this.properties.codeLanguage === 'python'
+          ? ejecutarPython(codigo, this.entradas)
+          : ejecutarJS(codigo, this.entradas))
         : evaluateGuard(this.properties.expression ?? '', this.entradas);
       this.resultado = resultado;
       this.error = undefined;

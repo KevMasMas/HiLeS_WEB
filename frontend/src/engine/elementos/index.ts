@@ -21,6 +21,7 @@ export type * from './interfaces';
 export interface ConfiguracionElemento {
   properties?: Partial<HilesNodeProperties>;
   ports?: readonly HilesPort[];
+  hijos?: readonly string[];
 }
 
 export type FabricaElemento = (configuracion: ConfiguracionElemento) => IElementoHiLeS;

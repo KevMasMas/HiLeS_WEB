@@ -13,8 +13,8 @@ export class ElementoService implements IElementoHiLeS {
   constructor(configuracion: ConfiguracionService = {}) { this.puertos = configuracion.ports ?? []; }
   recibirEntrada(puertoId: string, valor: ValorRuntime): void {
     const puerto = this.puertos.find((item) => item.id === puertoId);
-    if (puerto && puerto.direction !== 'input' && puerto.direction !== 'output') {
-      this.ultimoError = `El puerto ${puertoId} no es válido.`;
+    if (!puerto || puerto.direction !== 'input') {
+      this.ultimoError = `El puerto ${puertoId} no es una entrada válida del Service.`;
       return;
     }
     this.valor = valor;

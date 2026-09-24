@@ -2,8 +2,6 @@ import { useEffect, useRef } from 'react';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
-import { javascript } from '@codemirror/lang-javascript';
-import { python } from '@codemirror/lang-python';
 import { oneDark } from '@codemirror/theme-one-dark';
 
 interface CodeEditorProps {
@@ -29,33 +27,37 @@ export const CodeEditor = ({
   // Inicializar o recrear el editor cuando cambie el lenguaje
   useEffect(() => {
     if (!editorRef.current) return;
+    let cancelado = false;
+    let view: EditorView | null = null;
 
-    const extensions = [
-      basicSetup,
-      oneDark,
-      EditorView.lineWrapping,
-      lenguaje === 'python' ? python() : javascript(),
-      EditorView.updateListener.of((update) => {
-        if (update.docChanged) {
-          onChange(update.state.doc.toString());
-        }
-      })
-    ];
+    const iniciar = async () => {
+      const extensionLenguaje = lenguaje === 'python'
+        ? (await import('@codemirror/lang-python')).python()
+        : (await import('@codemirror/lang-javascript')).javascript();
+      if (cancelado || !editorRef.current) return;
 
-    const state = EditorState.create({
-      doc: codigo,
-      extensions
-    });
+      const state = EditorState.create({
+        doc: codigo,
+        extensions: [
+          basicSetup,
+          oneDark,
+          EditorView.lineWrapping,
+          extensionLenguaje,
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) onChange(update.state.doc.toString());
+          }),
+        ],
+      });
 
-    const view = new EditorView({
-      state,
-      parent: editorRef.current
-    });
+      view = new EditorView({ state, parent: editorRef.current });
+      viewRef.current = view;
+    };
 
-    viewRef.current = view;
+    void iniciar();
 
     return () => {
-      view.destroy();
+      cancelado = true;
+      view?.destroy();
       viewRef.current = null;
     };
     // Deshabilitamos la regla porque si ponemos 'codigo' o 'onChange', 

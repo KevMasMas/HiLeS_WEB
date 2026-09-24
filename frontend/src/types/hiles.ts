@@ -7,7 +7,7 @@ export const HilesElementType = {
   HOLD: 'HOLD',
   PLACE: 'PLACE',
   TRANSITION: 'TRANSITION',
-  TOKEN: 'TOKEN', // Legacy import compatibility. Tokens are stored on Place nodes.
+  TOKEN: 'TOKEN', // Compatibilidad con importaciones antiguas; los tokens se almacenan en Place.
 } as const;
 
 export type HilesElementType = (typeof HilesElementType)[keyof typeof HilesElementType];
@@ -31,7 +31,7 @@ export type RuntimeValue = boolean | number | string;
 export type CCHPropagationMode = 'push' | 'pull' | 'flag';
 export type CodeLanguage = 'javascript' | 'python';
 
-/** A user-owned routing point. Coordinates are local when it belongs to a Block. */
+/** Punto de enrutamiento del usuario; sus coordenadas son locales si pertenece a un Block. */
 export interface ConnectionWaypoint {
   x: number;
   y: number;
@@ -72,9 +72,9 @@ export interface HilesNodeData extends Record<string, unknown> {
   name: string;
   ports: HilesPort[];
   properties: HilesNodeProperties;
-  /** Transient canvas presentation state; it is never serialized into the model. */
+  /** Estado transitorio de presentación del lienzo; nunca se serializa en el modelo. */
   summaryMode?: boolean;
-  /** Transient values reported by a running simulation. */
+  /** Valores transitorios informados por una simulación en ejecución. */
   runtime?: {
     value?: RuntimeValue;
     active?: boolean;
@@ -91,7 +91,7 @@ export interface HilesEdgeData extends Record<string, unknown> {
   dataType: PortDataType;
   delay: number;
   weight: number;
-  /** Ordered route points inserted by double-clicking an edge. */
+  /** Puntos de ruta ordenados que se insertan haciendo doble clic en una arista. */
   waypoints?: ConnectionWaypoint[];
   propagationMode?: CCHPropagationMode;
   stale?: boolean;

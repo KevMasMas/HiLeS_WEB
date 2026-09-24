@@ -12,7 +12,7 @@ export class ElementoRetencion implements IElementoHiLeS {
   constructor(configuracion: ConfiguracionRetencion = {}) { this.puertos = configuracion.ports ?? []; this.valorInicial = configuracion.valorInicial; this.valor = this.valorInicial; }
   recibirEntrada(puertoId: string, valor: ValorRuntime): void {
     const puerto = this.puertos.find((item) => item.id === puertoId);
-    if (!puerto || puerto.direction === 'input') this.valor = valor;
+    if (puerto?.direction === 'input') this.valor = valor;
   }
   evaluar(): Map<string, ValorRuntime> {
     const salida = this.puertos.find((puerto) => puerto.direction === 'output');
