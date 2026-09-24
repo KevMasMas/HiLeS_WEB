@@ -23,6 +23,47 @@ Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una t
 
 <!-- Agregar nuevas entradas debajo de esta línea. No eliminar las anteriores. -->
 
+### [2026-09-24 11:25] - Responsable: Cierre integral
+
+- Estado: [x] Hecho
+- Tarea o problema: Completar los pendientes detectados al revisar las tareas de todas las personas y dejar evidencia reproducible de su funcionamiento.
+- Qué se hizo: Se habilitó Python real con Pyodide 0.26.3 dentro de un Web Worker terminable y con límite de 15 segundos; se conectó al motor y al botón `Probar código`; se añadieron entradas de prueba tipadas y nombres de variables normalizados. Se eliminó el circuito demo codificado dentro del store, se preservó `propagationMode` al importar y editar canales, se amplió la prueba de túneles del Structural Block y se ejecutan los tres JSON mediante el motor. La ejecución completa reveló y corrigió la compatibilidad del puerto histórico `petri-in` en Transitions. También se tradujeron los comentarios restantes y se verificó desde un lienzo vacío el flujo manual Service → Functional Block con `input * 2`.
+- Archivos creados o modificados: `frontend/src/workers/pyodide.worker.ts`, `frontend/src/engine/EjecutorCodigo.ts`, `frontend/src/engine/elementos/ElementoBloqueFuncional.ts`, `frontend/src/engine/elementos/ElementoTransicion.ts`, `frontend/src/features/editor/PropertiesPanel.tsx`, `frontend/src/stores/useEditorStore.ts`, `frontend/src/features/editor/Canvas.tsx`, pruebas en `frontend/src/engine/__tests__/` y documentación del plan.
+- Rama: `motor-frontend`
+- Commit/hash de implementación: `5362451`
+- Cómo se probó: `npm run test:run`, `npm run build`, `npm run lint`, `git diff --check`; prueba interactiva de Pyodide con `humedad < 76`; construcción manual Service → Functional Block, conexión CCH, código `input * 2`, inyección y ejecución.
+- Resultado: 5 suites y 28 pruebas aprobadas; 226 módulos compilados; ESLint y comprobación de diff sin errores. Python devolvió `true`; el circuito manual publicó `2` y se estabilizó en dos pasos. La consola del navegador quedó sin errores ni advertencias.
+- Evidencia: `Test Files 5 passed`, `Tests 28 passed`, `✓ 226 modules transformed`, `✓ built`; interfaz local abierta en `http://127.0.0.1:5173/` con estado `ESTABILIZADA` y evento `New Functional Block publicó 2`.
+- Riesgos, pendientes o reversión necesaria: Pyodide se descarga desde el CDN oficial fijado a la versión 0.26.3 en el primer uso, por lo que la ejecución Python requiere conexión a Internet. No quedan tareas sin marcar en el plan.
+
+### [2026-09-24 11:05] - Responsable: Persona 5
+
+- Estado: [x] Hecho
+- Tarea o problema: Completar pruebas, integración y cierre técnico del motor frontend-only; verificar el circuito de humedad, los demos JSON, la interfaz en ejecución y los comandos finales del proyecto.
+- Qué se hizo: Se instaló y configuró Vitest; se crearon las cinco suites exigidas con 27 pruebas reproducibles; se cubrieron elementos, red de Petri, grafo, sandbox JavaScript, timeout, reinicio, autociclos y el flujo integral Service → Functional Block → Transition → Place. Se validaron los tres demos JSON existentes y el demo de humedad en ambos sentidos. Durante la integración se corrigió la validación de conexiones para separar canales Petri de canales de datos/control y se normalizaron los nombres visuales de puertos a identificadores de código, permitiendo que el puerto `Humedad` alimente la expresión `humedad < 76`. Se añadió carga diferida de CodeMirror y sus lenguajes para mantener todos los chunks por debajo de 500 kB. Se levantó el proyecto y se verificó en navegador la importación del demo, la inyección de humedad 90, el disparo de T2, el movimiento del token y la estabilización en tres pasos sin errores de consola.
+- Archivos creados o modificados:
+  - `frontend/vitest.config.ts`
+  - `frontend/package.json`
+  - `frontend/package-lock.json`
+  - `frontend/tsconfig.app.json`
+  - `frontend/tsconfig.node.json`
+  - `frontend/src/engine/__tests__/fixtures.ts`
+  - `frontend/src/engine/__tests__/MotorSimulacion.test.ts`
+  - `frontend/src/engine/__tests__/EvaluadorPetri.test.ts`
+  - `frontend/src/engine/__tests__/EjecutorCodigo.test.ts`
+  - `frontend/src/engine/__tests__/GrafoDatos.test.ts`
+  - `frontend/src/engine/__tests__/Elementos.test.ts`
+  - `frontend/src/engine/elementos/ElementoBloqueFuncional.ts`
+  - `frontend/src/stores/useEditorStore.ts`
+  - `entregas/entrega-3-26-septiembre/PLAN_MOTOR_FRONTEND.md`
+  - `entregas/entrega-3-26-septiembre/REGISTRO_CAMBIOS_MOTOR.md`
+- Rama: `motor-frontend`
+- Commit/hash: Pendiente de commit; cambios verificados en el árbol de trabajo de `motor-frontend`.
+- Cómo se probó: `npm run test:run`, `npm run build`, `npm run lint`, búsqueda con `rg` de referencias legacy al backend y validación interactiva en `http://127.0.0.1:5173/` importando `output/demo-2-humedad-token.json`.
+- Resultado: 5 suites y 27 pruebas aprobadas; TypeScript y Vite compilan; ESLint termina con código 0; los tres JSON se validan y construyen sin error; el demo de humedad mueve el token en ambos sentidos; la UI muestra eventos, valores y estabilización; consola del navegador sin errores ni advertencias.
+- Evidencia: Salidas `Test Files 5 passed`, `Tests 27 passed`, `✓ 226 modules transformed`, `✓ built`; navegador con evento `T2 · Desactivar disparó y movió los tokens` y `El circuito se estabilizó en el paso 3`.
+- Riesgos, pendientes o reversión necesaria: Python/Pyodide continúa fuera del alcance opcional y se mantiene deshabilitado explícitamente en la UI. No se requiere reversión técnica. El servidor local de desarrollo quedó ejecutándose para la entrega.
+
 ### [2026-09-23 16:11] - Responsable: Juan Ramos
 
 - Estado: [x] Hecho

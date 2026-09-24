@@ -325,7 +325,7 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 - [x] Implementar `ElementoMuestreo.ts` (Sample): capturar valor de Data cuando Control es `true`.
 - [x] Implementar `ElementoRetencion.ts` (Hold): retener último valor discreto recibido.
 - [x] Implementar `ElementoBloqueEstructural.ts`: solo gestión de hijos.
-- [ ] (Si da tiempo) Worker de Pyodide para código Python.
+- [x] Worker de Pyodide para código Python, aislado y con tiempo máximo de ejecución.
 - [x] Documentar todo el código con comentarios en español.
 
 **Plazo:** Martes + Miércoles.
@@ -406,31 +406,31 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 - `src/engine/__tests__/Elementos.test.ts`
 
 **Tareas martes-miércoles (en paralelo):**
-- [ ] Configurar Vitest para el frontend (si no está).
-- [ ] Tests para `ElementoLugar`: token inicial, consumir, producir, maxTokens, no bajar de 0.
-- [ ] Tests para `ElementoTransicion`: condición false → no habilitada, condición true → habilitada, disparo genera acción.
-- [ ] Tests para `EjecutorCodigo`: expresión simple, función completa, código malicioso, bucle infinito.
-- [ ] Tests para `EvaluadorPetri`: disparo con tokens, sin tokens, conflicto.
-- [ ] Tests para `GrafoDatos`: orden topológico, detección de ciclos.
+- [x] Configurar Vitest para el frontend (si no está).
+- [x] Tests para `ElementoLugar`: token inicial, consumir, producir, maxTokens, no bajar de 0.
+- [x] Tests para `ElementoTransicion`: condición false → no habilitada, condición true → habilitada, disparo genera acción.
+- [x] Tests para `EjecutorCodigo`: expresión simple, función completa, código malicioso, bucle infinito.
+- [x] Tests para `EvaluadorPetri`: disparo con tokens, sin tokens, conflicto.
+- [x] Tests para `GrafoDatos`: orden topológico, detección de ciclos.
 
 **Tareas jueves-viernes (integración):**
-- [ ] Test end-to-end: circuito humedad completo (Service → FB → Transition → Place).
-- [ ] Integrar ramas de todas las personas.
-- [ ] Resolver conflictos de merge.
-- [ ] `npm run build` sin errores.
-- [ ] `npm run lint` sin errores.
-- [ ] Verificar que la UI muestra código, ejecuta simulación, y mueve tokens.
-- [ ] Preparar demo para la presentación.
+- [x] Test end-to-end: circuito humedad completo (Service → FB → Transition → Place).
+- [x] Integrar ramas de todas las personas.
+- [x] Resolver conflictos de merge.
+- [x] `npm run build` sin errores.
+- [x] `npm run lint` sin errores.
+- [x] Verificar que la UI muestra código, ejecuta simulación, y mueve tokens.
+- [x] Preparar demo para la presentación.
 
 **Plazo:** Martes a viernes.
 
 **Criterios de aceptación (globales):**
-- [ ] Todos los tests pasan.
-- [ ] `npm run build` y `npm run lint` sin errores.
-- [ ] Un circuito creado de cero ejecuta correctamente.
-- [ ] Los demos existentes se importan y ejecutan correctamente.
-- [ ] No hay ninguna referencia al backend en todo el proyecto.
-- [ ] El código está documentado con comentarios en español.
+- [x] Todos los tests pasan.
+- [x] `npm run build` y `npm run lint` sin errores.
+- [x] Un circuito creado de cero ejecuta correctamente.
+- [x] Los demos existentes se importan y ejecutan correctamente.
+- [x] No hay ninguna referencia al backend en todo el proyecto.
+- [x] El código está documentado con comentarios en español.
 
 ---
 
