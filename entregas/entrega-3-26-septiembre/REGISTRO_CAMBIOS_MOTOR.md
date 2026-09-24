@@ -23,6 +23,18 @@ Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una t
 
 <!-- Agregar nuevas entradas debajo de esta línea. No eliminar las anteriores. -->
 
+### [2026-09-24 11:41] - Responsable: Corrección de integración UI
+
+- Estado: [x] Hecho
+- Tarea o problema: El editor del Functional Block `>84%` podía reemplazar su código por `humedad < 76` después de cambiar de bloque y ejecutar el demo de humedad.
+- Qué se hizo: Se corrigió el ciclo de vida de CodeMirror. Cada nodo seleccionado monta una instancia aislada; el listener usa siempre el callback vigente; las sincronizaciones programáticas ya no se interpretan como escritura del usuario; y una carga asíncrona del lenguaje toma el código más reciente. El resultado de `Probar código` también quedó asociado al nodo que lo produjo.
+- Archivos creados o modificados: `frontend/src/features/editor/CodeEditor.tsx`, `frontend/src/features/editor/PropertiesPanel.tsx` y este registro.
+- Rama: `motor-frontend`
+- Commit/hash: Registrado en el commit posterior a esta entrada.
+- Cómo se probó: Se ejecutaron `npm run test:run`, `npm run lint` y `npm run build`. En navegador se importó `demo-2-humedad-token.json`, se alternó varias veces entre `<76%` y `>84%`, se inyectó humedad `90`, se ejecutó el motor y se volvió a alternar la selección.
+- Resultado: 5 suites y 28 pruebas aprobadas; lint y build correctos. `>84%` conservó `humedad > 84`, publicó `true` y disparó T2; `<76%` conservó `humedad < 76` y publicó `false`. El circuito se estabilizó en tres pasos y la consola quedó sin errores ni advertencias.
+- Riesgos, pendientes o reversión necesaria: Ninguno conocido. Si un autosave antiguo ya había quedado modificado antes de esta corrección, debe reimportarse el JSON original o restaurarse manualmente la expresión correcta una sola vez.
+
 ### [2026-09-24 11:25] - Responsable: Cierre integral
 
 - Estado: [x] Hecho

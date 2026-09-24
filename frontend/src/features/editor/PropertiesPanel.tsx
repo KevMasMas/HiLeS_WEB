@@ -49,17 +49,10 @@ const PortEditor: React.FC<{ nodeId: string; ports: HilesPort[] }> = ({ nodeId, 
 
 export const PropertiesPanel: React.FC = () => {
   const store = useEditorStore();
-  const [resultadoPrueba, setResultadoPrueba] = useState<string | null>(null);
+  const [resultadoPrueba, setResultadoPrueba] = useState<{ nodeId: string; mensaje: string } | null>(null);
   
   const selectedNode = store.nodes.find((node) => node.id === store.selectedElementId);
   const selectedEdge = store.edges.find((edge) => edge.id === store.selectedConnectionId);
-
-  const [prevNodeId, setPrevNodeId] = useState(selectedNode?.id);
-  
-  if (selectedNode?.id !== prevNodeId) {
-    setPrevNodeId(selectedNode?.id);
-    setResultadoPrueba(null);
-  }
 
   if (selectedEdge) {
     const data = selectedEdge.data!;
@@ -137,12 +130,13 @@ export const PropertiesPanel: React.FC = () => {
           </div>
           <React.Suspense fallback={<div style={{ padding: 12, fontSize: 11 }}>Cargando editor…</div>}>
             <CodeEditor
+            key={selectedNode.id}
             codigo={String(properties.code ?? properties.expression ?? '')}
             lenguaje={(properties.codeLanguage as 'javascript' | 'python') ?? 'javascript'}
             onChange={(code) => update(selectedNode.id, { code })}
             variablesDisponibles={ports.filter(p => p.direction === 'input').map(p => p.name)}
             onProbar={async () => {
-              setResultadoPrueba('Ejecutando...');
+              setResultadoPrueba({ nodeId: selectedNode.id, mensaje: 'Ejecutando...' });
               try {
                 const edges = store.edges.filter(e => e.target === selectedNode.id);
                 const simState = useSimulationStore.getState();
@@ -160,12 +154,12 @@ export const PropertiesPanel: React.FC = () => {
                 const res = properties.codeLanguage === 'python'
                   ? await ejecutarPython(code, entradas)
                   : await ejecutarJS(code, entradas);
-                setResultadoPrueba(`Resultado: ${String(res)}`);
+                setResultadoPrueba({ nodeId: selectedNode.id, mensaje: `Resultado: ${String(res)}` });
               } catch (e: unknown) {
-                setResultadoPrueba(`Error: ${e instanceof Error ? e.message : String(e)}`);
+                setResultadoPrueba({ nodeId: selectedNode.id, mensaje: `Error: ${e instanceof Error ? e.message : String(e)}` });
               }
             }}
-              resultadoPrueba={resultadoPrueba}
+              resultadoPrueba={resultadoPrueba?.nodeId === selectedNode.id ? resultadoPrueba.mensaje : null}
             />
           </React.Suspense>
         </div>

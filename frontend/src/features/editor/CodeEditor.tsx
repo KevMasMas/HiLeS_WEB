@@ -23,6 +23,14 @@ export const CodeEditor = ({
 }: CodeEditorProps) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const codigoRef = useRef(codigo);
+  const onChangeRef = useRef(onChange);
+  const sincronizandoRef = useRef(false);
+
+  useEffect(() => {
+    codigoRef.current = codigo;
+    onChangeRef.current = onChange;
+  }, [codigo, onChange]);
 
   // Inicializar o recrear el editor cuando cambie el lenguaje
   useEffect(() => {
@@ -37,14 +45,16 @@ export const CodeEditor = ({
       if (cancelado || !editorRef.current) return;
 
       const state = EditorState.create({
-        doc: codigo,
+        doc: codigoRef.current,
         extensions: [
           basicSetup,
           oneDark,
           EditorView.lineWrapping,
           extensionLenguaje,
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) onChange(update.state.doc.toString());
+            if (update.docChanged && !sincronizandoRef.current) {
+              onChangeRef.current(update.state.doc.toString());
+            }
           }),
         ],
       });
@@ -60,9 +70,6 @@ export const CodeEditor = ({
       view?.destroy();
       viewRef.current = null;
     };
-    // Deshabilitamos la regla porque si ponemos 'codigo' o 'onChange', 
-    // CodeMirror se destruirá y recreará en cada tipeo (perdiendo el foco).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lenguaje]); 
 
   // Sincronizar cambios que vengan de afuera (e.g. deshacer de zustand, o selección de otro nodo)
@@ -70,9 +77,14 @@ export const CodeEditor = ({
     if (viewRef.current) {
       const currentCode = viewRef.current.state.doc.toString();
       if (codigo !== currentCode) {
-        viewRef.current.dispatch({
-          changes: { from: 0, to: currentCode.length, insert: codigo }
-        });
+        sincronizandoRef.current = true;
+        try {
+          viewRef.current.dispatch({
+            changes: { from: 0, to: currentCode.length, insert: codigo }
+          });
+        } finally {
+          sincronizandoRef.current = false;
+        }
       }
     }
   }, [codigo]);
