@@ -23,6 +23,19 @@ Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una t
 
 <!-- Agregar nuevas entradas debajo de esta línea. No eliminar las anteriores. -->
 
+### [2026-09-25 17:52] - Responsable: Integración de demo con conversores
+
+- Estado: [x] Hecho
+- Tarea o problema: Crear un circuito demostrable, diferente al riego, que muestre el comportamiento de los conversores `Sample` y `Hold` junto con Services, Functional Blocks Python y una red de Petri.
+- Qué se hizo: Se añadió el demo importable **Control de Parqueadero**. El Service de vehículos alimenta `Sample`; el Service de captura decide cuándo `Sample` toma una lectura; `Hold` mantiene la última lectura capturada y la entrega a dos Functional Blocks Python que abren o cierran una barrera mediante dos Transitions y dos Places.
+- Archivos creados o modificados: `output/demo-parqueadero-converters.json`, `frontend/src/engine/__tests__/MotorSimulacion.test.ts` y este registro.
+- Rama: `motor-frontend`
+- Commit/hash: Pendiente de commit.
+- Cómo se probó: Se validó el JSON, se incorporó al recorrido de importación/construcción/ejecución de los demos y se ejecutaron `npm run test:run`, `npm run lint` y `npm run build`.
+- Resultado: JSON válido; 5 suites y 28 pruebas aprobadas; ESLint y compilación de TypeScript/Vite finalizan correctamente. La prueba usa un Worker simulado para comprobar el flujo Python en el entorno de Vitest, donde Pyodide no está disponible.
+- Evidencia: `Test Files 5 passed`, `Tests 28 passed`, `✓ built`.
+- Riesgos, pendientes o reversión necesaria: La comprobación visual en navegador quedó pendiente por una denegación de autorización de la automatización local; el archivo es autónomo e importable desde la interfaz.
+
 ### [2026-09-24 11:41] - Responsable: Corrección de integración UI
 
 - Estado: [x] Hecho

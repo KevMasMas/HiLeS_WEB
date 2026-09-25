@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Edge, Node } from '@xyflow/react';
 import { isModelDocument, migrateV1toV2, validateModelDocument } from '../../domain/modelDocument';
 import type { HilesEdgeData, HilesNodeData } from '../../types/hiles';
@@ -60,8 +60,27 @@ describe('MotorSimulacion', () => {
   });
 
   it('importa, construye y ejecuta todos los demos JSON existentes', async () => {
-    const archivos = ['figure-29-hiles-wsn.json', 'demo-2-humedad-token.json', 'circuito-presentacion-demo.json'];
-    for (const archivo of archivos) {
+    const WorkerOriginal = globalThis.Worker;
+    class WorkerPythonDemo {
+      onmessage: ((evento: MessageEvent<{ ok: boolean; value?: boolean }>) => void) | null = null;
+      onerror: (() => void) | null = null;
+      terminate = vi.fn();
+
+      postMessage(mensaje: { inputs: { vehiculos?: number } }): void {
+        queueMicrotask(() => this.onmessage?.({
+          data: { ok: true, value: (mensaje.inputs.vehiculos ?? 0) < 10 },
+        } as MessageEvent<{ ok: boolean; value?: boolean }>));
+      }
+    }
+    Object.assign(globalThis, { Worker: WorkerPythonDemo });
+    const archivos = [
+      'figure-29-hiles-wsn.json',
+      'demo-2-humedad-token.json',
+      'circuito-presentacion-demo.json',
+      'demo-parqueadero-converters.json',
+    ];
+    try {
+      for (const archivo of archivos) {
       const contenido: unknown = JSON.parse(readFileSync(resolve(process.cwd(), '..', 'output', archivo), 'utf8'));
       expect(isModelDocument(contenido)).toBe(true);
       if (!isModelDocument(contenido)) continue;
@@ -97,7 +116,10 @@ describe('MotorSimulacion', () => {
         .filter((evento) => evento.tipo === TipoEventoSimulacion.ERROR)
         .map((evento) => evento.mensaje)
         .join(' | ');
-      expect(motor.obtenerEstado(), `${archivo}: ${errores}`).not.toBe(EstadoSimulacion.ERROR);
+        expect(motor.obtenerEstado(), `${archivo}: ${errores}`).not.toBe(EstadoSimulacion.ERROR);
+      }
+    } finally {
+      Object.assign(globalThis, { Worker: WorkerOriginal });
     }
   });
 

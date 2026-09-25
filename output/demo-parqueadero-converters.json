@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 2,
+  "metadata": { "savedAt": "2026-09-25T00:00:00.000Z" },
+  "network": { "topology": null, "protocol": null, "nodes": ["parqueadero"] },
+  "allElements": [
+    {
+      "id": "sensor-vehiculos", "type": "SERVICE", "name": "Sensor de vehículos",
+      "layout": { "x": 40, "y": 110 },
+      "ports": [{ "id": "vehiculos-out", "name": "vehiculos", "direction": "output", "dataType": "integer", "nature": "continuous", "side": "right", "offset": 0.5 }],
+      "properties": { "description": "Cantidad que reporta el sensor.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "capturar-lectura", "type": "SERVICE", "name": "Capturar lectura",
+      "layout": { "x": 40, "y": 300 },
+      "ports": [{ "id": "capturar-out", "name": "capturar", "direction": "output", "dataType": "boolean", "nature": "control", "side": "right", "offset": 0.5 }],
+      "properties": { "description": "Envía true para que Sample capture el sensor.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "sample-ocupacion", "type": "SAMPLE", "name": "Sample de ocupación",
+      "layout": { "x": 230, "y": 180 },
+      "ports": [
+        { "id": "sample-data", "name": "Data", "direction": "input", "dataType": "integer", "nature": "continuous", "side": "left", "offset": 0.32 },
+        { "id": "sample-control", "name": "Control", "direction": "input", "dataType": "boolean", "nature": "control", "side": "left", "offset": 0.68 },
+        { "id": "sample-out", "name": "Sampled", "direction": "output", "dataType": "integer", "nature": "continuous", "side": "right", "offset": 0.5 }
+      ],
+      "properties": { "description": "Solo captura Data cuando Control es true.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "hold-ocupacion", "type": "HOLD", "name": "Hold de ocupación",
+      "layout": { "x": 410, "y": 180 },
+      "ports": [
+        { "id": "hold-data", "name": "Data", "direction": "input", "dataType": "integer", "nature": "continuous", "side": "left", "offset": 0.5 },
+        { "id": "hold-out", "name": "Held", "direction": "output", "dataType": "integer", "nature": "continuous", "side": "right", "offset": 0.5 }
+      ],
+      "properties": { "description": "Conserva la última lectura capturada.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "fb-abrir", "type": "FUNCTIONAL_BLOCK", "name": "¿Hay cupo?",
+      "layout": { "x": 585, "y": 85 },
+      "ports": [{ "id": "abrir-in", "name": "vehiculos", "direction": "input", "dataType": "integer", "nature": "continuous", "side": "left", "offset": 0.5 }, { "id": "abrir-out", "name": "abrir", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "right", "offset": 0.5 }],
+      "properties": { "description": "Autoriza abrir con menos de 10 vehículos.", "codeLanguage": "python", "code": "def calcular(**inputs):\n    vehiculos = inputs.get('vehiculos')\n    return vehiculos is not None and vehiculos < 10", "expression": "", "collapsed": false, "locked": false, "visible": true, "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "fb-cerrar", "type": "FUNCTIONAL_BLOCK", "name": "¿Está lleno?",
+      "layout": { "x": 585, "y": 285 },
+      "ports": [{ "id": "cerrar-in", "name": "vehiculos", "direction": "input", "dataType": "integer", "nature": "continuous", "side": "left", "offset": 0.5 }, { "id": "cerrar-out", "name": "cerrar", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "right", "offset": 0.5 }],
+      "properties": { "description": "Cierra con 10 o más vehículos.", "codeLanguage": "python", "code": "def calcular(**inputs):\n    vehiculos = inputs.get('vehiculos')\n    return vehiculos is not None and vehiculos >= 10", "expression": "", "collapsed": false, "locked": false, "visible": true, "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "p-cerrada", "type": "PLACE", "name": "Barrera cerrada", "layout": { "x": 820, "y": 90 }, "ports": [],
+      "properties": { "description": "Estado inicial.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 1, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "t-abrir", "type": "TRANSITION", "name": "Abrir barrera", "layout": { "x": 950, "y": 90 },
+      "ports": [{ "id": "transition-condition-in", "name": "Condición", "direction": "input", "dataType": "boolean", "nature": "continuous", "side": "top", "offset": 0.5 }, { "id": "transition-action-out", "name": "Acción", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "bottom", "offset": 0.5 }],
+      "properties": { "description": "Abre si hay cupo.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "p-abierta", "type": "PLACE", "name": "Barrera abierta", "layout": { "x": 850, "y": 300 }, "ports": [],
+      "properties": { "description": "Permite el ingreso.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    },
+    {
+      "id": "t-cerrar", "type": "TRANSITION", "name": "Cerrar barrera", "layout": { "x": 950, "y": 300 },
+      "ports": [{ "id": "transition-condition-in", "name": "Condición", "direction": "input", "dataType": "boolean", "nature": "continuous", "side": "top", "offset": 0.5 }, { "id": "transition-action-out", "name": "Acción", "direction": "output", "dataType": "boolean", "nature": "continuous", "side": "bottom", "offset": 0.5 }],
+      "properties": { "description": "Cierra si está lleno.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+    }
+  ],
+  "relationNode": [],
+  "connections": [
+    { "id": "cch-sensor-sample", "source": "sensor-vehiculos", "sourceHandle": "vehiculos-out", "target": "sample-ocupacion", "targetHandle": "sample-data", "label": "CCH1 · Dato", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "cch-control-sample", "source": "capturar-lectura", "sourceHandle": "capturar-out", "target": "sample-ocupacion", "targetHandle": "sample-control", "label": "CCH2 · Control", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "cch-sample-hold", "source": "sample-ocupacion", "sourceHandle": "sample-out", "target": "hold-ocupacion", "targetHandle": "hold-data", "label": "CCH3 · Muestra", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "cch-hold-abrir", "source": "hold-ocupacion", "sourceHandle": "hold-out", "target": "fb-abrir", "targetHandle": "abrir-in", "label": "CCH4 · Retenido", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "cch-hold-cerrar", "source": "hold-ocupacion", "sourceHandle": "hold-out", "target": "fb-cerrar", "targetHandle": "cerrar-in", "label": "CCH5 · Retenido", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "cch-abrir-transition", "source": "fb-abrir", "sourceHandle": "abrir-out", "target": "t-abrir", "targetHandle": "transition-condition-in", "label": "CCH6 · Abrir", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "cch-cerrar-transition", "source": "fb-cerrar", "sourceHandle": "cerrar-out", "target": "t-cerrar", "targetHandle": "transition-condition-in", "label": "CCH7 · Cerrar", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "petri-cerrada-abrir", "source": "p-cerrada", "sourceHandle": "petri-out", "target": "t-abrir", "targetHandle": "petri-in", "label": "LCH1", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "petri-abrir-abierta", "source": "t-abrir", "sourceHandle": "petri-out", "target": "p-abierta", "targetHandle": "petri-in", "label": "LCH2", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "petri-abierta-cerrar", "source": "p-abierta", "sourceHandle": "petri-out", "target": "t-cerrar", "targetHandle": "petri-in", "label": "LCH3", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "petri-cerrar-cerrada", "source": "t-cerrar", "sourceHandle": "petri-out", "target": "p-cerrada", "targetHandle": "petri-in", "label": "LCH4", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } }
+  ]
+}
