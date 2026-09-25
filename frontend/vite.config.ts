@@ -4,6 +4,6 @@ import { defineConfig } from 'vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  server: {
-  },
+  // Evita instancias duplicadas durante la recarga en caliente de componentes lazy.
+  resolve: { dedupe: ['react', 'react-dom'] },
 })
