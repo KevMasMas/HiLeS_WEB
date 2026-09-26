@@ -41,7 +41,7 @@ La prueba no se considera terminada sólo porque un demo importado funcione. Deb
 - Cada persona **crea su rama local** a partir de esa rama y hace push desde ahí.
 - Convención de rama: `motor/persona-N-descripcion` (ej: `motor/persona-1-engine`).
 - Commits en español con prefijo semántico: `feat:`, `fix:`, `refactor:`, `test:`.
-- **No hacer merge** hasta que Persona 5 valide el checklist completo.
+- **No hacer merge** hasta que Juan Romero, Julian Romero y Kevin Rincon validen el checklist completo.
 - Cada commit debe describir una unidad verificable: por ejemplo, `feat: implementar ElementoLugar con consumo y producción de tokens`.
 
 ---
@@ -396,7 +396,7 @@ El **Structural Block** no tiene lógica de ejecución propia. Es un contenedor 
 
 ---
 
-### Persona 5 — Tests, Integración y Cierre Técnico
+### Revisión — Juan Romero, Julian Romero y Kevin Rincon
 
 **Archivos a crear:**
 - `src/engine/__tests__/MotorSimulacion.test.ts`
@@ -455,7 +455,7 @@ Persona 4 │ Instalar CodeMirror │ CodeEditor.tsx    │ SimulationPanel  │
           │ Investigar API CM6  │ PropertiesPanel   │ CustomNodes      │ BUFFER
           │                     │                   │ CSS              │
           │                     │                   │                  │
-Persona 5 │ Config Vitest       │ Tests Petri       │ Integración      │ Tests e2e
+Revisión │ Config Vitest       │ Tests Petri       │ Integración      │ Tests e2e
           │ Tests Elementos     │ Tests Ejecutor    │ Merge ramas      │ Build final
           │ Tests GrafoDatos    │                   │ Resolver conflictos│ DEMO
 ```
@@ -463,7 +463,7 @@ Persona 5 │ Config Vitest       │ Tests Petri       │ Integración      �
 **Dependencias entre personas:**
 
 - Persona 4 (UI) depende de Juan Ramos (store) y Julian Dario Romero Buitrago (ejecutor) para miércoles.
-- Persona 5 (integración) depende de todas las demás para jueves.
+- La revisión e integración de Juan Romero, Julian Romero y Kevin Rincon depende de todas las demás para jueves.
 - Juan Ramos, Juan David Romero y Julian Dario Romero Buitrago pueden trabajar en paralelo desde el martes.
 
 ---

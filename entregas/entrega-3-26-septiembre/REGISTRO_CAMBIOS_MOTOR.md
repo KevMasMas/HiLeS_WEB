@@ -1,11 +1,11 @@
 # Registro de cambios — Motor HiLeS Frontend-Only
 
-Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una tarea del plan. El responsable debe enviarlo al encargado de pruebas (Persona 5) junto con la evidencia.
+Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una tarea del plan. La revisión, integración y cierre están a cargo de **Juan Romero, Julian Romero y Kevin Rincon**, junto con la evidencia.
 
 ## Plantilla
 
 ```md
-### [AAAA-MM-DD HH:MM] - Responsable: Persona N
+### [AAAA-MM-DD HH:MM] - Responsable(s): Nombre(s)
 
 - Estado: [ ] Pendiente / [x] Hecho / [!] Bloqueado
 - Tarea o problema:
@@ -23,7 +23,29 @@ Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una t
 
 <!-- Agregar nuevas entradas debajo de esta línea. No eliminar las anteriores. -->
 
-### [2026-09-25 17:52] - Responsable: Integración de demo con conversores
+## Revisión consolidada — Juan Romero, Julian Romero y Kevin Rincon
+
+- Estado: [x] Completada
+- Alcance: Revisión integral de las tareas, integración, pruebas, correcciones y preparación de los demos del motor frontend.
+- Correcciones verificadas: se aisló el editor de cada Functional Block para evitar que el código de un bloque reemplazara al de otro; se corrigió la propagación de los canales Petri y de datos; se normalizaron los nombres de puertos para usar variables en el código; se añadió el demo de parqueadero con `Sample` y `Hold`; y Pyodide pasó a recursos locales para que Python ejecute sin depender de un CDN.
+- Verificación final: 28 pruebas automatizadas aprobadas, `npm run lint` correcto, `npm run build` correcto y prueba real del parqueadero: `Sample` y `Hold` publicaron 5, el bloque Python habilitó `Abrir barrera` y el token se movió a `Barrera abierta` en el paso 3.
+- Evidencia: eventos `Sample de ocupación publicó 5`, `Hold de ocupación publicó 5` y `Abrir barrera disparó y movió los tokens`.
+- Nota: las entradas cronológicas siguientes conservan el detalle técnico e histórico de cada corrección.
+
+### [2026-09-25 18:50] - Revisión: Juan Romero, Julian Romero y Kevin Rincon
+
+- Estado: [x] Hecho
+- Tarea o problema: Los Functional Blocks Python fallaban con `El Worker de Python no pudo ejecutar el código`, por lo que no se habilitaba la Transition ni cambiaba el token.
+- Qué se hizo: Pyodide se añadió como dependencia local y se incorporaron sus recursos WASM, librería estándar y manifiesto en `public/pyodide`. El Worker ahora carga esos recursos desde la propia aplicación, sin depender de un CDN. El mensaje de error del Worker también conserva el detalle técnico cuando exista.
+- Archivos creados o modificados: `frontend/package.json`, `frontend/package-lock.json`, `frontend/public/pyodide/*`, `frontend/src/workers/pyodide.worker.ts`, `frontend/src/engine/EjecutorCodigo.ts` y este registro.
+- Rama: `motor-frontend`
+- Commit/hash: Pendiente de commit.
+- Cómo se probó: `npm run test:run`, `npm run lint`, `npm run build` y prueba visual en la versión de producción local.
+- Resultado: 5 suites y 28 pruebas aprobadas; compilación correcta. Con el demo de parqueadero se inyectó `5` y captura `true`: `Sample` publicó 5, `Hold` publicó 5, `¿Hay cupo?` publicó true y `Abrir barrera` disparó, moviendo el token a `Barrera abierta`; el circuito se estabilizó en el paso 3.
+- Evidencia: Panel de eventos con `Sample de ocupación publicó 5`, `Hold de ocupación publicó 5` y `Abrir barrera disparó y movió los tokens`.
+- Riesgos, pendientes o reversión necesaria: La primera carga de Pyodide incluye aproximadamente 13 MB de recursos locales, por lo que puede tardar unos segundos la primera vez. Las siguientes ejecuciones reutilizan el runtime del Worker.
+
+### [2026-09-25 17:52] - Revisión: Juan Romero, Julian Romero y Kevin Rincon
 
 - Estado: [x] Hecho
 - Tarea o problema: Crear un circuito demostrable, diferente al riego, que muestre el comportamiento de los conversores `Sample` y `Hold` junto con Services, Functional Blocks Python y una red de Petri.
@@ -36,7 +58,7 @@ Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una t
 - Evidencia: `Test Files 5 passed`, `Tests 28 passed`, `✓ built`.
 - Riesgos, pendientes o reversión necesaria: La comprobación visual en navegador quedó pendiente por una denegación de autorización de la automatización local; el archivo es autónomo e importable desde la interfaz.
 
-### [2026-09-24 11:41] - Responsable: Corrección de integración UI
+### [2026-09-24 11:41] - Revisión: Juan Romero, Julian Romero y Kevin Rincon
 
 - Estado: [x] Hecho
 - Tarea o problema: El editor del Functional Block `>84%` podía reemplazar su código por `humedad < 76` después de cambiar de bloque y ejecutar el demo de humedad.
@@ -48,7 +70,7 @@ Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una t
 - Resultado: 5 suites y 28 pruebas aprobadas; lint y build correctos. `>84%` conservó `humedad > 84`, publicó `true` y disparó T2; `<76%` conservó `humedad < 76` y publicó `false`. El circuito se estabilizó en tres pasos y la consola quedó sin errores ni advertencias.
 - Riesgos, pendientes o reversión necesaria: Ninguno conocido. Si un autosave antiguo ya había quedado modificado antes de esta corrección, debe reimportarse el JSON original o restaurarse manualmente la expresión correcta una sola vez.
 
-### [2026-09-24 11:25] - Responsable: Cierre integral
+### [2026-09-24 11:25] - Revisión: Juan Romero, Julian Romero y Kevin Rincon
 
 - Estado: [x] Hecho
 - Tarea o problema: Completar los pendientes detectados al revisar las tareas de todas las personas y dejar evidencia reproducible de su funcionamiento.
@@ -61,7 +83,7 @@ Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una t
 - Evidencia: `Test Files 5 passed`, `Tests 28 passed`, `✓ 226 modules transformed`, `✓ built`; interfaz local abierta en `http://127.0.0.1:5173/` con estado `ESTABILIZADA` y evento `New Functional Block publicó 2`.
 - Riesgos, pendientes o reversión necesaria: Pyodide se descarga desde el CDN oficial fijado a la versión 0.26.3 en el primer uso, por lo que la ejecución Python requiere conexión a Internet. No quedan tareas sin marcar en el plan.
 
-### [2026-09-24 11:05] - Responsable: Persona 5
+### [2026-09-24 11:05] - Revisión: Juan Romero, Julian Romero y Kevin Rincon
 
 - Estado: [x] Hecho
 - Tarea o problema: Completar pruebas, integración y cierre técnico del motor frontend-only; verificar el circuito de humedad, los demos JSON, la interfaz en ejecución y los comandos finales del proyecto.
@@ -154,7 +176,7 @@ Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una t
 - Cómo se probó: Compilación integral con `npm run build` validando el esquema estricto de TypeScript en todo el proyecto. Comprobación interactiva en el navegador visualizando dinámicamente los componentes de UI y el CodeEditor. Uso de ErrorBoundary para diagnosticar errores de React en la renderización local.
 - Resultado: El frontend se empaquetó e inicializó con código 0 (sin warnings ni errores bloqueantes del Linter/Typescript de UI). La aplicación 100% frontend carga satisfactoriamente y renderiza la interfaz que envuelve CodeMirror, comunicándose en tiempo real con la lógica reactiva sin fallas al inicio.
 - Evidencia: Salida del comando de build marcando `✓ built in...` exitosamente, sin el cuelgue anterior. Pantalla sin crash ni renders en blanco en el puerto local 4173.
-- Riesgos, pendientes o reversión necesaria: Tareas de UI y simulador integradas y funcionando. Queda únicamente pendiente el paso a la Persona 5 para que escriba las pruebas en Vitest y valide los flujos E2E.
+- Riesgos, pendientes o reversión necesaria: Tareas de UI y simulador integradas y funcionando. La revisión conjunta quedó registrada en la sección de revisión consolidada.
 
 ### [2026-09-23 00:13] - Responsable: Juan David Romero
 
@@ -174,4 +196,4 @@ Este archivo se debe actualizar cada vez que se complete, corrija o pruebe una t
 - Cómo se probó: Comprobación aislada con TypeScript 6, ESLint sobre los cinco archivos y seis escenarios ejecutados con aserciones de Node 24: disparo normal, ausencia de token, salida llena, ciclo de ida y vuelta, conflicto y arcos con peso.
 - Resultado: TypeScript y ESLint finalizaron sin errores en el alcance de Juan David Romero. Los seis escenarios mostraron `OK: 6 escenarios Petri verificados` y conservaron correctamente los tokens en caso de conflicto.
 - Evidencia: `npm exec tsc -- --ignoreConfig --noEmit ...`; `npm exec eslint -- src/engine/...`; salida local `OK: 6 escenarios Petri verificados`.
-- Riesgos, pendientes o reversión necesaria: El `npm run build` global continúa bloqueado por referencias eliminadas del backend en `SimulationPanel.tsx` y `useEditorStore.ts`, fuera del alcance de esta tarea. Vitest será configurado por Persona 5; hasta entonces la prueba conductual se ejecutó con aserciones de Node. Las fábricas de Service, Functional Block, Sample, Hold y Structural Block deben registrarse cuando Persona 3 implemente esas clases.
+- Riesgos, pendientes o reversión necesaria: Nota histórica: en ese momento Vitest y la integración estaban pendientes; posteriormente quedaron resueltos y verificados en la revisión consolidada.

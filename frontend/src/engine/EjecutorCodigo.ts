@@ -144,7 +144,9 @@ export const ejecutarPython = (codigo: string, entradas: EntradasRuntime = {}): 
         finalizar(() => reject(new ErrorEjecucionCodigo(evento.data.error ?? 'No fue posible ejecutar el código Python.')));
       }
     };
-    worker.onerror = () => finalizar(() => reject(new ErrorEjecucionCodigo('El Worker de Python no pudo ejecutar el código.')));
+    worker.onerror = (evento) => finalizar(() => reject(new ErrorEjecucionCodigo(
+      `El Worker de Python no pudo ejecutar el código.${evento.message ? ` ${evento.message}` : ''}`,
+    )));
     worker.postMessage({ codigo, inputs: normalizarEntradas(entradas) });
   });
 };

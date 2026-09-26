@@ -9,24 +9,21 @@ interface RespuestaPython {
   error?: string;
 }
 
-interface PyodideRuntime {
-  runPythonAsync(codigo: string): Promise<unknown>;
-}
+import { loadPyodide, type PyodideInterface } from 'pyodide';
 
-interface ModuloPyodide {
-  loadPyodide(): Promise<PyodideRuntime>;
-}
+let runtime: Promise<PyodideInterface> | undefined;
 
-const PYODIDE_URL = 'https://cdn.jsdelivr.net/pyodide/v0.26.3/full/pyodide.mjs';
-
-const runtime = import(/* @vite-ignore */ PYODIDE_URL)
-  .then((modulo) => (modulo as ModuloPyodide).loadPyodide());
+/** Pyodide y sus recursos WASM se sirven localmente desde public/pyodide. */
+const obtenerRuntime = (): Promise<PyodideInterface> => {
+  runtime ??= loadPyodide({ indexURL: `${self.location.origin}/pyodide/` });
+  return runtime;
+};
 
 const serializarLiteralPython = (valor: unknown): string => JSON.stringify(JSON.stringify(valor));
 
 self.onmessage = async (evento: MessageEvent<SolicitudPython>) => {
   try {
-    const pyodide = await runtime;
+    const pyodide = await obtenerRuntime();
     const { codigo, inputs } = evento.data;
     const esFuncion = /^\s*def\s+calcular\s*\(/m.test(codigo);
     const preparacion = [
