@@ -6,7 +6,7 @@ No se deben eliminar entradas anteriores. Si una prueba cambia de resultado, se 
 
 ## Reglas del registro
 
-- Usar únicamente `Persona 1`, `Persona 2`, `Persona 3` o `Persona 4` como responsable.
+- Usar los nombres definidos para cada responsable: `Persona 1`, `Persona 2`, `Julian Romero` o `Persona 4`.
 - Registrar fecha y hora de Colombia.
 - No incluir SSID, contraseña Wi-Fi, usuario MQTT, contraseña MQTT ni otros secretos.
 - Los logs y capturas deben ocultar credenciales antes de adjuntarse.
@@ -69,6 +69,25 @@ Usar esta plantilla cuando el problema impida continuar:
 
 <!-- Agregar las entradas nuevas debajo de esta línea. No eliminar ni reescribir las anteriores. -->
 
+### [2026-10-08 13:40] — Responsable: Julian Romero
+
+- Estado: [ ] Pendiente
+- Área: web MQTT / pruebas / documentación
+- Tarea o problema: Verificar la implementación del cliente MQTT de la aplicación web antes de marcar sus tareas como completadas.
+- Qué se hizo: Se auditó la capa MQTT del frontend. El cliente usa MQTT sobre WebSockets, mantiene una instancia centralizada, expone los estados `DISCONNECTED`, `CONNECTING`, `CONNECTED` y `ERROR`, permite conectar y desconectar, reintenta la conexión, vuelve a suscribirse al reconectar, publica comandos JSON para el LED y muestra mensajes recibidos en una interfaz mínima. La configuración se mantiene fuera del código mediante variables `VITE_MQTT_*`.
+- Topics involucrados: `udfjc/hiles/v1/equipo1/pico01/led/comando`, `led/estado`, `estado/conexion`, `telemetria`, `error`; los topics restantes del contrato también están centralizados en `MQTT_TOPICS`.
+- Archivos creados o modificados: `frontend/package.json`, `frontend/package-lock.json`, `frontend/src/App.tsx`, `frontend/src/features/mqtt/MqttPanel.tsx`, `frontend/src/services/mqtt/MqttClient.ts`, `frontend/src/services/mqtt/config.ts`, `frontend/src/services/mqtt/config.test.ts`, `frontend/vitest.config.ts`, `frontend/.env.example`.
+- Configuración utilizada, sin secretos: host `localhost`, WebSocket `9001`, ruta `/mqtt`, protocolo `ws`; usuario y contraseña únicamente mediante variables de entorno ficticias.
+- Rama: `mqtt-pico`
+- Commit/hash: Pendiente de commit.
+- Cómo se probó: Se ejecutaron `npm run`, `npm run test:run`, `npm run lint`, `npm run build` y `git diff --check`. Se revisó la separación entre MQTT, MotorSimulacion, EjecutorCodigo y BusObserver. También se comprobó que no existe `.env` real versionado ni una IP personal hardcodeada.
+- Resultado esperado: El frontend debe compilar, pasar sus pruebas y quedar preparado para conectarse al broker local por WebSockets en el puerto `9001`, sin alterar la semántica del motor HiLeS.
+- Resultado obtenido: `31/31` pruebas aprobadas, lint correcto, build correcto y separación arquitectónica confirmada. Mosquitto no está disponible en el entorno, por lo que no se pudo ejecutar la prueba real de publicación/suscripción.
+- Evidencia: logs de `npm run test:run`, `npm run lint` y `npm run build`; no hay captura ni video de la prueba física todavía.
+- Uso de la Pico: no requerido para la auditoría de código; bloque físico pendiente.
+- Riesgos, pendientes o reversión necesaria: Falta validar Web → Mosquitto → Pico → Mosquitto → Web, la reconexión contra un broker real y la evidencia visual. La validación estricta de esquemas JSON y la integración con un `Service` corresponden posteriormente a Persona 4.
+- Entrega a la siguiente persona: Persona 1 debe proporcionar Mosquitto con listeners `1883` y `9001`; Persona 2 debe proporcionar la Pico conectada; Persona 4 debe completar la validación JSON, la integración con `Service` y el cierre de evidencias.
+
 ---
 
 ## Seguimiento por persona
@@ -108,22 +127,22 @@ Esta sección resume el avance. El detalle y la evidencia deben permanecer en la
 - Evidencia principal:
 - Pendiente principal:
 
-### Persona 3 — Cliente MQTT de la aplicación web
+### Julian Romero — Cliente MQTT de la aplicación web
 
-- Estado general: [ ] Pendiente / [ ] En progreso / [ ] Terminado
-- [ ] Dependencia MQTT del navegador agregada.
-- [ ] Configuración del broker separada del código fuente.
-- [ ] Conexión WebSocket al puerto `9001`.
-- [ ] Estados de conexión visibles en español.
-- [ ] Publicación de `led/comando`.
-- [ ] Suscripción a `led/estado`.
-- [ ] Suscripción a `estado/conexion`, `telemetria` y `error`.
-- [ ] Reconexión y resuscripción comprobadas.
-- [ ] Control mínimo del LED en la interfaz.
+- Estado general: [ ] Pendiente / [x] En progreso / [ ] Terminado
+- [x] Dependencia MQTT del navegador agregada.
+- [x] Configuración del broker separada del código fuente.
+- [x] Conexión WebSocket al puerto `9001`.
+- [x] Estados de conexión visibles en español.
+- [x] Publicación de `led/comando`.
+- [x] Suscripción a `led/estado`.
+- [x] Suscripción a `estado/conexion`, `telemetria` y `error`.
+- [ ] Reconexión y resuscripción comprobadas contra un broker real.
+- [x] Control mínimo del LED en la interfaz.
 - [ ] Mensajes simulados probados sin requerir la Pico.
-- Último commit/hash:
-- Evidencia principal:
-- Pendiente principal:
+- Último commit/hash: Pendiente de commit.
+- Evidencia principal: `npm run test:run` (31/31), `npm run lint` y `npm run build` aprobados.
+- Pendiente principal: prueba real con Mosquitto en `9001`, mensajes simulados, reconexión y flujo completo con la Pico.
 
 ### Persona 4 — Contrato JSON, integración HiLeS, pruebas y cierre
 
@@ -150,7 +169,7 @@ Esta sección resume el avance. El detalle y la evidencia deben permanecer en la
 | Fecha | Hora inicial | Hora final | Responsable del bloque | Objetivo | Resultado | Evidencia |
 |---|---|---|---|---|---|---|
 | 2026-10-08 | Pendiente | Pendiente | Persona 2, apoyo Persona 1 | MicroPython, Wi-Fi, Mosquitto y LED | Pendiente | Pendiente |
-| 2026-10-09 | Pendiente | Pendiente | Persona 2, apoyo Persona 3 | Integración completa con la web | Pendiente | Pendiente |
+| 2026-10-09 | Pendiente | Pendiente | Persona 2, apoyo Julian Romero | Integración completa con la web | Pendiente | Pendiente |
 
 ---
 
@@ -164,8 +183,8 @@ Esta sección resume el avance. El detalle y la evidencia deben permanecer en la
 | Pico se conecta a MQTT | Persona 2 | [ ] | Pendiente |
 | JSON en `led/comando` enciende el LED | Persona 2 | [ ] | Pendiente |
 | Pico confirma por `led/estado` | Persona 2 | [ ] | Pendiente |
-| Web se conecta por WebSockets | Persona 3 | [ ] | Pendiente |
-| Web recibe un mensaje MQTT simulado | Persona 3 | [ ] | Pendiente |
+| Web se conecta por WebSockets | Julian Romero | [ ] | Pendiente |
+| Web recibe un mensaje MQTT simulado | Julian Romero | [ ] | Pendiente |
 | Web controla el LED físico | Personas 2 y 3 | [ ] | Pendiente |
 | Pico apagada se muestra como desconectada | Personas 2 y 3 | [ ] | Pendiente |
 | Recuperación después de reiniciar Mosquitto | Personas 1, 2 y 3 | [ ] | Pendiente |

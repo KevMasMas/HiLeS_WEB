@@ -189,22 +189,22 @@ La interfaz HiLeS puede continuar en desarrollo durante esta prueba. Para el hit
 
 ---
 
-### Persona 3 — Cliente MQTT de la aplicación web
+### Julian Romero — Cliente MQTT de la aplicación web
 
 **Trabajo sin Pico:** completo hasta la integración final. Puede usar clientes MQTT de escritorio y mensajes simulados.
 
 **Responsabilidades:**
 
-- [ ] Agregar el cliente MQTT del navegador como dependencia del frontend.
-- [ ] Crear una capa de conexión MQTT separada del motor HiLeS.
-- [ ] Permitir configurar host, puerto WebSocket, usuario y contraseña fuera del código fuente.
-- [ ] Conectar mediante `ws://` al listener local `9001`.
-- [ ] Mostrar estados: desconectado, conectando, conectado y error.
-- [ ] Publicar comandos JSON en `led/comando`.
-- [ ] Suscribirse a `led/estado`, `estado/conexion`, `telemetria` y `error`.
-- [ ] Reintentar la conexión y volver a suscribirse cuando regrese el broker.
-- [ ] Crear una interfaz mínima para controlar el LED y ver la respuesta.
-- [ ] Mantener el bus `BusObserver` actual funcionando sin cambios de semántica.
+- [x] Agregar el cliente MQTT del navegador como dependencia del frontend.
+- [x] Crear una capa de conexión MQTT separada del motor HiLeS.
+- [x] Permitir configurar host, puerto WebSocket, usuario y contraseña fuera del código fuente.
+- [x] Conectar mediante `ws://` al listener local `9001`.
+- [x] Mostrar estados: desconectado, conectando, conectado y error.
+- [x] Publicar comandos JSON en `led/comando`.
+- [x] Suscribirse a `led/estado`, `estado/conexion`, `telemetria` y `error`.
+- [x] Reintentar la conexión y volver a suscribirse cuando regrese el broker.
+- [x] Crear una interfaz mínima para controlar el LED y ver la respuesta.
+- [x] Mantener el bus `BusObserver` actual funcionando sin cambios de semántica.
 
 **Entrega del jueves:** cliente web capaz de conectarse al broker, aunque todavía use mensajes generados desde escritorio.
 
@@ -254,7 +254,7 @@ Mientras tanto, Personas 3 y 4 trabajan sin Pico usando mensajes MQTT simulados.
 
 ### Viernes — Bloque físico 2, aproximadamente 2 horas
 
-**Participan:** Persona 2 y Persona 3; Persona 4 dirige el checklist.
+**Participan:** Persona 2 y Julian Romero; Persona 4 dirige el checklist.
 
 - Sustituir el cliente de escritorio por la aplicación HiLeS.
 - Probar web → broker → Pico → broker → web.
