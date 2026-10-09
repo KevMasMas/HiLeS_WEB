@@ -36,6 +36,9 @@ interface SimulationState {
   servicios: ServicioInyectable[];
   /** Último mensaje dirigido al usuario (por ejemplo, una inyección rechazada). */
   mensaje: string | null;
+  /** Indica que Paso o Ejecutar siguen procesándose. */
+  ocupado: boolean;
+  operacion: 'paso' | 'ejecucion' | null;
 
   /** Reconstruye el grafo a partir del contenido actual del editor. */
   sincronizar: () => void;
@@ -96,7 +99,10 @@ const publicarEstadoDelMotor = (mensaje: string | null = null): Partial<Simulati
   };
 };
 
-export const useSimulationStore = create<SimulationState>((set) => ({
+/** Cede un frame para que React alcance a pintar el indicador antes del trabajo. */
+const permitirPintado = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
+
+export const useSimulationStore = create<SimulationState>((set, get) => ({
   estado: EstadoSimulacion.INACTIVA,
   eventos: [],
   valoresRuntime: {},
@@ -104,6 +110,8 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   contadorPasos: 0,
   servicios: [],
   mensaje: null,
+  ocupado: false,
+  operacion: null,
 
   sincronizar: () => {
     const { nodes, edges } = useEditorStore.getState();
@@ -118,15 +126,45 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   },
 
   paso: async () => {
-    await motor.paso();
-    set(publicarEstadoDelMotor());
+    if (get().ocupado) return;
+    set({ ocupado: true, operacion: 'paso', mensaje: 'Procesando un paso del circuito…' });
+    await permitirPintado();
+    try {
+      const resultado = await motor.paso();
+      set({
+        ...publicarEstadoDelMotor(`Paso ${resultado.paso} completado.`),
+        ocupado: false,
+        operacion: null,
+      });
+    } catch (error) {
+      set({
+        ...publicarEstadoDelMotor(error instanceof Error ? `No fue posible ejecutar el paso: ${error.message}` : 'No fue posible ejecutar el paso.'),
+        ocupado: false,
+        operacion: null,
+      });
+    }
   },
 
   ejecutar: async () => {
-    const resultado = await motor.ejecutar();
-    set(publicarEstadoDelMotor(resultado.estabilizado
-      ? `El circuito se estabilizó tras ${resultado.pasosEjecutados} paso(s).`
-      : 'La ejecución terminó sin estabilizarse: revisa los eventos.'));
+    if (get().ocupado) return;
+    set({ ocupado: true, operacion: 'ejecucion', mensaje: 'Ejecutando el circuito hasta estabilizarlo…' });
+    await permitirPintado();
+    try {
+      const resultado = await motor.ejecutar();
+      set({
+        ...publicarEstadoDelMotor(resultado.estabilizado
+          ? `El circuito se estabilizó tras ${resultado.pasosEjecutados} paso(s).`
+          : 'La ejecución terminó sin estabilizarse: revisa los eventos.'),
+        ocupado: false,
+        operacion: null,
+      });
+    } catch (error) {
+      set({
+        ...publicarEstadoDelMotor(error instanceof Error ? `No fue posible ejecutar el circuito: ${error.message}` : 'No fue posible ejecutar el circuito.'),
+        ocupado: false,
+        operacion: null,
+      });
+    }
   },
 
   reiniciar: () => {

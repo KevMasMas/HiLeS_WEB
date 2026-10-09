@@ -94,7 +94,7 @@ class MqttBrowserClient {
 
     client.on('close', () => {
       if (this.client !== client) return;
-      if (this.status !== 'DISCONNECTED') {
+      if (this.status !== 'DISCONNECTED' && this.status !== 'ERROR') {
         this.notifyStatus('DISCONNECTED');
       }
     });

@@ -3,6 +3,7 @@ import { MQTT_TOPICS } from '../../services/mqtt/config';
 import { mqttClient } from '../../services/mqtt/MqttClient';
 import { mqttHilesBridge } from '../../services/mqtt/setupMqttHilesBridge';
 import type { AccionLed } from '../../services/mqtt/messages';
+import './mqtt.css';
 
 type MessageEntry = {
   id: string;
@@ -14,6 +15,11 @@ type MessageEntry = {
 type IntegrationNotice = {
   id: string;
   level: 'info' | 'error';
+  message: string;
+};
+
+type ConnectionFeedback = {
+  level: 'pending' | 'success' | 'error' | 'neutral';
   message: string;
 };
 
@@ -48,6 +54,7 @@ export const MqttPanel: React.FC = () => {
   const [status, setStatus] = useState(mqttClient.getStatus());
   const [messages, setMessages] = useState<MessageEntry[]>([]);
   const [notices, setNotices] = useState<IntegrationNotice[]>([]);
+  const [connectionFeedback, setConnectionFeedback] = useState<ConnectionFeedback | null>(null);
 
   useEffect(() => {
     const addNotice = (level: IntegrationNotice['level'], message: string) => {
@@ -58,7 +65,16 @@ export const MqttPanel: React.FC = () => {
       }, ...previous].slice(0, 5));
     };
 
-    const unsubscribeStatus = mqttClient.onStatusChange(setStatus);
+    const unsubscribeStatus = mqttClient.onStatusChange((nextStatus) => {
+      setStatus(nextStatus);
+      if (nextStatus === 'CONNECTING') {
+        setConnectionFeedback({ level: 'pending', message: 'Intentando conectar con el broker MQTT…' });
+      } else if (nextStatus === 'CONNECTED') {
+        setConnectionFeedback({ level: 'success', message: 'Conexión MQTT establecida correctamente.' });
+      } else if (nextStatus === 'ERROR') {
+        setConnectionFeedback({ level: 'error', message: 'No fue posible conectar con MQTT. Verifica el broker, el puerto, el usuario y la contraseña.' });
+      }
+    });
     const unsubscribeMessage = mqttClient.onMessage((topic, payload) => {
       const entry: MessageEntry = {
         id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
@@ -96,11 +112,13 @@ export const MqttPanel: React.FC = () => {
   }, []);
 
   const handleConnect = () => {
+    setConnectionFeedback({ level: 'pending', message: 'Intentando conectar con el broker MQTT…' });
     mqttClient.connect();
   };
 
   const handleDisconnect = () => {
     mqttClient.disconnect();
+    setConnectionFeedback({ level: 'neutral', message: 'Conexión MQTT cerrada.' });
   };
 
   const handleLedCommand = (accion: AccionLed) => {
@@ -134,6 +152,17 @@ export const MqttPanel: React.FC = () => {
               Desconectar
             </button>
           </div>
+
+          {connectionFeedback && (
+            <div
+              className={`mqtt-connection-feedback is-${connectionFeedback.level}`}
+              role={connectionFeedback.level === 'error' ? 'alert' : 'status'}
+              aria-live="polite"
+            >
+              {connectionFeedback.level === 'pending' && <span className="mqtt-connection-spinner" aria-hidden="true" />}
+              <span>{connectionFeedback.message}</span>
+            </div>
+          )}
 
           <div style={styles.actions}>
             <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('encender')} disabled={status !== 'CONNECTED'}>Encender</button>

@@ -8,7 +8,7 @@ export const SimulationPanel: React.FC = () => {
   const [numericValue, setNumericValue] = useState('');
   const [textValue, setTextValue] = useState('');
 
-  const { estado, eventos, servicios, mensaje, inyectarEntrada, paso, ejecutar, reiniciar } = useSimulationStore();
+  const { estado, eventos, servicios, mensaje, ocupado, operacion, inyectarEntrada, paso, ejecutar, reiniciar } = useSimulationStore();
 
   const selectedService = servicios.find(s => s.id === selectedServiceId) ?? servicios[0];
 
@@ -26,7 +26,7 @@ export const SimulationPanel: React.FC = () => {
   };
 
   return (
-    <section className={`simulation-panel ${expanded ? 'is-expanded' : 'is-collapsed'}`} aria-label="Simulación del motor local">
+    <section className={`simulation-panel ${expanded ? 'is-expanded' : 'is-collapsed'}`} aria-label="Simulación del motor local" aria-busy={ocupado}>
       <button className="simulation-panel__header" type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
         <span>
           <i className="simulation-panel__status" style={{ backgroundColor: getStatusColor(), opacity: 1, borderColor: getStatusColor() }} />
@@ -43,6 +43,13 @@ export const SimulationPanel: React.FC = () => {
             <span style={{ fontSize: 11, fontWeight: 800, color: getStatusColor() }}>{estado.toUpperCase()}</span>
           </div>
 
+          {ocupado && (
+            <div className="simulation-panel__loading" role="status" aria-live="polite">
+              <span className="simulation-panel__spinner" aria-hidden="true" />
+              <span>{operacion === 'paso' ? 'Procesando el siguiente paso…' : 'Ejecutando el circuito…'}</span>
+            </div>
+          )}
+
           {/* Selector de Entrada */}
           {servicios.length > 0 ? (
             <>
@@ -55,18 +62,18 @@ export const SimulationPanel: React.FC = () => {
 
               {selectedService?.tipoDato === 'boolean' ? (
                 <div className="simulation-panel__controls">
-                  <button type="button" onClick={() => inyectarEntrada(selectedService.id, false)}>Enviar 0</button>
-                  <button type="button" className="is-primary" onClick={() => inyectarEntrada(selectedService.id, true)}>Enviar 1</button>
+                  <button type="button" disabled={ocupado} onClick={() => inyectarEntrada(selectedService.id, false)}>Enviar 0</button>
+                  <button type="button" className="is-primary" disabled={ocupado} onClick={() => inyectarEntrada(selectedService.id, true)}>Enviar 1</button>
                 </div>
               ) : selectedService?.tipoDato === 'integer' || selectedService?.tipoDato === 'real' ? (
                 <div className="simulation-panel__numeric-control">
                   <input type="number" step="any" value={numericValue} placeholder="Ej.: 42" onChange={(e) => setNumericValue(e.target.value)} />
-                  <button type="button" className="is-primary" disabled={numericValue.trim() === ''} onClick={() => inyectarEntrada(selectedService.id, selectedService.tipoDato === 'integer' ? Math.trunc(Number(numericValue)) : Number(numericValue))}>Enviar</button>
+                  <button type="button" className="is-primary" disabled={ocupado || numericValue.trim() === ''} onClick={() => inyectarEntrada(selectedService.id, selectedService.tipoDato === 'integer' ? Math.trunc(Number(numericValue)) : Number(numericValue))}>Enviar</button>
                 </div>
               ) : (
                 <div className="simulation-panel__numeric-control">
                   <input type="text" value={textValue} placeholder="Valor de texto" onChange={(e) => setTextValue(e.target.value)} />
-                  <button type="button" className="is-primary" disabled={textValue.length === 0} onClick={() => inyectarEntrada(selectedService.id, textValue)}>Enviar</button>
+                  <button type="button" className="is-primary" disabled={ocupado || textValue.length === 0} onClick={() => inyectarEntrada(selectedService.id, textValue)}>Enviar</button>
                 </div>
               )}
             </>
@@ -79,21 +86,22 @@ export const SimulationPanel: React.FC = () => {
             <button 
               style={{ padding: '6px', fontSize: 11, borderRadius: 4, border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer' }} 
               onClick={paso} 
-              disabled={estado === 'inactiva' || estado === 'error'}
+              disabled={ocupado || estado === 'inactiva' || estado === 'error'}
             >
-              ▶ Paso
+              {ocupado && operacion === 'paso' ? 'Procesando…' : '▶ Paso'}
             </button>
             <button 
               style={{ padding: '6px', fontSize: 11, borderRadius: 4, border: '1px solid #bae6fd', background: '#e0f2fe', color: '#0284c7', cursor: 'pointer', fontWeight: 700 }} 
               onClick={ejecutar} 
-              disabled={estado === 'inactiva' || estado === 'error'}
+              disabled={ocupado || estado === 'inactiva' || estado === 'error'}
             >
-              ⏩ Ejecutar
+              {ocupado && operacion === 'ejecucion' ? 'Ejecutando…' : '⏩ Ejecutar'}
             </button>
           </div>
           <button 
             style={{ width: '100%', padding: '6px', fontSize: 11, borderRadius: 4, border: '1px solid #fecaca', background: '#fff1f2', color: '#be123c', cursor: 'pointer' }} 
             onClick={reiniciar}
+            disabled={ocupado}
           >
             ↺ Reiniciar
           </button>
