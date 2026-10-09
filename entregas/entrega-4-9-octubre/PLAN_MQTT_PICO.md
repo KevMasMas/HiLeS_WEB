@@ -65,6 +65,8 @@ La entrega no se considera terminada si solamente funciona Mosquitto desde dos t
 - [ ] Responder con aceptación o error mediante `modelo/confirmacion`.
 - [ ] Ejecutar en MicroPython una regla sencilla del modelo, no el motor HiLeS completo.
 
+La arquitectura general, el demostrador con paso de token y la división de la migración completa entre las cuatro personas están definidos en [`PLAN_TRADUCCION_MOTOR_MICROPYTHON.md`](PLAN_TRADUCCION_MOTOR_MICROPYTHON.md).
+
 ## Fuera de alcance para este viernes
 
 - Portar todo el motor HiLeS TypeScript a MicroPython.
