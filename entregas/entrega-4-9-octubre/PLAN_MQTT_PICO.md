@@ -1,8 +1,8 @@
-# Plan de trabajo — Integración HiLeS, MQTT y Raspberry Pi Pico 2 W
+# Plan de trabajo — Integración HiLeS, MQTT y Raspberry Pi Pico W
 
 ## Explicación general
 
-En esta entrega vamos a agregar comunicación real entre HiLeS y una Raspberry Pi Pico 2 W. La aplicación web y la Pico no se conectarán directamente: ambas serán clientes de un broker MQTT Mosquitto ejecutado en un computador de la red local.
+En esta entrega vamos a agregar comunicación real entre HiLeS y una Raspberry Pi Pico W. La aplicación web y la Pico no se conectarán directamente: ambas serán clientes de un broker MQTT Mosquitto ejecutado en un computador de la red local.
 
 La web enviará comandos y mensajes JSON por topics MQTT. La Pico, programada con MicroPython, recibirá esos mensajes, ejecutará una acción sencilla —inicialmente controlar el LED— y publicará de vuelta su estado, telemetría o errores. El LED también servirá como evidencia física de que la Pico está recibiendo o transmitiendo información.
 
@@ -13,7 +13,7 @@ Aplicación HiLeS
 Mosquitto local
        ▲
        │ MQTT (puerto 1883)
-Raspberry Pi Pico 2 W + MicroPython
+Raspberry Pi Pico W + MicroPython
 ```
 
 Mosquitto local es un broker MQTT real, no una simulación. Para esta entrega funcionará dentro de la misma red Wi-Fi. Dejar la solución preparada para cambiar posteriormente a un broker en línea será parte del diseño, pero no se debe bloquear la entrega intentando desplegar infraestructura cloud antes de validar el flujo local.
@@ -46,17 +46,17 @@ La entrega no se considera terminada si solamente funciona Mosquitto desde dos t
 
 ## Alcance P0 de la entrega
 
-- [ ] Mosquitto ejecutándose localmente con listener MQTT en `1883` y WebSockets en `9001`.
-- [ ] Topics y mensajes JSON documentados en español.
-- [ ] Pico 2 W con MicroPython, conexión Wi-Fi y conexión MQTT.
-- [ ] Reconexión básica de Wi-Fi y MQTT sin tener que reiniciar manualmente la placa.
+- [x] Mosquitto ejecutándose localmente con listener MQTT en `1883` y WebSockets en `9001`.
+- [x] Topics y mensajes JSON documentados en español.
+- [x] Pico W con MicroPython, conexión Wi-Fi y conexión MQTT.
+- [x] Reconexión básica de Wi-Fi y MQTT sin tener que reiniciar manualmente la placa.
 - [ ] Web HiLeS conectada a Mosquitto mediante MQTT sobre WebSockets.
 - [ ] Comando web → Pico para encender, apagar o hacer titilar el LED.
 - [ ] Confirmación Pico → web con el estado real del LED.
 - [ ] Estado de conexión de la Pico visible en la web.
 - [ ] Un punto de integración con HiLeS mediante un `Service`, sin sustituir el bus interno del motor.
 - [ ] Evidencia reproducible: capturas, consola/log, video corto y pasos para ejecutar.
-- [ ] Build, lint y pruebas existentes del frontend sin errores nuevos.
+- [x] Build, lint y pruebas existentes del frontend sin errores nuevos.
 
 ## Alcance P1 si P0 queda estable
 
@@ -144,20 +144,20 @@ La interfaz HiLeS puede continuar en desarrollo durante esta prueba. Para el hit
 
 ## Distribución del trabajo — 4 personas
 
-### Persona 1 — Mosquitto, red y configuración compartida
+### Kevin Rincon — Mosquitto, red y configuración compartida
 
 **Trabajo sin Pico:** casi todo. Solo requiere un bloque corto con la Pico para validar la conexión real.
 
 **Responsabilidades:**
 
-- [ ] Instalar o verificar Mosquitto en el computador que actuará como broker.
-- [ ] Crear una configuración reproducible con listeners `1883` y `9001`.
-- [ ] Definir la IP local estable que utilizarán los clientes durante la demostración.
-- [ ] Configurar usuario y contraseña de desarrollo sin subir secretos al repositorio.
-- [ ] Probar publicación y suscripción desde dos clientes de escritorio.
-- [ ] Entregar a las otras personas host, puertos, usuario y formato de configuración local.
-- [ ] Documentar cómo iniciar, detener y comprobar Mosquitto.
-- [ ] Apoyar a Persona 2 durante la primera conexión real de la Pico.
+- [x] Instalar o verificar Mosquitto en el computador que actuará como broker.
+- [x] Crear una configuración reproducible con listeners `1883` y `9001`.
+- [x] Definir la IP local que utilizarán los clientes durante la demostración y documentar su verificación previa.
+- [x] Configurar usuario y contraseña de desarrollo sin subir secretos al repositorio.
+- [x] Probar publicación y suscripción desde dos clientes de escritorio.
+- [x] Entregar a las otras personas host, puertos y formatos de configuración local; las credenciales se comparten por privado.
+- [x] Documentar cómo iniciar, detener y comprobar Mosquitto.
+- [x] Apoyar a Felipe Prado durante la primera conexión real de la Pico.
 
 **Entrega del jueves:** broker local operativo y prueba PUB/SUB desde escritorio.
 
@@ -165,22 +165,22 @@ La interfaz HiLeS puede continuar en desarrollo durante esta prueba. Para el hit
 
 ---
 
-### Persona 2 — Pico 2 W, MicroPython, Wi-Fi y MQTT
+### Felipe Prado — Pico W, MicroPython, Wi-Fi y MQTT
 
 **Trabajo con Pico:** responsable principal de los bloques físicos reservados.
 
 **Responsabilidades:**
 
-- [ ] Verificar o instalar el firmware MicroPython compatible con Pico 2 W.
-- [ ] Ejecutar una prueba independiente de blink antes de agregar red.
-- [ ] Crear la configuración local de Wi-Fi y MQTT sin subir credenciales.
-- [ ] Conectar la Pico al Wi-Fi con timeout y mensajes de diagnóstico.
-- [ ] Conectar la Pico a Mosquitto usando `umqtt`.
-- [ ] Suscribirse a `led/comando` e interpretar el JSON.
-- [ ] Encender, apagar o hacer titilar el LED según `accion`.
-- [ ] Publicar la confirmación en `led/estado`.
-- [ ] Publicar `estado/conexion` al conectarse.
-- [ ] Implementar reconexión básica de Wi-Fi y MQTT.
+- [x] Verificar o instalar el firmware MicroPython compatible con Pico W.
+- [x] Ejecutar una prueba independiente de blink antes de agregar red.
+- [x] Crear la configuración local de Wi-Fi y MQTT sin subir credenciales.
+- [x] Conectar la Pico al Wi-Fi con timeout y mensajes de diagnóstico.
+- [x] Conectar la Pico a Mosquitto usando `umqtt`.
+- [x] Suscribirse a `led/comando` e interpretar el JSON.
+- [x] Encender, apagar o hacer titilar el LED según `accion`.
+- [x] Publicar la confirmación en `led/estado`.
+- [x] Publicar `estado/conexion` al conectarse.
+- [x] Implementar reconexión básica de Wi-Fi y MQTT.
 - [ ] Entregar logs y video corto de la prueba física.
 
 **Entrega del jueves:** Pico conectada al broker y comando JSON controlando el LED.
@@ -218,14 +218,14 @@ La interfaz HiLeS puede continuar en desarrollo durante esta prueba. Para el hit
 
 **Responsabilidades:**
 
-- [ ] Centralizar los topics para que no queden textos MQTT repetidos por toda la aplicación.
+- [x] Centralizar los topics para que no queden textos MQTT repetidos por toda la aplicación.
 - [ ] Definir tipos TypeScript y ejemplos para cada mensaje JSON.
 - [ ] Validar mensajes entrantes y mostrar errores comprensibles en español.
 - [ ] Integrar MQTT con un `Service` de HiLeS como frontera con el mundo exterior.
 - [ ] Preparar una prueba en la que una entrada MQTT llegue al motor o una salida del motor se publique por MQTT.
-- [ ] Preparar mensajes de prueba independientes de la Pico para no bloquear el desarrollo web.
+- [x] Preparar mensajes de prueba independientes de la Pico para no bloquear el desarrollo web.
 - [ ] Integrar únicamente cambios revisados de las otras tres personas.
-- [ ] Ejecutar pruebas, lint y build.
+- [x] Ejecutar pruebas, lint y build.
 - [ ] Preparar el guion de demostración, checklist y evidencias.
 - [ ] Coordinar el ensayo completo del viernes.
 
@@ -235,13 +235,13 @@ La interfaz HiLeS puede continuar en desarrollo durante esta prueba. Para el hit
 
 ---
 
-## Uso coordinado de la única Pico 2 W
+## Uso coordinado de la única Pico W
 
 La Pico no debe circular entre responsables durante todo el día. Se reserva por bloques con un propietario claro.
 
 ### Jueves — Bloque físico 1, aproximadamente 2 horas
 
-**Participan:** Persona 2 como responsable y Persona 1 como apoyo.
+**Participan:** Felipe Prado como responsable y Kevin Rincon como apoyo.
 
 - Instalar/verificar MicroPython.
 - Probar blink.
@@ -254,7 +254,7 @@ Mientras tanto, Personas 3 y 4 trabajan sin Pico usando mensajes MQTT simulados.
 
 ### Viernes — Bloque físico 2, aproximadamente 2 horas
 
-**Participan:** Persona 2 y Julian Romero; Persona 4 dirige el checklist.
+**Participan:** Felipe Prado y Julian Romero; Persona 4 dirige el checklist.
 
 - Sustituir el cliente de escritorio por la aplicación HiLeS.
 - Probar web → broker → Pico → broker → web.
@@ -280,26 +280,26 @@ Si los horarios físicos cambian, se conservan los tres bloques y sus objetivos;
 
 ### Miércoles 7 de octubre
 
-- [ ] Acordar topics y contrato JSON.
+- [x] Acordar topics y contrato JSON.
 - [ ] Crear ramas de trabajo.
-- [ ] Preparar configuración Mosquitto.
-- [ ] Preparar estructura MicroPython sin depender todavía de la Pico.
-- [ ] Preparar capa MQTT web y mensajes simulados.
+- [x] Preparar configuración Mosquitto.
+- [x] Preparar estructura MicroPython sin depender todavía de la Pico.
+- [x] Preparar capa MQTT web y mensajes simulados.
 
 ### Jueves 8 de octubre — prueba intermedia
 
-- [ ] Completar Mosquitto local.
-- [ ] Completar bloque físico 1.
-- [ ] Confirmar comando JSON → LED → respuesta JSON.
+- [x] Completar Mosquitto local.
+- [x] Completar bloque físico 1.
+- [x] Confirmar comando JSON → LED → respuesta JSON.
 - [ ] Confirmar conexión web al broker con mensajes simulados.
-- [ ] Registrar fallos y decidir el alcance real de P1 antes de terminar el día.
+- [x] Registrar fallos y decidir el alcance real de P1 antes de terminar el día.
 
 ### Viernes 9 de octubre — entrega
 
 - [ ] Integrar web y Pico durante el bloque físico 2.
 - [ ] Conectar al menos un `Service` HiLeS con MQTT.
-- [ ] Ejecutar pruebas de desconexión y recuperación.
-- [ ] Ejecutar `npm run test:run`, `npm run lint` y `npm run build` en frontend.
+- [x] Ejecutar pruebas de desconexión y recuperación.
+- [x] Ejecutar `npm run test:run`, `npm run lint` y `npm run build` en frontend.
 - [ ] Completar documentación y evidencia.
 - [ ] Realizar ensayo final.
 - [ ] Tener versión entregable congelada a más tardar a las 6:30 p. m.
@@ -320,7 +320,7 @@ mqtt/persona-3-web
 mqtt/persona-4-integracion
 ```
 
-- [ ] No subir SSID, contraseña Wi-Fi, usuario MQTT ni contraseña MQTT.
+- [x] No subir SSID, contraseña Wi-Fi, usuario MQTT ni contraseña MQTT.
 - [ ] No usar `git add .` si existen cambios de otra persona en el directorio.
 - [ ] Cada commit representa una unidad comprobable.
 - [ ] Persona 4 integra solo commits con evidencia y pasos de prueba.
@@ -330,18 +330,18 @@ mqtt/persona-4-integracion
 
 ## Criterios de aceptación antes de entregar
 
-- [ ] Mosquitto inicia con MQTT y WebSockets.
-- [ ] La Pico se conecta sin modificar el código en cada ejecución.
+- [x] Mosquitto inicia con MQTT y WebSockets.
+- [x] La Pico se conecta sin modificar el código en cada ejecución.
 - [ ] La web muestra que está conectada al broker.
 - [ ] La web enciende y apaga el LED físico mediante JSON.
 - [ ] La web recibe la confirmación real publicada por la Pico.
 - [ ] Los mensajes inválidos no detienen la Pico ni bloquean la web.
-- [ ] La pérdida temporal del broker o Wi-Fi produce un error comprensible y permite recuperación básica.
+- [x] La pérdida temporal del broker o Wi-Fi produce un error comprensible y permite recuperación básica.
 - [ ] Existe al menos una integración demostrable entre MQTT y un `Service` HiLeS.
-- [ ] No hay credenciales en Git.
-- [ ] Pruebas, lint y build no presentan errores nuevos.
+- [x] No hay credenciales en Git.
+- [x] Pruebas, lint y build no presentan errores nuevos.
 - [ ] Existe evidencia grabada de respaldo.
-- [ ] La documentación permite repetir la prueba en otro computador de la misma red.
+- [x] La documentación permite repetir la prueba en otro computador de la misma red.
 
 ---
 
