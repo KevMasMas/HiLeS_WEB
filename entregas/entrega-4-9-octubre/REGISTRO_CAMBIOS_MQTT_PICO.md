@@ -69,6 +69,48 @@ Usar esta plantilla cuando el problema impida continuar:
 
 <!-- Agregar las entradas nuevas debajo de esta línea. No eliminar ni reescribir las anteriores. -->
 
+### [2026-10-09 16:23] — Responsable: Kevin Rincon
+
+- Estado: Hecho; ensayo formal pendiente.
+- Área: auditoría de cierre / documentación / seguridad de configuración.
+- Tarea o problema: Revisar todos los archivos y checklists de la entrega para alinear las casillas con los resultados realmente comprobados.
+- Qué se hizo: Se revisaron los documentos, archivos de Mosquitto y MicroPython, servicios MQTT del frontend, estado de Git, ramas y configuración local ignorada. Se completó el checklist de preparación de la guía y se confirmó el trabajo sobre la rama común `mqtt-pico` sin intervenir `main`. Las tareas P1 y el ensayo formal permanecen sin marcar. Las evidencias audiovisuales son gestionadas por el equipo fuera del repositorio.
+- Topics involucrados: todos los topics del contrato; no se publicaron mensajes adicionales durante esta auditoría.
+- Archivos creados o modificados: `GUIA_DEMO_MQTT_HILES.md`, `PLAN_MQTT_PICO.md` y este registro.
+- Configuración utilizada, sin secretos: se verificó únicamente la presencia de las variables requeridas en `frontend/.env.local`; sus valores sensibles no se imprimieron y el archivo continúa ignorado por Git.
+- Rama: `mqtt-pico`.
+- Commit/hash: Pendiente de commit del cierre de Kevin Rincon.
+- Cómo se probó: Revisión de todas las casillas con `rg`, inventario de archivos, `git status`, ramas locales/remotas, búsqueda de referencias de configuración versionadas, `git check-ignore` y `git diff --check`.
+- Resultado esperado: Las casillas deben reflejar únicamente trabajo implementado o evidencia documentada, sin marcar P1 ni acciones futuras.
+- Resultado obtenido: Checklist de preparación completo y P0 funcional completo; únicamente permanece pendiente el ensayo formal. No se encontraron credenciales reales versionadas.
+- Evidencia: Registro de pruebas físicas de la sesión, salida de 39/39 pruebas, lint y build, historial Git y documentos operativos de la entrega. Las capturas y videos se conservan por separado.
+- Uso de la Pico: No requerido para la auditoría; las pruebas físicas ya fueron confirmadas durante esta sesión.
+- Riesgos, pendientes o reversión necesaria: Ejecutar y registrar el ensayo formal, congelar la versión y crear el commit final.
+- Entrega a la siguiente persona: Kevin Rincon debe dirigir o registrar el ensayo final.
+
+---
+
+### [2026-10-09 15:59] — Responsable: Kevin Rincon
+
+- Estado: Hecho; evidencia final y ensayo formal pendientes.
+- Área: web MQTT / Mosquitto / Pico W / prueba física.
+- Tarea o problema: Completar el recorrido bidireccional real desde la aplicación HiLeS hasta el LED físico y devolver la confirmación a la web.
+- Qué se hizo: Se inició el frontend con la configuración local excluida de Git, se conectó el panel MQTT a Mosquitto por WebSockets y se probaron desde la web las acciones de encender, apagar y titilar sobre la Pico W. Después se importó el modelo de humedad, se publicó una entrada MQTT con valor `70` para comprobar la frontera con un `Service` HiLeS y se envió el texto inválido `"setenta"` para verificar el rechazo seguro. Al detectar que el aviso podía quedar fuera del área visible, se ajustó el panel para mantener los diagnósticos de integración visibles y limitar el desplazamiento a las listas de avisos y mensajes.
+- Topics involucrados: `udfjc/hiles/v1/equipo1/pico01/led/comando`, `led/estado`, `estado/conexion` y `entrada/establecer`.
+- Archivos creados o modificados: `frontend/.env.local` únicamente como configuración local no versionada; `frontend/src/features/mqtt/MqttPanel.tsx` para mantener visibles los avisos de integración; `PLAN_MQTT_PICO.md` y este registro para documentar el resultado.
+- Configuración utilizada, sin secretos: frontend servido localmente en el puerto `5174`; Mosquitto en `localhost:9001` para WebSockets y `192.168.137.106:1883` para la Pico; usuario MQTT configurado localmente.
+- Rama: `mqtt-pico`.
+- Commit/hash: Pendiente de commit del cierre documental.
+- Cómo se probó: En el panel MQTT de HiLeS se confirmó la conexión y se ejecutaron consecutivamente las acciones `encender`, `apagar` y `titilar`, observando la respuesta física del LED y el retorno de estado en la aplicación. Luego se publicó `{"servicio_id":"demo2-humidity","valor":70,"id_mensaje":"demo-service-001"}` en `entrada/establecer` y la web confirmó la recepción del valor. Finalmente se publicó el mismo mensaje con `"valor":"setenta"`; la aplicación mostró el rechazo por incompatibilidad con el tipo `real`. Después del ajuste visual se volvieron a ejecutar las 39 pruebas, lint y build correctamente.
+- Resultado esperado: La web publica el comando JSON, la Pico ejecuta la acción y la confirmación vuelve al panel a través de Mosquitto; una entrada externa válida también alcanza el `Service` correspondiente.
+- Resultado obtenido: Conexión WebSocket correcta y las tres acciones físicas ejecutadas correctamente; la aplicación mostró la comunicación de retorno de la Pico, el `Service` Humedad recibió el valor `70` esperado y rechazó el texto `"setenta"` mediante una alerta roja comprensible sin bloquear el motor.
+- Evidencia: Confirmación visual durante la prueba; capturas y video gestionados por el equipo fuera del repositorio.
+- Uso de la Pico: Prueba física integral completada.
+- Riesgos, pendientes o reversión necesaria: Registrar el ensayo final y congelar la versión entregable.
+- Entrega a la siguiente persona: Continuar con la evidencia reproducible y el ensayo formal siguiendo `GUIA_DEMO_MQTT_HILES.md`.
+
+---
+
 ### [2026-10-08 22:08] — Responsable: Juan David Romero
 
 - Estado: Hecho, excepto ensayo físico pendiente.

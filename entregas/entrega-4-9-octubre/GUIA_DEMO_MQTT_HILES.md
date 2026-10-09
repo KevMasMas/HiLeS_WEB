@@ -4,14 +4,14 @@ Responsable del checklist: **Juan David Romero**
 
 ## 1. Preparación
 
-- [ ] El PC y la Pico W están en la misma red.
-- [ ] La IP vigente del PC se confirmó con `ipconfig`.
-- [ ] Mosquitto está activo y escucha en `1883` y `9001`.
-- [ ] Las credenciales se compartieron por privado y no aparecen en capturas ni archivos versionados.
-- [ ] La Pico arranca `main.py`, se conecta y publica `estado/conexion`.
-- [ ] En `frontend/.env.local` están `VITE_MQTT_HOST`, `VITE_MQTT_WS_PORT=9001`, `VITE_MQTT_WS_PATH=/mqtt`, usuario y contraseña.
-- [ ] Se ejecutó `npm run test:run`, `npm run lint` y `npm run build`.
-- [ ] Se abrió la web con `npm run dev` y se importó `output/demo-2-humedad-token.json`.
+- [x] El PC y la Pico W están en la misma red.
+- [x] La IP vigente del PC se confirmó con `ipconfig`.
+- [x] Mosquitto está activo y escucha en `1883` y `9001`.
+- [x] Las credenciales se compartieron por privado y no aparecen en capturas ni archivos versionados.
+- [x] La Pico arranca `main.py`, se conecta y publica `estado/conexion`.
+- [x] En `frontend/.env.local` están `VITE_MQTT_HOST`, `VITE_MQTT_WS_PORT=9001`, `VITE_MQTT_WS_PATH=/mqtt`, usuario y contraseña.
+- [x] Se ejecutó `npm run test:run`, `npm run lint` y `npm run build`.
+- [x] Se abrió la web con `npm run dev` y se importó `output/demo-2-humedad-token.json`.
 
 ## 2. Demostración principal: web → Pico → web
 

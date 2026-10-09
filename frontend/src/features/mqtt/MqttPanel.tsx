@@ -147,6 +147,7 @@ export const MqttPanel: React.FC = () => {
               {notices.map((notice) => (
                 <div
                   key={notice.id}
+                  role={notice.level === 'error' ? 'alert' : 'status'}
                   style={{
                     ...styles.notice,
                     ...(notice.level === 'error' ? styles.errorNotice : styles.infoNotice),
@@ -216,8 +217,6 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 12,
-    maxHeight: 320,
-    overflowY: 'auto' as const,
   },
   row: {
     display: 'flex',
@@ -274,11 +273,15 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 8,
+    maxHeight: 160,
+    overflowY: 'auto' as const,
   },
   noticeList: {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 6,
+    maxHeight: 128,
+    overflowY: 'auto' as const,
   },
   notice: {
     border: '1px solid',

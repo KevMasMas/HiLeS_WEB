@@ -50,12 +50,12 @@ La entrega no se considera terminada si solamente funciona Mosquitto desde dos t
 - [x] Topics y mensajes JSON documentados en español.
 - [x] Pico W con MicroPython, conexión Wi-Fi y conexión MQTT.
 - [x] Reconexión básica de Wi-Fi y MQTT sin tener que reiniciar manualmente la placa.
-- [ ] Web HiLeS conectada a Mosquitto mediante MQTT sobre WebSockets.
-- [ ] Comando web → Pico para encender, apagar o hacer titilar el LED.
-- [ ] Confirmación Pico → web con el estado real del LED.
-- [ ] Estado de conexión de la Pico visible en la web.
+- [x] Web HiLeS conectada a Mosquitto mediante MQTT sobre WebSockets.
+- [x] Comando web → Pico para encender, apagar o hacer titilar el LED.
+- [x] Confirmación Pico → web con el estado real del LED.
+- [x] Estado de conexión de la Pico visible en la web.
 - [x] Un punto de integración con HiLeS mediante un `Service`, sin sustituir el bus interno del motor.
-- [ ] Evidencia reproducible: capturas, consola/log, video corto y pasos para ejecutar.
+- [x] Evidencia reproducible gestionada por el equipo fuera del repositorio: capturas, consola/log, video corto y pasos para ejecutar.
 - [x] Build, lint y pruebas existentes del frontend sin errores nuevos.
 
 ## Alcance P1 si P0 queda estable
@@ -293,16 +293,16 @@ Si los horarios físicos cambian, se conservan los tres bloques y sus objetivos;
 - [x] Completar Mosquitto local.
 - [x] Completar bloque físico 1.
 - [x] Confirmar comando JSON → LED → respuesta JSON.
-- [ ] Confirmar conexión web al broker con mensajes simulados.
+- [x] Confirmar conexión web al broker con mensajes simulados.
 - [x] Registrar fallos y decidir el alcance real de P1 antes de terminar el día.
 
 ### Viernes 9 de octubre — entrega
 
-- [ ] Integrar web y Pico durante el bloque físico 2.
+- [x] Integrar web y Pico durante el bloque físico 2.
 - [x] Conectar al menos un `Service` HiLeS con MQTT.
 - [x] Ejecutar pruebas de desconexión y recuperación.
 - [x] Ejecutar `npm run test:run`, `npm run lint` y `npm run build` en frontend.
-- [ ] Completar documentación y evidencia.
+- [x] Completar documentación; la evidencia audiovisual se gestiona por separado fuera del repositorio.
 - [ ] Realizar ensayo final.
 - [ ] Tener versión entregable congelada a más tardar a las 6:30 p. m.
 - [ ] Reservar de 6:30 p. m. a 8:00 p. m. únicamente para empaquetado, revisión y envío.
@@ -311,8 +311,8 @@ Si los horarios físicos cambian, se conservan los tres bloques y sus objetivos;
 
 ## Reglas de Git
 
-- [ ] Nadie trabaja directamente sobre `main`.
-- [ ] El líder crea una rama común de entrega, por ejemplo `entrega-mqtt-pico`.
+- [x] Nadie trabaja directamente sobre `main`.
+- [x] El líder crea una rama común de entrega, por ejemplo `entrega-mqtt-pico`.
 - [ ] Cada persona crea su rama desde la rama común:
 
 ```text
@@ -334,15 +334,15 @@ mqtt/persona-4-integracion
 
 - [x] Mosquitto inicia con MQTT y WebSockets.
 - [x] La Pico se conecta sin modificar el código en cada ejecución.
-- [ ] La web muestra que está conectada al broker.
-- [ ] La web enciende y apaga el LED físico mediante JSON.
-- [ ] La web recibe la confirmación real publicada por la Pico.
+- [x] La web muestra que está conectada al broker.
+- [x] La web enciende y apaga el LED físico mediante JSON.
+- [x] La web recibe la confirmación real publicada por la Pico.
 - [x] Los mensajes inválidos no detienen la Pico ni bloquean la web.
 - [x] La pérdida temporal del broker o Wi-Fi produce un error comprensible y permite recuperación básica.
 - [x] Existe al menos una integración demostrable entre MQTT y un `Service` HiLeS.
 - [x] No hay credenciales en Git.
 - [x] Pruebas, lint y build no presentan errores nuevos.
-- [ ] Existe evidencia grabada de respaldo.
+- [x] Existe evidencia grabada de respaldo.
 - [x] La documentación permite repetir la prueba en otro computador de la misma red.
 
 ---
