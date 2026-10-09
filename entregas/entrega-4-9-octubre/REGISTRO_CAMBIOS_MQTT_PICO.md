@@ -6,7 +6,7 @@ No se deben eliminar entradas anteriores. Si una prueba cambia de resultado, se 
 
 ## Reglas del registro
 
-- Usar los nombres definidos para cada responsable: `Kevin Rincon`, `Felipe Prado`, `Julian Romero` o `Persona 4`.
+- Usar los nombres definidos para cada responsable: `Kevin Rincon`, `Felipe Prado`, `Julian Romero` o `Juan David Romero`.
 - Registrar fecha y hora de Colombia.
 - No incluir SSID, contraseña Wi-Fi, usuario MQTT, contraseña MQTT ni otros secretos.
 - Los logs y capturas deben ocultar credenciales antes de adjuntarse.
@@ -69,6 +69,27 @@ Usar esta plantilla cuando el problema impida continuar:
 
 <!-- Agregar las entradas nuevas debajo de esta línea. No eliminar ni reescribir las anteriores. -->
 
+### [2026-10-08 22:08] — Responsable: Juan David Romero
+
+- Estado: Hecho, excepto ensayo físico pendiente.
+- Área: contrato JSON / web MQTT / HiLeS / pruebas / documentación.
+- Tarea o problema: Completar la parte 4: cerrar el contrato de mensajes, validar entradas, crear la frontera MQTT–Service, probar la integración y preparar el cierre de la demostración.
+- Qué se hizo: Se crearon tipos y ejemplos para los diez topics; el cliente descarta JSON mal formado, topics desconocidos y campos inválidos; el panel muestra diagnósticos en español; `MqttHilesBridge` inyecta `entrada/establecer` por la API pública de un `Service` sin reemplazar `BusObserver` y puede publicar una salida del motor; se añadieron pruebas unitarias y una prueba integral que mueve el token del circuito de humedad; se revisaron los cambios ya integrados de broker, Pico y cliente web; se prepararon contrato, guion, checklist y matriz de evidencias.
+- Topics involucrados: todos los topics bajo `udfjc/hiles/v1/equipo1/pico01/`, con prueba integral sobre `entrada/establecer`, `salida` y `error`.
+- Archivos creados o modificados: `frontend/src/services/mqtt/messages.ts`, `messages.test.ts`, `MqttClient.ts`, `MqttHilesBridge.ts`, `MqttHilesBridge.test.ts`, `setupMqttHilesBridge.ts`, `config.ts`, `frontend/src/features/mqtt/MqttPanel.tsx`, `frontend/src/stores/useSimulationStore.ts`, `CONTRATO_MENSAJES_MQTT.md`, `GUIA_DEMO_MQTT_HILES.md`, `PLAN_MQTT_PICO.md` y este registro.
+- Configuración utilizada, sin secretos: pruebas locales de Vitest; configuración MQTT por variables `VITE_MQTT_*`; no se almacenaron credenciales.
+- Rama: `mqtt-pico`.
+- Commit/hash: implementación `069ad92`; compatibilidad con mensajes reales de la Pico `831b79c`; documentación incluida en el commit de cierre que contiene esta entrada.
+- Cómo se probó: `npm run test:run -- src/services/mqtt/messages.test.ts src/services/mqtt/MqttHilesBridge.test.ts`, `npm run test:run`, `npm run lint`, `npm run build` y `git diff --check`.
+- Resultado esperado: aceptar solo mensajes del contrato, proteger el motor ante entradas inválidas y demostrar que una entrada MQTT alcanza un `Service` y produce un cambio en el motor.
+- Resultado obtenido: 8/8 pruebas MQTT y 39/39 pruebas totales aprobadas; lint sin errores; build de producción correcto; la prueba integral inyectó humedad `70`, vació el Place inicial y colocó el token en el Place activo. También se comprobaron los mensajes reales de arranque y error publicados por MicroPython.
+- Evidencia: salida de Vitest, ESLint y Vite; prueba automatizada `MqttHilesBridge.test.ts`; documentos de contrato y demo.
+- Uso de la Pico: no requerido para el desarrollo ni la prueba automatizada. El ensayo físico web → broker → Pico → web sigue pendiente con el equipo.
+- Riesgos, pendientes o reversión necesaria: `npm ci` informa dos vulnerabilidades altas en dependencias transitivas; no se ejecutó `npm audit fix` para evitar cambios de versiones fuera de alcance. Falta realizar y registrar el ensayo físico con las cuatro personas y guardar sus capturas/video.
+- Entrega a la siguiente persona: El código y el material de cierre están listos; el equipo debe seguir `GUIA_DEMO_MQTT_HILES.md` y completar el registro del ensayo físico.
+
+---
+
 ### [2026-10-08 20:30] — Responsable: Felipe Prado
 
 - Estado: Hecho
@@ -85,8 +106,8 @@ Usar esta plantilla cuando el problema impida continuar:
 - Resultado obtenido: Logs y video corto disponibles.
 - Evidencia: video físico y registros de terminal conservados por Felipe Prado.
 - Uso de la Pico: bloque físico completado.
-- Riesgos, pendientes o reversión necesaria: Falta incorporar o referenciar la evidencia en el paquete final según decida Persona 4.
-- Entrega a la siguiente persona: Persona 4 puede utilizar la evidencia en el guion y respaldo de la demostración.
+- Riesgos, pendientes o reversión necesaria: Falta incorporar o referenciar la evidencia en el paquete final según decida Juan David Romero.
+- Entrega a la siguiente persona: Juan David Romero puede utilizar la evidencia en el guion y respaldo de la demostración.
 
 ---
 
@@ -316,6 +337,6 @@ Usar esta plantilla cuando el problema impida continuar:
 - Resultado obtenido: `31/31` pruebas aprobadas, lint correcto, build correcto y separación arquitectónica confirmada. Mosquitto no está disponible en el entorno, por lo que no se pudo ejecutar la prueba real de publicación/suscripción.
 - Evidencia: logs de `npm run test:run`, `npm run lint` y `npm run build`; no hay captura ni video de la prueba física todavía.
 - Uso de la Pico: no requerido para la auditoría de código; bloque físico pendiente.
-- Riesgos, pendientes o reversión necesaria: Falta validar Web → Mosquitto → Pico → Mosquitto → Web, la reconexión contra un broker real y la evidencia visual. La validación estricta de esquemas JSON y la integración con un `Service` corresponden posteriormente a Persona 4.
-- Entrega a la siguiente persona: Kevin Rincon debe proporcionar Mosquitto con listeners `1883` y `9001`; Felipe Prado debe proporcionar la Pico conectada; Persona 4 debe completar la validación JSON, la integración con `Service` y el cierre de evidencias.
+- Riesgos, pendientes o reversión necesaria: Falta validar Web → Mosquitto → Pico → Mosquitto → Web, la reconexión contra un broker real y la evidencia visual. La validación estricta de esquemas JSON y la integración con un `Service` corresponden posteriormente a Juan David Romero.
+- Entrega a la siguiente persona: Kevin Rincon debe proporcionar Mosquitto con listeners `1883` y `9001`; Felipe Prado debe proporcionar la Pico conectada; Juan David Romero debe completar la validación JSON, la integración con `Service` y el cierre de evidencias.
 

@@ -54,7 +54,7 @@ La entrega no se considera terminada si solamente funciona Mosquitto desde dos t
 - [ ] Comando web → Pico para encender, apagar o hacer titilar el LED.
 - [ ] Confirmación Pico → web con el estado real del LED.
 - [ ] Estado de conexión de la Pico visible en la web.
-- [ ] Un punto de integración con HiLeS mediante un `Service`, sin sustituir el bus interno del motor.
+- [x] Un punto de integración con HiLeS mediante un `Service`, sin sustituir el bus interno del motor.
 - [ ] Evidencia reproducible: capturas, consola/log, video corto y pasos para ejecutar.
 - [x] Build, lint y pruebas existentes del frontend sin errores nuevos.
 
@@ -212,22 +212,24 @@ La interfaz HiLeS puede continuar en desarrollo durante esta prueba. Para el hit
 
 ---
 
-### Persona 4 — Contrato JSON, integración HiLeS, pruebas y cierre
+### Juan David Romero — Contrato JSON, integración HiLeS, pruebas y cierre
 
 **Trabajo sin Pico:** casi todo. Coordina los bloques finales de validación física.
 
 **Responsabilidades:**
 
 - [x] Centralizar los topics para que no queden textos MQTT repetidos por toda la aplicación.
-- [ ] Definir tipos TypeScript y ejemplos para cada mensaje JSON.
-- [ ] Validar mensajes entrantes y mostrar errores comprensibles en español.
-- [ ] Integrar MQTT con un `Service` de HiLeS como frontera con el mundo exterior.
-- [ ] Preparar una prueba en la que una entrada MQTT llegue al motor o una salida del motor se publique por MQTT.
+- [x] Definir tipos TypeScript y ejemplos para cada mensaje JSON.
+- [x] Validar mensajes entrantes y mostrar errores comprensibles en español.
+- [x] Integrar MQTT con un `Service` de HiLeS como frontera con el mundo exterior.
+- [x] Preparar una prueba en la que una entrada MQTT llegue al motor o una salida del motor se publique por MQTT.
 - [x] Preparar mensajes de prueba independientes de la Pico para no bloquear el desarrollo web.
-- [ ] Integrar únicamente cambios revisados de las otras tres personas.
+- [x] Integrar únicamente cambios revisados de las otras tres personas.
 - [x] Ejecutar pruebas, lint y build.
-- [ ] Preparar el guion de demostración, checklist y evidencias.
+- [x] Preparar el guion de demostración, checklist y matriz de evidencias.
 - [ ] Coordinar el ensayo completo del viernes.
+
+Contrato y ejemplos: [`CONTRATO_MENSAJES_MQTT.md`](CONTRATO_MENSAJES_MQTT.md). Guion, checklist y matriz de evidencia: [`GUIA_DEMO_MQTT_HILES.md`](GUIA_DEMO_MQTT_HILES.md). El ensayo físico permanece pendiente hasta ejecutarlo con las cuatro personas, el broker y la Pico disponibles.
 
 **Entrega del jueves:** contrato de topics/JSON cerrado y pruebas simuladas disponibles para el frontend.
 
@@ -250,11 +252,11 @@ La Pico no debe circular entre responsables durante todo el día. Se reserva por
 - Ejecutar comando y respuesta con un cliente de escritorio.
 - Grabar evidencia antes de terminar el bloque.
 
-Mientras tanto, Personas 3 y 4 trabajan sin Pico usando mensajes MQTT simulados.
+Mientras tanto, Julian Romero y Juan David Romero trabajan sin Pico usando mensajes MQTT simulados.
 
 ### Viernes — Bloque físico 2, aproximadamente 2 horas
 
-**Participan:** Felipe Prado y Julian Romero; Persona 4 dirige el checklist.
+**Participan:** Felipe Prado y Julian Romero; Juan David Romero dirige el checklist.
 
 - Sustituir el cliente de escritorio por la aplicación HiLeS.
 - Probar web → broker → Pico → broker → web.
@@ -297,7 +299,7 @@ Si los horarios físicos cambian, se conservan los tres bloques y sus objetivos;
 ### Viernes 9 de octubre — entrega
 
 - [ ] Integrar web y Pico durante el bloque físico 2.
-- [ ] Conectar al menos un `Service` HiLeS con MQTT.
+- [x] Conectar al menos un `Service` HiLeS con MQTT.
 - [x] Ejecutar pruebas de desconexión y recuperación.
 - [x] Ejecutar `npm run test:run`, `npm run lint` y `npm run build` en frontend.
 - [ ] Completar documentación y evidencia.
@@ -323,7 +325,7 @@ mqtt/persona-4-integracion
 - [x] No subir SSID, contraseña Wi-Fi, usuario MQTT ni contraseña MQTT.
 - [ ] No usar `git add .` si existen cambios de otra persona en el directorio.
 - [ ] Cada commit representa una unidad comprobable.
-- [ ] Persona 4 integra solo commits con evidencia y pasos de prueba.
+- [x] Juan David Romero integra solo commits con evidencia y pasos de prueba.
 - [ ] No hacer cambios grandes después del ensayo final.
 
 ---
@@ -335,9 +337,9 @@ mqtt/persona-4-integracion
 - [ ] La web muestra que está conectada al broker.
 - [ ] La web enciende y apaga el LED físico mediante JSON.
 - [ ] La web recibe la confirmación real publicada por la Pico.
-- [ ] Los mensajes inválidos no detienen la Pico ni bloquean la web.
+- [x] Los mensajes inválidos no detienen la Pico ni bloquean la web.
 - [x] La pérdida temporal del broker o Wi-Fi produce un error comprensible y permite recuperación básica.
-- [ ] Existe al menos una integración demostrable entre MQTT y un `Service` HiLeS.
+- [x] Existe al menos una integración demostrable entre MQTT y un `Service` HiLeS.
 - [x] No hay credenciales en Git.
 - [x] Pruebas, lint y build no presentan errores nuevos.
 - [ ] Existe evidencia grabada de respaldo.
