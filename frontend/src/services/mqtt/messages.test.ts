@@ -27,6 +27,16 @@ describe('contrato de mensajes MQTT', () => {
     });
   });
 
+  it('acepta los mensajes espontáneos que publica la Pico al iniciar o fallar', () => {
+    expect(validarMensajeMqtt(MQTT_TOPICS.LED_ESTADO, {
+      encendido: false,
+      accion_aplicada: 'inicio',
+    })).toMatchObject({ valido: true });
+    expect(validarMensajeMqtt(MQTT_TOPICS.ERROR, {
+      error: 'Acción no soportada',
+    })).toMatchObject({ valido: true });
+  });
+
   it('rechaza topics que no pertenecen al contrato', () => {
     const resultado = validarMensajeMqtt('otro/topic', {});
     expect(resultado).toMatchObject({ valido: false });

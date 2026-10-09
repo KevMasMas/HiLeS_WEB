@@ -2,6 +2,7 @@ import { MQTT_TOPICS, type MqttTopic } from './config';
 
 export type ValorMensajeMqtt = boolean | number | string;
 export type AccionLed = 'encender' | 'apagar' | 'titilar';
+export type AccionLedEstado = AccionLed | 'inicio';
 export type AccionSimulacion = 'iniciar' | 'detener' | 'reiniciar' | 'paso';
 
 export interface MensajeLedComando {
@@ -11,8 +12,9 @@ export interface MensajeLedComando {
 
 export interface MensajeLedEstado {
   encendido: boolean;
-  accion_aplicada: AccionLed;
-  id_mensaje: string;
+  accion_aplicada: AccionLedEstado;
+  /** No existe en el estado inicial espontáneo de la Pico. */
+  id_mensaje?: string;
 }
 
 export interface MensajeEstadoConexion {
@@ -28,7 +30,10 @@ export interface MensajeTelemetria {
 }
 
 export interface MensajeErrorMqtt {
-  mensaje: string;
+  /** Forma usada por la web. */
+  mensaje?: string;
+  /** Forma usada actualmente por MicroPython en la Pico. */
+  error?: string;
   codigo?: string;
   id_mensaje?: string;
 }
@@ -87,6 +92,7 @@ export type ResultadoValidacionMensaje =
 
 const TOPICS_CONOCIDOS = new Set<string>(Object.values(MQTT_TOPICS));
 const ACCIONES_LED = new Set<AccionLed>(['encender', 'apagar', 'titilar']);
+const ACCIONES_ESTADO_LED = new Set<AccionLedEstado>(['encender', 'apagar', 'titilar', 'inicio']);
 const ACCIONES_SIMULACION = new Set<AccionSimulacion>(['iniciar', 'detener', 'reiniciar', 'paso']);
 
 const esObjeto = (valor: unknown): valor is Record<string, unknown> =>
@@ -120,10 +126,9 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
       break;
     }
     case MQTT_TOPICS.LED_ESTADO: {
-      const idError = validarId(topic, payload);
-      if (idError) return idError;
       if (typeof payload.encendido !== 'boolean') return error(topic, 'encendido debe ser booleano');
-      if (!ACCIONES_LED.has(payload.accion_aplicada as AccionLed)) return error(topic, 'accion_aplicada no es válida');
+      if (!ACCIONES_ESTADO_LED.has(payload.accion_aplicada as AccionLedEstado)) return error(topic, 'accion_aplicada no es válida');
+      if (payload.id_mensaje !== undefined && !esTexto(payload.id_mensaje)) return error(topic, 'id_mensaje debe ser texto');
       break;
     }
     case MQTT_TOPICS.ESTADO_CONEXION:
@@ -139,7 +144,11 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
       }
       break;
     case MQTT_TOPICS.ERROR:
-      if (!esTexto(payload.mensaje)) return error(topic, 'mensaje debe ser un texto no vacío');
+      if (!esTexto(payload.mensaje) && !esTexto(payload.error)) {
+        return error(topic, 'mensaje o error debe ser un texto no vacío');
+      }
+      if (payload.mensaje !== undefined && !esTexto(payload.mensaje)) return error(topic, 'mensaje debe ser texto');
+      if (payload.error !== undefined && !esTexto(payload.error)) return error(topic, 'error debe ser texto');
       if (payload.codigo !== undefined && !esTexto(payload.codigo)) return error(topic, 'codigo debe ser texto');
       if (payload.id_mensaje !== undefined && !esTexto(payload.id_mensaje)) return error(topic, 'id_mensaje debe ser texto');
       break;
