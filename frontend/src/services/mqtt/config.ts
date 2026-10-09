@@ -11,6 +11,8 @@ export const MQTT_TOPICS = {
   MODELO_CONFIRMACION: 'udfjc/hiles/v1/equipo1/pico01/modelo/confirmacion',
 } as const;
 
+export type MqttTopic = (typeof MQTT_TOPICS)[keyof typeof MQTT_TOPICS];
+
 export type MqttConnectionStatus = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR';
 
 export interface MqttConfig {

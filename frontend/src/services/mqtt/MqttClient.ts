@@ -1,14 +1,22 @@
 import mqtt, { type IClientOptions, type MqttClient as BrowserMqttClient } from 'mqtt';
-import { getMqttConfig, MQTT_TOPICS, type MqttConnectionStatus } from './config';
+import { getMqttConfig, MQTT_TOPICS, type MqttConnectionStatus, type MqttTopic } from './config';
+import { validarMensajeMqtt, type AccionLed, type MensajeMqtt } from './messages';
 
-export type MqttMessageHandler = (topic: string, payload: unknown) => void;
+export type MqttMessageHandler = (topic: MqttTopic, payload: MensajeMqtt) => void;
 export type MqttStatusHandler = (status: MqttConnectionStatus) => void;
+export interface MqttValidationError {
+  topic: string;
+  error: string;
+  rawPayload: string;
+}
+export type MqttValidationErrorHandler = (validationError: MqttValidationError) => void;
 
 class MqttBrowserClient {
   private client: BrowserMqttClient | null = null;
   private status: MqttConnectionStatus = 'DISCONNECTED';
   private readonly statusListeners = new Set<MqttStatusHandler>();
   private readonly messageListeners = new Set<MqttMessageHandler>();
+  private readonly validationErrorListeners = new Set<MqttValidationErrorHandler>();
   private readonly subscriptions = new Set<string>();
 
   public getStatus(): MqttConnectionStatus {
@@ -25,13 +33,22 @@ class MqttBrowserClient {
     return () => this.messageListeners.delete(listener);
   }
 
+  public onValidationError(listener: MqttValidationErrorHandler): () => void {
+    this.validationErrorListeners.add(listener);
+    return () => this.validationErrorListeners.delete(listener);
+  }
+
   private notifyStatus(nextStatus: MqttConnectionStatus): void {
     this.status = nextStatus;
     this.statusListeners.forEach((listener) => listener(nextStatus));
   }
 
-  private notifyMessage(topic: string, payload: unknown): void {
+  private notifyMessage(topic: MqttTopic, payload: MensajeMqtt): void {
     this.messageListeners.forEach((listener) => listener(topic, payload));
+  }
+
+  private notifyValidationError(validationError: MqttValidationError): void {
+    this.validationErrorListeners.forEach((listener) => listener(validationError));
   }
 
   public connect(): void {
@@ -101,10 +118,21 @@ class MqttBrowserClient {
       try {
         parsed = JSON.parse(raw);
       } catch {
-        parsed = raw;
+        this.notifyValidationError({
+          topic,
+          error: `Mensaje inválido en ${topic}: el contenido no es JSON válido.`,
+          rawPayload: raw,
+        });
+        return;
       }
 
-      this.notifyMessage(topic, parsed);
+      const resultado = validarMensajeMqtt(topic, parsed);
+      if (!resultado.valido) {
+        this.notifyValidationError({ topic, error: resultado.error, rawPayload: raw });
+        return;
+      }
+
+      this.notifyMessage(resultado.topic, resultado.mensaje);
     });
   }
 
@@ -148,7 +176,7 @@ class MqttBrowserClient {
     return true;
   }
 
-  public sendLedCommand(accion: 'encender' | 'apagar' | 'titilar', extra: Record<string, unknown> = {}): boolean {
+  public sendLedCommand(accion: AccionLed, extra: Record<string, unknown> = {}): boolean {
     return this.publish(MQTT_TOPICS.LED_COMANDO, {
       accion,
       id_mensaje: `web-${Date.now()}`,

@@ -6,6 +6,7 @@ import type {
   EstadoElemento,
   EventoSimulacion,
   NodoHiLeS,
+  ResultadoInyeccion,
   ServicioInyectable,
   ValorRuntime,
 } from '../engine/tipos';
@@ -38,7 +39,7 @@ interface SimulationState {
 
   /** Reconstruye el grafo a partir del contenido actual del editor. */
   sincronizar: () => void;
-  inyectarEntrada: (servicioId: string, valor: ValorRuntime) => void;
+  inyectarEntrada: (servicioId: string, valor: ValorRuntime) => ResultadoInyeccion;
   paso: () => Promise<void>;
   ejecutar: () => Promise<void>;
   reiniciar: () => void;
@@ -113,6 +114,7 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   inyectarEntrada: (servicioId, valor) => {
     const resultado = motor.inyectarEntrada(servicioId, valor);
     set(publicarEstadoDelMotor(resultado.mensaje));
+    return resultado;
   },
 
   paso: async () => {

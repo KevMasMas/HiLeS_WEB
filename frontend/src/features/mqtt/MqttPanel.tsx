@@ -1,14 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { MQTT_TOPICS } from '../../services/mqtt/config';
 import { mqttClient } from '../../services/mqtt/MqttClient';
-
-type PayloadType = string | number | boolean | Record<string, unknown> | Array<unknown> | null;
+import { mqttHilesBridge } from '../../services/mqtt/setupMqttHilesBridge';
+import type { AccionLed } from '../../services/mqtt/messages';
 
 type MessageEntry = {
   id: string;
   topic: string;
-  payload: PayloadType;
+  payload: unknown;
   receivedAt: string;
+};
+
+type IntegrationNotice = {
+  id: string;
+  level: 'info' | 'error';
+  message: string;
 };
 
 const getStatusColor = (status: string): string => {
@@ -41,14 +47,23 @@ export const MqttPanel: React.FC = () => {
   const [expanded, setExpanded] = useState(true);
   const [status, setStatus] = useState(mqttClient.getStatus());
   const [messages, setMessages] = useState<MessageEntry[]>([]);
+  const [notices, setNotices] = useState<IntegrationNotice[]>([]);
 
   useEffect(() => {
+    const addNotice = (level: IntegrationNotice['level'], message: string) => {
+      setNotices((previous) => [{
+        id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+        level,
+        message,
+      }, ...previous].slice(0, 5));
+    };
+
     const unsubscribeStatus = mqttClient.onStatusChange(setStatus);
     const unsubscribeMessage = mqttClient.onMessage((topic, payload) => {
       const entry: MessageEntry = {
         id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
         topic,
-        payload: payload as PayloadType,
+        payload,
         receivedAt: new Date().toLocaleTimeString('es-ES', {
           hour: '2-digit',
           minute: '2-digit',
@@ -58,7 +73,10 @@ export const MqttPanel: React.FC = () => {
 
       setMessages((previous) => [entry, ...previous].slice(0, 8));
     });
+    const unsubscribeValidation = mqttClient.onValidationError(({ error }) => addNotice('error', error));
+    const unsubscribeBridge = mqttHilesBridge.onEvent(({ nivel, mensaje }) => addNotice(nivel, mensaje));
 
+    mqttHilesBridge.start();
     mqttClient.subscribe(MQTT_TOPICS.LED_ESTADO);
     mqttClient.subscribe(MQTT_TOPICS.ESTADO_CONEXION);
     mqttClient.subscribe(MQTT_TOPICS.TELEMETRIA);
@@ -67,6 +85,9 @@ export const MqttPanel: React.FC = () => {
     return () => {
       unsubscribeStatus();
       unsubscribeMessage();
+      unsubscribeValidation();
+      unsubscribeBridge();
+      mqttHilesBridge.stop();
       mqttClient.unsubscribe(MQTT_TOPICS.LED_ESTADO);
       mqttClient.unsubscribe(MQTT_TOPICS.ESTADO_CONEXION);
       mqttClient.unsubscribe(MQTT_TOPICS.TELEMETRIA);
@@ -82,7 +103,7 @@ export const MqttPanel: React.FC = () => {
     mqttClient.disconnect();
   };
 
-  const handleLedCommand = (accion: 'encender' | 'apagar' | 'titilar') => {
+  const handleLedCommand = (accion: AccionLed) => {
     mqttClient.sendLedCommand(accion);
   };
 
@@ -119,6 +140,23 @@ export const MqttPanel: React.FC = () => {
             <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('apagar')} disabled={status !== 'CONNECTED'}>Apagar</button>
             <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('titilar')} disabled={status !== 'CONNECTED'}>Titilar</button>
           </div>
+
+          {notices.length > 0 && (
+            <div style={styles.noticeList} aria-live="polite">
+              <strong style={styles.messageTitle}>Integración HiLeS</strong>
+              {notices.map((notice) => (
+                <div
+                  key={notice.id}
+                  style={{
+                    ...styles.notice,
+                    ...(notice.level === 'error' ? styles.errorNotice : styles.infoNotice),
+                  }}
+                >
+                  {notice.message}
+                </div>
+              ))}
+            </div>
+          )}
 
           <div style={styles.messageList}>
             <strong style={styles.messageTitle}>Mensajes recientes</strong>
@@ -236,6 +274,28 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 8,
+  },
+  noticeList: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 6,
+  },
+  notice: {
+    border: '1px solid',
+    borderRadius: 6,
+    padding: 8,
+    fontSize: 10,
+    lineHeight: 1.4,
+  },
+  infoNotice: {
+    borderColor: '#93c5fd',
+    background: '#eff6ff',
+    color: '#1e3a8a',
+  },
+  errorNotice: {
+    borderColor: '#fca5a5',
+    background: '#fef2f2',
+    color: '#991b1b',
   },
   messageTitle: {
     fontSize: 11,
