@@ -19,9 +19,9 @@ export const HilesGlyph: React.FC<HilesGlyphProps> = ({ type, width = 88, height
   return (
     <svg width={width} height={height} viewBox={viewBox} aria-hidden="true" style={style}>
       {type === HilesElementType.STRUCTURAL_BLOCK && <rect x="7" y="6" width="86" height="48" {...common} />}
-      {type === HilesElementType.FUNCTIONAL_BLOCK && <rect x="7" y="8" width="86" height="44" rx="12" {...common} />}
+      {type === HilesElementType.FUNCTIONAL_BLOCK && <ellipse cx="50" cy="30" rx="43" ry="22" {...common} />}
       {type === HilesElementType.SERVICE && (
-        <><rect x="32" y="12" width="36" height="36" {...common} /><rect x="39" y="19" width="22" height="22" fill="none" stroke="#2878d0" strokeWidth="4" /></>
+        <><rect x="28" y="8" width="44" height="44" {...common} /><rect x="36" y="16" width="28" height="28" fill="none" stroke="#2878d0" strokeWidth="4" /></>
       )}
       {type === HilesElementType.PORT && (
         <><line x1="14" y1="30" x2="42" y2="30" stroke="#172033" strokeWidth="3" /><rect x="42" y="20" width="20" height="20" fill="#e33a43" stroke="#e33a43" strokeWidth="3" /><rect x="48" y="26" width="8" height="8" fill="#fff" /><line x1="62" y1="30" x2="88" y2="30" stroke="#172033" strokeWidth="3" /></>

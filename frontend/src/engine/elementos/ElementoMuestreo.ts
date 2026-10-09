@@ -20,11 +20,9 @@ export class ElementoMuestreo implements IElementoHiLeS {
       return;
     }
     if (puerto.name.toLowerCase() === 'control' || puerto.nature === 'control') {
-      if (typeof valor !== 'boolean') {
-        this.error = 'La entrada Control del Sample debe ser booleana.';
-        return;
-      }
-      this.control = valor;
+      // El LCH representa la llegada de un evento lógico; se admite también
+      // su representación numérica (0/1) usada por algunos modelos importados.
+      this.control = Boolean(valor);
     } else {
       this.dato = valor;
     }
@@ -34,6 +32,7 @@ export class ElementoMuestreo implements IElementoHiLeS {
   evaluar(): Map<string, ValorRuntime> {
     if (!this.tieneCaptura) return new Map();
     const salida = this.puertos.find((puerto) => puerto.direction === 'output');
+    this.tieneCaptura = false;
     return salida ? new Map([[salida.id, this.capturado as ValorRuntime]]) : new Map();
   }
   reiniciar(): void { this.dato = undefined; this.capturado = undefined; this.tieneCaptura = false; this.control = false; this.error = undefined; }

@@ -4,12 +4,13 @@ import type { AristaHiLeS, NodoHiLeS, ValorRuntime } from './tipos';
 import type { BusObserver } from './BusObserver';
 
 /**
- * Una arista transporta datos (CCH/DCH) si no es un arco de la red de Petri.
- * Los arcos Petri los administra `EvaluadorPetri`, nunca este módulo.
+ * Una arista transporta datos por CCH/DCH o eventos lógicos por LCH. Los arcos
+ * de tokens Petri se distinguen por sus handles y los administra EvaluadorPetri.
  */
 export const esAristaDatos = (arista: AristaHiLeS): boolean =>
-  arista.data?.hilesConnectionType !== HilesConnectionType.PETRI
-  && arista.data?.hilesConnectionType !== HilesConnectionType.TOKEN_FLOW;
+  arista.data?.hilesConnectionType !== HilesConnectionType.TOKEN_FLOW
+  && (arista.data?.hilesConnectionType !== HilesConnectionType.PETRI
+    || (!arista.sourceHandle?.startsWith('petri') && !arista.targetHandle?.startsWith('petri')));
 
 export interface ResultadoOrdenTopologico {
   /**
@@ -30,7 +31,10 @@ const aristasDatosValidas = (
 ): AristaHiLeS[] => {
   const existentes = new Set(nodos.map((nodo) => nodo.id));
   return aristas.filter((arista) =>
-    esAristaDatos(arista) && existentes.has(arista.source) && existentes.has(arista.target));
+    esAristaDatos(arista)
+    && arista.data?.hilesConnectionType !== HilesConnectionType.PETRI
+    && existentes.has(arista.source)
+    && existentes.has(arista.target));
 };
 
 /**

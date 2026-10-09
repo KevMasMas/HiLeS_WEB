@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { Edge, Node } from '@xyflow/react';
 import { isModelDocument, migrateV1toV2, validateModelDocument } from '../../domain/modelDocument';
-import type { HilesEdgeData, HilesNodeData } from '../../types/hiles';
+import { HilesConnectionType, type HilesEdgeData, type HilesNodeData } from '../../types/hiles';
 import { EstadoSimulacion, TipoEventoSimulacion } from '../tipos';
 import { MotorSimulacion } from '../MotorSimulacion';
 import { circuitoHumedad } from './fixtures';
@@ -57,6 +57,26 @@ describe('MotorSimulacion', () => {
     motor.construirGrafo(nodes, edges);
     expect(motor.obtenerEstado()).toBe(EstadoSimulacion.ERROR);
     expect(motor.obtenerEventos().some((evento) => evento.tipo === TipoEventoSimulacion.ERROR)).toBe(true);
+  });
+
+  it('modela el parqueadero como CCH + LCH → Sample → DCH → Hold → CCH + LCH', () => {
+    const contenido: unknown = JSON.parse(readFileSync(resolve(process.cwd(), '..', 'output', 'demo-parqueadero-converters.json'), 'utf8'));
+    expect(isModelDocument(contenido)).toBe(true);
+    if (!isModelDocument(contenido)) return;
+    const documento = migrateV1toV2(contenido);
+    const hold = documento.allElements.find((elemento) => elemento.id === 'hold-ocupacion');
+    expect(hold?.ports.map(({ name, direction, nature }) => ({ name, direction, nature }))).toEqual([
+      { name: 'DCH', direction: 'input', nature: 'continuous' },
+      { name: 'CCH', direction: 'output', nature: 'continuous' },
+      { name: 'LCH', direction: 'output', nature: 'control' },
+    ]);
+
+    const conexiones = new Map(documento.connections.map((conexion) => [conexion.id, conexion]));
+    expect(conexiones.get('lch-control-sample')?.data?.hilesConnectionType).toBe(HilesConnectionType.PETRI);
+    expect(conexiones.get('dch-sample-hold')?.data?.hilesConnectionType).toBe(HilesConnectionType.DISCRETE);
+    expect(conexiones.get('cch-hold-abrir')?.sourceHandle).toBe('hold-cch');
+    expect(conexiones.get('cch-hold-cerrar')?.sourceHandle).toBe('hold-cch');
+    expect(conexiones.get('lch-hold-evento')?.sourceHandle).toBe('hold-lch');
   });
 
   it('importa, construye y ejecuta todos los demos JSON existentes', async () => {

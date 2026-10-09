@@ -52,14 +52,20 @@ describe('elementos HiLeS', () => {
     expect(sample.evaluar().size).toBe(0);
     sample.recibirEntrada('control', true);
     expect(sample.evaluar().get('sampled')).toBe(12);
+    expect(sample.evaluar().size).toBe(0);
   });
 
-  it('Hold mantiene el último valor válido', () => {
-    const hold = new ElementoRetencion({ ports: [puerto('data', 'Data', 'input'), puerto('held', 'Held', 'output')] });
-    hold.recibirEntrada('data', 4);
-    expect(hold.evaluar().get('held')).toBe(4);
+  it('Hold separa el DCH en un valor CCH retenido y un evento LCH', () => {
+    const hold = new ElementoRetencion({ ports: [
+      puerto('dch', 'DCH', 'input'),
+      puerto('cch', 'CCH', 'output'),
+      puerto('lch', 'LCH', 'output', 'boolean', 'control'),
+    ] });
+    hold.recibirEntrada('dch', 4);
+    expect(Object.fromEntries(hold.evaluar())).toEqual({ cch: 4, lch: true });
+    expect(Object.fromEntries(hold.evaluar())).toEqual({ cch: 4 });
     hold.recibirEntrada('desconocido', 9);
-    expect(hold.evaluar().get('held')).toBe(4);
+    expect(Object.fromEntries(hold.evaluar())).toEqual({ cch: 4 });
   });
 
   it('Structural Block pasa valores por sus túneles y conserva sus hijos', () => {

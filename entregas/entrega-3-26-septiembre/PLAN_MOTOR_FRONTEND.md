@@ -189,9 +189,9 @@ La **Transition** es el evento de la red de Petri. Dispara cuando se cumplen **d
 El **Sample** captura el valor de una señal continua en el instante en que recibe una señal de control.
 
 **Comportamiento:**
-- Puerto "Data" (entrada): recibe el valor continuo actual.
-- Puerto "Control" (entrada): recibe la señal de disparo (cuando llega `true`, captura).
-- Puerto "Sampled" (salida): retorna el último valor capturado.
+- Puerto "CCH" (entrada): recibe el valor continuo actual.
+- Puerto "LCH" (entrada): recibe el evento lógico de muestreo.
+- Puerto "DCH" (salida): emite el valor discreto capturado cuando llega el evento LCH.
 - Solo actualiza su salida cuando la señal de control es `true`. Mientras tanto, mantiene el último valor capturado.
 
 ---
@@ -201,8 +201,10 @@ El **Sample** captura el valor de una señal continua en el instante en que reci
 El **Hold** mantiene un valor discreto como señal continua hasta que llega uno nuevo.
 
 **Comportamiento:**
-- Puerto "Data" (entrada): recibe valores discretos (eventos).
-- Puerto "Held" (salida): siempre retorna el último valor recibido.
+- Puerto "DCH" (entrada): recibe el valor discreto desde la punta del triángulo.
+- Puerto "CCH" (salida): conserva y publica el último valor discreto como señal continua.
+- Puerto "LCH" (salida): emite el evento lógico asociado a la llegada del dato discreto.
+- Visualmente, el DCH llega por la punta y las salidas CCH y LCH se publican desde el lado ancho, al contrario del Sample.
 - No necesita señal de control. Actualiza cada vez que llega un nuevo dato.
 - Funciona como un "Zero-Order Hold": mantiene el valor constante entre eventos.
 

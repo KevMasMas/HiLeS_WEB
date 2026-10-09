@@ -34,6 +34,21 @@ const rectanglePointForPort = (port: HilesPort, bounds: { x: number; y: number; 
   return { x: bounds.x + bounds.width, y: bounds.y + bounds.height * offset };
 };
 
+const ellipsePointForPort = (port: HilesPort, bounds: { cx: number; cy: number; rx: number; ry: number }) => {
+  const normalizedOffset = Math.max(-1, Math.min(1, port.offset * 2 - 1));
+  const curve = Math.sqrt(Math.max(0, 1 - normalizedOffset ** 2));
+  if (port.side === 'left' || port.side === 'right') {
+    return {
+      x: bounds.cx + (port.side === 'left' ? -1 : 1) * bounds.rx * curve,
+      y: bounds.cy + bounds.ry * normalizedOffset,
+    };
+  }
+  return {
+    x: bounds.cx + bounds.rx * normalizedOffset,
+    y: bounds.cy + (port.side === 'top' ? -1 : 1) * bounds.ry * curve,
+  };
+};
+
 const svgPointStyle = (
   point: { x: number; y: number },
   width: number,
@@ -57,7 +72,8 @@ const PortHandles: React.FC<{
   rotation?: number;
   triangle?: { direction: HilesNodeData['properties']['operatorDirection']; width: number; height: number };
   rectangle?: { bounds: { x: number; y: number; width: number; height: number }; width: number; height: number };
-}> = ({ ports, rotation = 0, triangle, rectangle }) => (
+  ellipse?: { bounds: { cx: number; cy: number; rx: number; ry: number }; width: number; height: number };
+}> = ({ ports, rotation = 0, triangle, rectangle, ellipse }) => (
   <>
     {ports.map((port) => (
       <React.Fragment key={port.id}>
@@ -70,6 +86,8 @@ const PortHandles: React.FC<{
             ? (() => { const point = trianglePointForPort(port, triangle.direction); return point ? svgPointStyle(point, triangle.width, triangle.height) : offsetStyle(port); })()
             : rectangle
               ? svgPointStyle(rectanglePointForPort(port, rectangle.bounds), rectangle.width, rectangle.height)
+              : ellipse
+                ? svgPointStyle(ellipsePointForPort(port, ellipse.bounds), ellipse.width, ellipse.height)
               : offsetStyle(port)}
         />
         <span className={`hiles-port-label hiles-port-label--${port.side}`} style={portLabelStyle(port, rotation)}>
@@ -189,7 +207,8 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
   const glyphHeight = isFunctional ? 52 : hilesType === HilesElementType.TRANSITION ? 48 : 44;
   const rectangleBounds = hilesType === HilesElementType.FUNCTIONAL_BLOCK
     ? { x: 7, y: 8, width: 86, height: 44 }
-    : { x: 32, y: 12, width: 36, height: 36 };
+    : { x: 28, y: 8, width: 44, height: 44 };
+  const functionalEllipse = { cx: 50, cy: 30, rx: 43, ry: 22 };
   const currentNode = allNodes.find((node) => node.id === id);
   const inputConnection = allEdges.find((edge) => edge.target === id && edge.targetHandle === 'petri-in');
   const outputConnection = allEdges.find((edge) => edge.source === id && edge.sourceHandle === 'petri-out');
@@ -216,7 +235,13 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
         {/* Transition rotates only its SVG bar; its Condition port text stays horizontal. */}
         {hilesType === HilesElementType.TRANSITION && <PortHandles ports={ports} />}
         {isTriangle && <PortHandles ports={ports} rotation={properties.rotation} triangle={{ direction: properties.operatorDirection, width: glyphWidth, height: glyphHeight }} />}
-        {isGlyphRectangle && <PortHandles ports={ports} rotation={properties.rotation} rectangle={{ bounds: rectangleBounds, width: glyphWidth, height: glyphHeight }} />}
+        {isGlyphRectangle && <PortHandles
+          ports={ports}
+          rotation={properties.rotation}
+          {...(isFunctional
+            ? { ellipse: { bounds: functionalEllipse, width: glyphWidth, height: glyphHeight } }
+            : { rectangle: { bounds: rectangleBounds, width: glyphWidth, height: glyphHeight } })}
+        />}
         <HilesGlyph type={hilesType} width={glyphWidth} height={glyphHeight} direction={properties.operatorDirection} style={hilesType === HilesElementType.TRANSITION ? rotationStyle : undefined} />
         {isFunctional && (properties.code || properties.expression) && <span className="hiles-node__expression" style={{ transform: `rotate(${-properties.rotation}deg)`, transformOrigin: 'center' }}>{String(properties.code || properties.expression).slice(0, 30)}</span>}
         {hilesType === HilesElementType.PLACE && displayedTokens > 0 && <span className="hiles-place-token" aria-label={`${displayedTokens} token`} />}

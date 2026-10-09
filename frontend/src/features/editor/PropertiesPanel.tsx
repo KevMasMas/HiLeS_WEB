@@ -185,7 +185,7 @@ export const PropertiesPanel: React.FC = () => {
             <option value="right">Pointing right</option><option value="left">Pointing left</option><option value="up">Pointing up</option><option value="down">Pointing down</option>
           </select>
         </Field>
-        <p style={styles.help}>{hilesType === HilesElementType.SAMPLE ? 'Data and control inputs stay on the wide side; the sampled output stays on the tip.' : 'The input stays on the wide side; the held output stays on the tip.'}</p>
+        <p style={styles.help}>{hilesType === HilesElementType.SAMPLE ? 'CCH data and an LCH event enter on the wide side; the sampled DCH leaves through the tip.' : 'The DCH enters through the tip; the retained CCH value and its LCH event leave from the wide side.'}</p>
       </>}
       {hilesType === HilesElementType.SAMPLE && <Field label="Description"><TextArea value={properties.description} onChange={(event) => update(selectedNode.id, { description: event.target.value })} /></Field>}
       {hilesType === HilesElementType.HOLD && <Field label="Held Value"><TextInput value={properties.heldValue} onChange={(event) => update(selectedNode.id, { heldValue: event.target.value })} /></Field>}

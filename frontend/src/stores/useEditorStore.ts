@@ -14,6 +14,9 @@ import {
 } from '../types/hiles';
 import { HilesElementTranslations } from '../types/translations';
 import { isModelDocument, serializeModel, validateModelDocument } from '../domain/modelDocument';
+import { orientOperatorPorts } from './operatorPorts';
+
+export { orientOperatorPorts } from './operatorPorts';
 
 
 type HilesNode = Node<HilesNodeData>;
@@ -89,10 +92,10 @@ const persistAutosave = () => {
   }
 };
 
-const defaultProperties = (): HilesNodeProperties => ({
+const defaultProperties = (type?: HilesElementType): HilesNodeProperties => ({
   description: '', collapsed: false, locked: false, visible: true,
   expression: '', executionDelay: 0, enabled: true,
-  tokens: 0, maxTokens: 1, delay: 0, condition: '', heldValue: '', operatorDirection: 'right', rotation: 0,
+  tokens: 0, maxTokens: 1, delay: 0, condition: '', heldValue: '', operatorDirection: type === HilesElementType.HOLD ? 'left' : 'right', rotation: 0,
 });
 
 const createPort = (direction: PortDirection, name?: string, nature: HilesPort['nature'] = 'continuous'): HilesPort => ({
@@ -117,26 +120,39 @@ const defaultPorts = (type: HilesElementType): HilesPort[] => {
     { ...createPort('input', 'In'), id: `IN_${crypto.randomUUID()}`, dataType: 'boolean', side: 'left', offset: 0.5 },
     { ...createPort('output', 'Out'), id: `OUT_${crypto.randomUUID()}`, dataType: 'boolean', side: 'right', offset: 0.5 },
   ];
-  if (type === HilesElementType.SAMPLE || type === HilesElementType.HOLD) return operatorPorts(type, 'right');
+  if (type === HilesElementType.SAMPLE || type === HilesElementType.HOLD) {
+    return operatorPorts(type, type === HilesElementType.HOLD ? 'left' : 'right');
+  }
   return [];
 };
 
 const operatorPorts = (type: HilesElementType, direction: OperatorDirection): HilesPort[] => {
-  const sides: Record<OperatorDirection, { input: HilesPort['side']; output: HilesPort['side'] }> = {
-    right: { input: 'left', output: 'right' }, left: { input: 'right', output: 'left' }, up: { input: 'bottom', output: 'top' }, down: { input: 'top', output: 'bottom' },
-  };
-  const { input, output } = sides[direction];
-  if (type === HilesElementType.SAMPLE) return [
-    { ...createPort('input', 'Data'), side: input, offset: 0.32 },
-    { ...createPort('input', 'Control', 'control'), side: input, offset: 0.68 },
-    { ...createPort('output', 'Sampled'), side: output, offset: 0.5 },
-  ];
-  return [{ ...createPort('input', 'Data'), side: input, offset: 0.5 }, { ...createPort('output', 'Held'), side: output, offset: 0.5 }];
+  const ports = type === HilesElementType.SAMPLE
+    ? [createPort('input', 'CCH'), createPort('input', 'LCH', 'control'), createPort('output', 'DCH')]
+    : [createPort('input', 'DCH'), createPort('output', 'CCH'), createPort('output', 'LCH', 'control')];
+  return orientOperatorPorts(type, direction, ports);
+};
+
+const ensureHoldSignalPorts = (ports: HilesPort[]): HilesPort[] => {
+  const outputs = ports.filter((port) => port.direction === 'output');
+  if (outputs.some((port) => port.nature === 'control')) return ports;
+  if (outputs.length >= 2) {
+    const logicalOutputId = outputs[1].id;
+    return ports.map((port) => port.id === logicalOutputId
+      ? { ...port, name: 'LCH', nature: 'control', dataType: 'boolean' }
+      : port);
+  }
+  const template = outputs[0] ?? createPort('output', 'CCH');
+  const baseId = `${template.id}-lch`;
+  let id = baseId;
+  let suffix = 2;
+  while (ports.some((port) => port.id === id)) id = `${baseId}-${suffix++}`;
+  return [...ports, { ...template, id, name: 'LCH', nature: 'control', dataType: 'boolean' }];
 };
 
 const edgeAppearance = (type: HilesConnectionType) => {
   if (type === HilesConnectionType.CONTINUOUS) return { prefix: 'CCH', stroke: '#172033', dash: undefined, marker: MarkerType.ArrowClosed };
-  if (type === HilesConnectionType.DISCRETE) return { prefix: 'DCH', stroke: '#2563eb', dash: undefined, marker: MarkerType.Arrow };
+  if (type === HilesConnectionType.DISCRETE) return { prefix: 'DCH', stroke: '#172033', dash: undefined, marker: MarkerType.Arrow };
   // Petri: canal lógico discontinuo terminado en una punta de flecha abierta.
   if (type === HilesConnectionType.PETRI) return { prefix: 'LCH', stroke: '#172033', dash: '7 5', marker: MarkerType.Arrow };
   return { prefix: 'ARC', stroke: '#172033', dash: '3 5', marker: MarkerType.Arrow };
@@ -163,7 +179,7 @@ export const getConnectionValidation = (nodes: HilesNode[], connection: Connecti
   const isPetriPair = (sourceType === HilesElementType.PLACE && targetType === HilesElementType.TRANSITION)
     || (sourceType === HilesElementType.TRANSITION && targetType === HilesElementType.PLACE);
 
-  if (type === HilesConnectionType.TOKEN_FLOW || type === HilesConnectionType.PETRI) {
+  if (type === HilesConnectionType.TOKEN_FLOW) {
     return isPetriPair
       ? { valid: true, reason: '' }
       : { valid: false, reason: 'Petri channels must alternate Place and Transition.' };
@@ -178,6 +194,9 @@ export const getConnectionValidation = (nodes: HilesNode[], connection: Connecti
   const targetPort = asData(target).ports.find((port) => port.id === connection.targetHandle);
   if (!sourcePort || !targetPort) return { valid: false, reason: 'Data and control connections must start and end at ports.' };
   if (sourcePort.direction !== 'output' || targetPort.direction !== 'input') return { valid: false, reason: 'Only Output Port → Input Port is allowed.' };
+  if (type === HilesConnectionType.PETRI && (sourcePort.nature !== 'control' || targetPort.nature !== 'control')) {
+    return { valid: false, reason: 'LCH connections require logical control ports.' };
+  }
   const typesMatch = sourcePort.dataType === targetPort.dataType
     || sourcePort.dataType === 'custom'
     || targetPort.dataType === 'custom'
@@ -186,17 +205,23 @@ export const getConnectionValidation = (nodes: HilesNode[], connection: Connecti
   return typesMatch ? { valid: true, reason: '' } : { valid: false, reason: 'Port data types are incompatible.' };
 };
 
-const normalizeNode = (node: HilesNode): HilesNode => ({
-  ...node,
-  data: {
-    hilesType: node.data.hilesType,
-    name: node.data.name,
-    ports: Array.isArray(node.data.ports) && (node.data.ports.length > 0 || node.data.hilesType !== HilesElementType.TRANSITION)
-      ? node.data.ports
-      : defaultPorts(node.data.hilesType),
-    properties: { ...defaultProperties(), ...(node.data.properties ?? {}) },
-  },
-});
+const normalizeNode = (node: HilesNode): HilesNode => {
+  const properties = { ...defaultProperties(node.data.hilesType), ...(node.data.properties ?? {}) };
+  const ports = Array.isArray(node.data.ports) && (node.data.ports.length > 0 || node.data.hilesType !== HilesElementType.TRANSITION)
+    ? node.data.ports
+    : defaultPorts(node.data.hilesType);
+  return {
+    ...node,
+    data: {
+      hilesType: node.data.hilesType,
+      name: node.data.name,
+      ports: node.data.hilesType === HilesElementType.HOLD
+        ? orientOperatorPorts(node.data.hilesType, properties.operatorDirection, ensureHoldSignalPorts(ports))
+        : ports,
+      properties,
+    },
+  };
+};
 
 const normalizeEdge = (edge: HilesEdge): HilesEdge => {
   const hilesConnectionType = edge.data?.hilesConnectionType ?? HilesConnectionType.CONTINUOUS;
@@ -270,7 +295,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const isStructural = type === HilesElementType.STRUCTURAL_BLOCK;
     const newNode: HilesNode = {
       id, type: 'hilesNode', position,
-      data: { hilesType: type, name: `New ${HilesElementTranslations[type]}`, ports: defaultPorts(type), properties: defaultProperties() },
+      data: { hilesType: type, name: `New ${HilesElementTranslations[type]}`, ports: defaultPorts(type), properties: defaultProperties(type) },
       ...(isStructural ? { style: options.parentId ? { width: 240, height: 150 } : { width: 340, height: 220 } } : {}),
       ...(options.parentId ? { parentId: options.parentId, extent: 'parent' as const, expandParent: true } : {}),
       zIndex: isStructural ? 0 : 1,
@@ -289,7 +314,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (node.id !== id) return node;
     const mergedProperties = { ...node.data.properties, ...properties };
     const isOperator = node.data.hilesType === HilesElementType.SAMPLE || node.data.hilesType === HilesElementType.HOLD;
-    return { ...node, data: { ...node.data, properties: mergedProperties, ...(isOperator && properties.operatorDirection ? { ports: operatorPorts(node.data.hilesType, properties.operatorDirection) } : {}) } };
+    const operatorNodePorts = node.data.hilesType === HilesElementType.HOLD
+      ? ensureHoldSignalPorts(node.data.ports)
+      : node.data.ports;
+    return { ...node, data: { ...node.data, properties: mergedProperties, ...(isOperator && properties.operatorDirection ? { ports: orientOperatorPorts(node.data.hilesType, properties.operatorDirection, operatorNodePorts) } : {}) } };
     }), ...historyFor(state, snapshotOf(state)) });
   },
   addPort: (nodeId, direction) => {

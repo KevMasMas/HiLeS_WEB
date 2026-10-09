@@ -117,6 +117,7 @@ const CanvasInner: React.FC = () => {
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => store.setSelectedElement(node.id), [store]);
   const onEdgeClick: EdgeMouseHandler = useCallback((_, edge) => store.setSelectedConnection(edge.id), [store]);
   const onPaneClick = useCallback(() => { store.setSelectedElement(null); store.clearConnectionError(); }, [store]);
+  const onPaneContextMenu = useCallback((event: globalThis.MouseEvent | React.MouseEvent<Element>) => event.preventDefault(), []);
   const onNodeDragStart: OnNodeDrag = useCallback(() => store.beginHistoryTransaction(), [store]);
   const onNodeDragStop: OnNodeDrag = useCallback(() => store.endHistoryTransaction(), [store]);
   useEffect(() => {
@@ -137,10 +138,11 @@ const CanvasInner: React.FC = () => {
         nodes={visibleNodes} edges={visibleEdges}
         onNodesChange={store.onNodesChange} onEdgesChange={store.onEdgesChange} onConnect={store.onConnect}
         isValidConnection={isValidConnection}
-        onNodeClick={onNodeClick} onEdgeClick={onEdgeClick} onPaneClick={onPaneClick}
+        onNodeClick={onNodeClick} onEdgeClick={onEdgeClick} onPaneClick={onPaneClick} onPaneContextMenu={onPaneContextMenu}
         onNodeDragStart={onNodeDragStart} onNodeDragStop={onNodeDragStop}
         onDrop={onDrop} onDragOver={onDragOver} onViewportChange={(viewport) => setZoom(viewport.zoom)}
         nodeTypes={nodeTypes} edgeTypes={edgeTypes} connectionMode={ConnectionMode.Loose} connectOnClick minZoom={MIN_ZOOM} maxZoom={2.5} defaultViewport={{ x: 0, y: 0, zoom: 1 }} snapToGrid snapGrid={[1, 1]}
+        panOnDrag={[2]} selectionOnDrag={false}
         deleteKeyCode={null}
       >
         <Background color="#cbd5e1" gap={20} />

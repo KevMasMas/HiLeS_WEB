@@ -1,11 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { HilesConnectionType, HilesElementType } from '../../types/hiles';
-import { construirOrdenTopologico, detectarCiclos, propagarValores } from '../GrafoDatos';
+import { construirOrdenTopologico, detectarCiclos, esAristaDatos, propagarValores } from '../GrafoDatos';
 import { ElementoService } from '../elementos/ElementoService';
 import type { IElementoHiLeS } from '../elementos/interfaces';
 import { arista, nodo, puerto } from './fixtures';
 
 describe('GrafoDatos', () => {
+  it('transporta LCH de control y excluye los arcos que mueven tokens Petri', () => {
+    expect(esAristaDatos(arista('lch', 'a', 'b', HilesConnectionType.PETRI, 'lch-out', 'lch-in'))).toBe(true);
+    expect(esAristaDatos(arista('token', 'a', 'b', HilesConnectionType.PETRI, 'petri-out', 'petri-in'))).toBe(false);
+  });
+
+  it('permite lazos LCH sin reportarlos como ciclos algebraicos', () => {
+    const nodes = [nodo('a', HilesElementType.SERVICE), nodo('b', HilesElementType.SAMPLE)];
+    const edges = [
+      arista('ab', 'a', 'b', HilesConnectionType.CONTINUOUS),
+      arista('ba-lch', 'b', 'a', HilesConnectionType.PETRI, 'lch-out', 'lch-in'),
+    ];
+    expect(construirOrdenTopologico(nodes, edges).hayCiclo).toBe(false);
+  });
+
   it('construye un orden topológico determinista', () => {
     const nodes = [nodo('a', HilesElementType.SERVICE), nodo('b', HilesElementType.SERVICE), nodo('c', HilesElementType.SERVICE)];
     const edges = [arista('ab', 'a', 'b', HilesConnectionType.CONTINUOUS), arista('bc', 'b', 'c', HilesConnectionType.CONTINUOUS)];

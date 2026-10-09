@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, getSmoothStepPath, getStraightPath, useReactFlow, type Edge, type EdgeProps, type Node, type XYPosition } from '@xyflow/react';
 import { useEditorStore } from '../../stores/useEditorStore';
-import { HilesElementType, type ConnectionWaypoint, type HilesEdgeData } from '../../types/hiles';
+import { HilesConnectionType, HilesElementType, type ConnectionWaypoint, type HilesEdgeData } from '../../types/hiles';
 
 type RoutedEdge = Edge<HilesEdgeData & { laneOffset?: number; targetLaneOffset?: number }>;
 
@@ -69,6 +69,15 @@ export const HilesEdge: React.FC<EdgeProps<RoutedEdge>> = (props) => {
   const { nodes, addConnectionWaypoint, moveConnectionWaypoint, beginHistoryTransaction, endHistoryTransaction } = useEditorStore();
   const waypoints = useMemo(() => data?.waypoints ?? [], [data?.waypoints]);
   const edgeLabel = typeof props.label === 'string' ? props.label : undefined;
+  const isDiscrete = data?.hilesConnectionType === HilesConnectionType.DISCRETE;
+  const discreteMarkerId = `hiles-dch-marker-${id.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+  const markerDefinition = isDiscrete ? (
+    <defs>
+      <marker id={discreteMarkerId} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse" markerUnits="strokeWidth">
+        <path d="M 1 1 L 9 5 L 1 9 Z" fill="#fff" stroke="#172033" strokeWidth="1.4" strokeLinejoin="round" />
+      </marker>
+    </defs>
+  ) : null;
   const nodesById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
   const absoluteWaypoints = useMemo(() => waypoints.map((waypoint) => {
     const parent = waypoint.parentBlockId ? nodesById.get(waypoint.parentBlockId) : undefined;
@@ -111,7 +120,7 @@ export const HilesEdge: React.FC<EdgeProps<RoutedEdge>> = (props) => {
     return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', stop); };
   }, [endHistoryTransaction, id, moveConnectionWaypoint, snapWaypoint, storeWaypoint, toFlowPoint]);
   const hitTarget = (path: string) => <path className="hiles-edge-hit-target" d={path} fill="none" stroke="transparent" strokeWidth={20} onDoubleClick={addWaypoint} />;
-  const renderBaseEdge = (path: string, markerEnd = props.markerEnd) => (
+  const renderBaseEdge = (path: string, markerEnd = isDiscrete ? `url(#${discreteMarkerId})` : props.markerEnd) => (
     <BaseEdge
       id={id}
       path={path}
@@ -125,7 +134,7 @@ export const HilesEdge: React.FC<EdgeProps<RoutedEdge>> = (props) => {
   if (waypoints.length) {
     const labelPoint = labelPointAlongRoute(routePoints);
     return <>
-      {renderBaseEdge(waypointPath)}{hitTarget(waypointPath)}
+      {markerDefinition}{renderBaseEdge(waypointPath)}{hitTarget(waypointPath)}
       <EdgeLabelRenderer>{absoluteWaypoints.map((point, index) => <button key={`${id}-${index}`} type="button" data-index={index} aria-label={`Move route point ${index + 1}`} className="hiles-edge-waypoint nodrag nopan" style={{ position: 'absolute', zIndex: 10, pointerEvents: 'auto', transform: `translate(-50%, -50%) translate(${point.x}px, ${point.y}px)` }} onMouseDown={startDragging} />)}</EdgeLabelRenderer>
       <ExternalEdgeLabel label={edgeLabel} x={labelPoint.x} y={labelPoint.y} />
     </>;
@@ -135,11 +144,11 @@ export const HilesEdge: React.FC<EdgeProps<RoutedEdge>> = (props) => {
   if (routing === 'straight') {
     const [path] = getStraightPath({ sourceX, sourceY, targetX, targetY }); const horizontal = Math.abs(targetX - sourceX) >= Math.abs(targetY - sourceY);
     const labelX = sourceX + (targetX - sourceX) * .5 + (horizontal ? 0 : 14); const labelY = sourceY + (targetY - sourceY) * .5 + (horizontal ? -14 : 0);
-    return <>{renderBaseEdge(path)}{hitTarget(path)}<ExternalEdgeLabel label={edgeLabel} x={labelX} y={labelY} /></>;
+    return <>{markerDefinition}{renderBaseEdge(path)}{hitTarget(path)}<ExternalEdgeLabel label={edgeLabel} x={labelX} y={labelY} /></>;
   }
   if (routing === 'curved') {
     const [path, labelX, labelY] = getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition });
-    return <>{renderBaseEdge(path)}{hitTarget(path)}<ExternalEdgeLabel label={edgeLabel} x={labelX} y={labelY - 14} /></>;
+    return <>{markerDefinition}{renderBaseEdge(path)}{hitTarget(path)}<ExternalEdgeLabel label={edgeLabel} x={labelX} y={labelY - 14} /></>;
   }
   const lane = data?.laneOffset ?? 0; const targetLane = data?.targetLaneOffset ?? 0;
   const horizontalSource = sourcePosition === 'left' || sourcePosition === 'right';
@@ -157,5 +166,5 @@ export const HilesEdge: React.FC<EdgeProps<RoutedEdge>> = (props) => {
       ? { centerX: (sourceX + targetX) / 2 + routeLane }
       : { centerY: (sourceY + targetY) / 2 + routeLane }),
   });
-  return <>{renderBaseEdge(path)}{hitTarget(path)}<ExternalEdgeLabel label={edgeLabel} x={labelX} y={labelY - 14} /></>;
+  return <>{markerDefinition}{renderBaseEdge(path)}{hitTarget(path)}<ExternalEdgeLabel label={edgeLabel} x={labelX} y={labelY - 14} /></>;
 };

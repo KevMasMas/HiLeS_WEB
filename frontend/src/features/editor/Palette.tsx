@@ -14,7 +14,7 @@ const groups: Array<{ title: string; elements: HilesElementType[] }> = [
 /** Los tres tipos de canal HiLeS que puede crear el usuario; TOKEN_FLOW solo conserva compatibilidad de importación. */
 const connections = [
   { type: HilesConnectionType.CONTINUOUS, label: 'Continuous Channel', stroke: '#172033', arrow: 'filled' },
-  { type: HilesConnectionType.DISCRETE, label: 'Discrete Event', stroke: '#2563eb', arrow: 'outlined' },
+  { type: HilesConnectionType.DISCRETE, label: 'Discrete Event', stroke: '#172033', arrow: 'outlined' },
   { type: HilesConnectionType.PETRI, label: 'Logical / Petri Channel', stroke: '#172033', arrow: 'chevron', dashed: true },
 ] as const;
 
@@ -53,7 +53,7 @@ export const Palette: React.FC = () => {
             <div style={styles.grid}>
               {group.elements.map((type) => (
                 <div key={type} style={styles.item} onDragStart={(event) => onDragStart(event, type)} draggable>
-                  <HilesGlyph type={type} width={58} height={38} />
+                  <HilesGlyph type={type} width={58} height={38} direction={type === HilesElementType.HOLD ? 'left' : 'right'} />
                   <span>{HilesElementTranslations[type]}</span>
                 </div>
               ))}

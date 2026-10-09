@@ -13,26 +13,33 @@
       "id": "capturar-lectura", "type": "SERVICE", "name": "Capturar lectura",
       "layout": { "x": 40, "y": 300 },
       "ports": [{ "id": "capturar-out", "name": "capturar", "direction": "output", "dataType": "boolean", "nature": "control", "side": "right", "offset": 0.5 }],
-      "properties": { "description": "Envía true para que Sample capture el sensor.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+      "properties": { "description": "Emite el evento LCH que ordena capturar la ocupación actual.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
     },
     {
       "id": "sample-ocupacion", "type": "SAMPLE", "name": "Sample de ocupación",
       "layout": { "x": 230, "y": 180 },
       "ports": [
-        { "id": "sample-data", "name": "Data", "direction": "input", "dataType": "integer", "nature": "continuous", "side": "left", "offset": 0.32 },
-        { "id": "sample-control", "name": "Control", "direction": "input", "dataType": "boolean", "nature": "control", "side": "left", "offset": 0.68 },
-        { "id": "sample-out", "name": "Sampled", "direction": "output", "dataType": "integer", "nature": "continuous", "side": "right", "offset": 0.5 }
+        { "id": "sample-data", "name": "CCH", "direction": "input", "dataType": "integer", "nature": "continuous", "side": "left", "offset": 0.32 },
+        { "id": "sample-control", "name": "LCH", "direction": "input", "dataType": "boolean", "nature": "control", "side": "left", "offset": 0.68 },
+        { "id": "sample-out", "name": "DCH", "direction": "output", "dataType": "integer", "nature": "continuous", "side": "right", "offset": 0.5 }
       ],
-      "properties": { "description": "Solo captura Data cuando Control es true.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+      "properties": { "description": "Convierte el valor CCH en un dato DCH cuando recibe el evento LCH.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
     },
     {
       "id": "hold-ocupacion", "type": "HOLD", "name": "Hold de ocupación",
       "layout": { "x": 410, "y": 180 },
       "ports": [
-        { "id": "hold-data", "name": "Data", "direction": "input", "dataType": "integer", "nature": "continuous", "side": "left", "offset": 0.5 },
-        { "id": "hold-out", "name": "Held", "direction": "output", "dataType": "integer", "nature": "continuous", "side": "right", "offset": 0.5 }
+        { "id": "hold-data", "name": "DCH", "direction": "input", "dataType": "integer", "nature": "continuous", "side": "left", "offset": 0.5 },
+        { "id": "hold-cch", "name": "CCH", "direction": "output", "dataType": "integer", "nature": "continuous", "side": "right", "offset": 0.32 },
+        { "id": "hold-lch", "name": "LCH", "direction": "output", "dataType": "boolean", "nature": "control", "side": "right", "offset": 0.68 }
       ],
-      "properties": { "description": "Conserva la última lectura capturada.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
+      "properties": { "description": "Recibe el DCH, conserva su valor por CCH y anuncia cada actualización por LCH.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "left", "rotation": 0 }
+    },
+    {
+      "id": "evento-ocupacion", "type": "SERVICE", "name": "Evento de ocupación actualizado",
+      "layout": { "x": 585, "y": 450 },
+      "ports": [{ "id": "evento-ocupacion-in", "name": "LCH", "direction": "input", "dataType": "boolean", "nature": "control", "side": "left", "offset": 0.5 }],
+      "properties": { "description": "Salida lógica: recibe un evento cada vez que Hold acepta un nuevo DCH.", "collapsed": false, "locked": false, "visible": true, "expression": "", "executionDelay": 0, "enabled": true, "tokens": 0, "maxTokens": 1, "delay": 0, "condition": "", "heldValue": "", "operatorDirection": "right", "rotation": 0 }
     },
     {
       "id": "fb-abrir", "type": "FUNCTIONAL_BLOCK", "name": "¿Hay cupo?",
@@ -68,15 +75,16 @@
   "relationNode": [],
   "connections": [
     { "id": "cch-sensor-sample", "source": "sensor-vehiculos", "sourceHandle": "vehiculos-out", "target": "sample-ocupacion", "targetHandle": "sample-data", "label": "CCH1 · Dato", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
-    { "id": "cch-control-sample", "source": "capturar-lectura", "sourceHandle": "capturar-out", "target": "sample-ocupacion", "targetHandle": "sample-control", "label": "CCH2 · Control", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
-    { "id": "cch-sample-hold", "source": "sample-ocupacion", "sourceHandle": "sample-out", "target": "hold-ocupacion", "targetHandle": "hold-data", "label": "CCH3 · Muestra", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
-    { "id": "cch-hold-abrir", "source": "hold-ocupacion", "sourceHandle": "hold-out", "target": "fb-abrir", "targetHandle": "abrir-in", "label": "CCH4 · Retenido", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
-    { "id": "cch-hold-cerrar", "source": "hold-ocupacion", "sourceHandle": "hold-out", "target": "fb-cerrar", "targetHandle": "cerrar-in", "label": "CCH5 · Retenido", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
-    { "id": "cch-abrir-transition", "source": "fb-abrir", "sourceHandle": "abrir-out", "target": "t-abrir", "targetHandle": "transition-condition-in", "label": "CCH6 · Abrir", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
-    { "id": "cch-cerrar-transition", "source": "fb-cerrar", "sourceHandle": "cerrar-out", "target": "t-cerrar", "targetHandle": "transition-condition-in", "label": "CCH7 · Cerrar", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
-    { "id": "petri-cerrada-abrir", "source": "p-cerrada", "sourceHandle": "petri-out", "target": "t-abrir", "targetHandle": "petri-in", "label": "LCH1", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
-    { "id": "petri-abrir-abierta", "source": "t-abrir", "sourceHandle": "petri-out", "target": "p-abierta", "targetHandle": "petri-in", "label": "LCH2", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
-    { "id": "petri-abierta-cerrar", "source": "p-abierta", "sourceHandle": "petri-out", "target": "t-cerrar", "targetHandle": "petri-in", "label": "LCH3", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
-    { "id": "petri-cerrar-cerrada", "source": "t-cerrar", "sourceHandle": "petri-out", "target": "p-cerrada", "targetHandle": "petri-in", "label": "LCH4", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } }
+    { "id": "lch-control-sample", "source": "capturar-lectura", "sourceHandle": "capturar-out", "target": "sample-ocupacion", "targetHandle": "sample-control", "label": "LCH1 · Capturar", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "dch-sample-hold", "source": "sample-ocupacion", "sourceHandle": "sample-out", "target": "hold-ocupacion", "targetHandle": "hold-data", "label": "DCH1 · Muestra", "type": "hilesEdge", "data": { "hilesConnectionType": "DISCRETE", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "cch-hold-abrir", "source": "hold-ocupacion", "sourceHandle": "hold-cch", "target": "fb-abrir", "targetHandle": "abrir-in", "label": "CCH2 · Ocupación retenida", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "cch-hold-cerrar", "source": "hold-ocupacion", "sourceHandle": "hold-cch", "target": "fb-cerrar", "targetHandle": "cerrar-in", "label": "CCH3 · Ocupación retenida", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "integer", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "lch-hold-evento", "source": "hold-ocupacion", "sourceHandle": "hold-lch", "target": "evento-ocupacion", "targetHandle": "evento-ocupacion-in", "label": "LCH2 · Dato actualizado", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "cch-abrir-transition", "source": "fb-abrir", "sourceHandle": "abrir-out", "target": "t-abrir", "targetHandle": "transition-condition-in", "label": "CCH4 · Abrir", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "cch-cerrar-transition", "source": "fb-cerrar", "sourceHandle": "cerrar-out", "target": "t-cerrar", "targetHandle": "transition-condition-in", "label": "CCH5 · Cerrar", "type": "hilesEdge", "data": { "hilesConnectionType": "CONTINUOUS", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "propagationMode": "push", "waypoints": [] } },
+    { "id": "petri-cerrada-abrir", "source": "p-cerrada", "sourceHandle": "petri-out", "target": "t-abrir", "targetHandle": "petri-in", "label": "LCH3", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "petri-abrir-abierta", "source": "t-abrir", "sourceHandle": "petri-out", "target": "p-abierta", "targetHandle": "petri-in", "label": "LCH4", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "petri-abierta-cerrar", "source": "p-abierta", "sourceHandle": "petri-out", "target": "t-cerrar", "targetHandle": "petri-in", "label": "LCH5", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } },
+    { "id": "petri-cerrar-cerrada", "source": "t-cerrar", "sourceHandle": "petri-out", "target": "p-cerrada", "targetHandle": "petri-in", "label": "LCH6", "type": "hilesEdge", "data": { "hilesConnectionType": "PETRI", "routing": "orthogonal", "dataType": "boolean", "delay": 0, "weight": 1, "waypoints": [] } }
   ]
 }
