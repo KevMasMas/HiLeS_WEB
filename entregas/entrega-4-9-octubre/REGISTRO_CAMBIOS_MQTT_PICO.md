@@ -69,6 +69,27 @@ Usar esta plantilla cuando el problema impida continuar:
 
 <!-- Agregar las entradas nuevas debajo de esta línea. No eliminar ni reescribir las anteriores. -->
 
+### [2026-10-08 20:30] — Responsable: Felipe Prado
+
+- Estado: Hecho
+- Área: Pico / pruebas / evidencia
+- Tarea o problema: Completar la evidencia física de la integración MQTT con la Pico W.
+- Qué se hizo: Se guardaron los logs de la prueba y un video corto donde se observa la ejecución física de los comandos MQTT sobre el LED de la placa.
+- Topics involucrados: `udfjc/hiles/v1/equipo1/pico01/led/comando`, `led/estado` y `estado/conexion`.
+- Archivos creados o modificados: evidencia audiovisual externa; actualización de `PLAN_MQTT_PICO.md` y `REGISTRO_CAMBIOS_MQTT_PICO.md`.
+- Configuración utilizada, sin secretos: broker MQTT local en `1883`, Pico W ejecutando `main.py` y autenticación habilitada.
+- Rama: `mqtt-pico`
+- Commit/hash: Pendiente de commit.
+- Cómo se probó: Se enviaron acciones MQTT y se registraron tanto las respuestas de consola como el comportamiento visible del LED.
+- Resultado esperado: Contar con evidencia reproducible del flujo MQTT y de la acción física ejecutada por la Pico.
+- Resultado obtenido: Logs y video corto disponibles.
+- Evidencia: video físico y registros de terminal conservados por Felipe Prado.
+- Uso de la Pico: bloque físico completado.
+- Riesgos, pendientes o reversión necesaria: Falta incorporar o referenciar la evidencia en el paquete final según decida Persona 4.
+- Entrega a la siguiente persona: Persona 4 puede utilizar la evidencia en el guion y respaldo de la demostración.
+
+---
+
 ### [2026-10-08 19:35] — Responsable: Kevin Rincon
 
 - Estado: Hecho

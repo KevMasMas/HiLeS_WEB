@@ -181,7 +181,7 @@ La interfaz HiLeS puede continuar en desarrollo durante esta prueba. Para el hit
 - [x] Publicar la confirmación en `led/estado`.
 - [x] Publicar `estado/conexion` al conectarse.
 - [x] Implementar reconexión básica de Wi-Fi y MQTT.
-- [ ] Entregar logs y video corto de la prueba física.
+- [x] Entregar logs y video corto de la prueba física.
 
 **Entrega del jueves:** Pico conectada al broker y comando JSON controlando el LED.
 
