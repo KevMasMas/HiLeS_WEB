@@ -1,0 +1,2635 @@
+{
+  "schemaVersion": 2,
+  "metadata": {
+    "savedAt": "2026-10-09T19:00:00-05:00",
+    "description": "Cuatro instancias independientes de un semáforo inteligente."
+  },
+  "network": {
+    "topology": null,
+    "protocol": null,
+    "nodes": [
+      "sem1-block",
+      "sem2-block",
+      "sem3-block",
+      "sem4-block"
+    ]
+  },
+  "allElements": [
+    {
+      "id": "sem1-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo inteligente 1",
+      "layout": {
+        "x": 80,
+        "y": 80,
+        "width": 760,
+        "height": 420
+      },
+      "ports": [],
+      "properties": {
+        "description": "Instancia 1: semáforo con sensor de cantidad de carros.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem1-sensor",
+      "type": "SERVICE",
+      "name": "Sensor carros S1",
+      "parentId": "sem1-block",
+      "layout": {
+        "x": 35,
+        "y": 185
+      },
+      "ports": [
+        {
+          "id": "sem1-sensor-out",
+          "name": "carros",
+          "direction": "output",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cantidad de carros detectados al frente.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem1-fb-verde",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Dar verde (≥ 6)",
+      "parentId": "sem1-block",
+      "layout": {
+        "x": 180,
+        "y": 50
+      },
+      "ports": [
+        {
+          "id": "sem1-verde-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem1-verde-out",
+          "name": "activar_verde",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a verde.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros >= 6",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem1-fb-amarillo",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Dar amarillo (< 6)",
+      "parentId": "sem1-block",
+      "layout": {
+        "x": 180,
+        "y": 175
+      },
+      "ports": [
+        {
+          "id": "sem1-amarillo-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem1-amarillo-out",
+          "name": "activar_amarillo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a amarillo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros < 6",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem1-fb-rojo",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Volver a rojo (= 0)",
+      "parentId": "sem1-block",
+      "layout": {
+        "x": 180,
+        "y": 300
+      },
+      "ports": [
+        {
+          "id": "sem1-rojo-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem1-rojo-out",
+          "name": "activar_rojo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros === 0",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem1-rojo",
+      "type": "PLACE",
+      "name": "🔴 Rojo",
+      "parentId": "sem1-block",
+      "layout": {
+        "x": 390,
+        "y": 60
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado rojo del semáforo 1.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem1-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "sem1-block",
+      "layout": {
+        "x": 620,
+        "y": 60
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado verde del semáforo 1.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem1-amarillo",
+      "type": "PLACE",
+      "name": "🟡 Amarillo",
+      "parentId": "sem1-block",
+      "layout": {
+        "x": 620,
+        "y": 300
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado amarillo del semáforo 1.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem1-t-verde",
+      "type": "TRANSITION",
+      "name": "T · Encender verde",
+      "parentId": "sem1-block",
+      "layout": {
+        "x": 505,
+        "y": 60
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado verde.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros >= 6",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem1-t-amarillo",
+      "type": "TRANSITION",
+      "name": "T · Encender amarillo",
+      "parentId": "sem1-block",
+      "layout": {
+        "x": 620,
+        "y": 185
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado amarillo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros < 6",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem1-t-rojo",
+      "type": "TRANSITION",
+      "name": "T · Encender rojo",
+      "parentId": "sem1-block",
+      "layout": {
+        "x": 505,
+        "y": 300
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros === 0",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem2-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo inteligente 2",
+      "layout": {
+        "x": 920,
+        "y": 80,
+        "width": 760,
+        "height": 420
+      },
+      "ports": [],
+      "properties": {
+        "description": "Instancia 2: semáforo con sensor de cantidad de carros.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem2-sensor",
+      "type": "SERVICE",
+      "name": "Sensor carros S2",
+      "parentId": "sem2-block",
+      "layout": {
+        "x": 35,
+        "y": 185
+      },
+      "ports": [
+        {
+          "id": "sem2-sensor-out",
+          "name": "carros",
+          "direction": "output",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cantidad de carros detectados al frente.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem2-fb-verde",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Dar verde (≥ 6)",
+      "parentId": "sem2-block",
+      "layout": {
+        "x": 180,
+        "y": 50
+      },
+      "ports": [
+        {
+          "id": "sem2-verde-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem2-verde-out",
+          "name": "activar_verde",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a verde.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros >= 6",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem2-fb-amarillo",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Dar amarillo (< 6)",
+      "parentId": "sem2-block",
+      "layout": {
+        "x": 180,
+        "y": 175
+      },
+      "ports": [
+        {
+          "id": "sem2-amarillo-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem2-amarillo-out",
+          "name": "activar_amarillo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a amarillo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros < 6",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem2-fb-rojo",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Volver a rojo (= 0)",
+      "parentId": "sem2-block",
+      "layout": {
+        "x": 180,
+        "y": 300
+      },
+      "ports": [
+        {
+          "id": "sem2-rojo-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem2-rojo-out",
+          "name": "activar_rojo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros === 0",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem2-rojo",
+      "type": "PLACE",
+      "name": "🔴 Rojo",
+      "parentId": "sem2-block",
+      "layout": {
+        "x": 390,
+        "y": 60
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado rojo del semáforo 2.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem2-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "sem2-block",
+      "layout": {
+        "x": 620,
+        "y": 60
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado verde del semáforo 2.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem2-amarillo",
+      "type": "PLACE",
+      "name": "🟡 Amarillo",
+      "parentId": "sem2-block",
+      "layout": {
+        "x": 620,
+        "y": 300
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado amarillo del semáforo 2.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem2-t-verde",
+      "type": "TRANSITION",
+      "name": "T · Encender verde",
+      "parentId": "sem2-block",
+      "layout": {
+        "x": 505,
+        "y": 60
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado verde.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros >= 6",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem2-t-amarillo",
+      "type": "TRANSITION",
+      "name": "T · Encender amarillo",
+      "parentId": "sem2-block",
+      "layout": {
+        "x": 620,
+        "y": 185
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado amarillo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros < 6",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem2-t-rojo",
+      "type": "TRANSITION",
+      "name": "T · Encender rojo",
+      "parentId": "sem2-block",
+      "layout": {
+        "x": 505,
+        "y": 300
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros === 0",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem3-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo inteligente 3",
+      "layout": {
+        "x": 80,
+        "y": 580,
+        "width": 760,
+        "height": 420
+      },
+      "ports": [],
+      "properties": {
+        "description": "Instancia 3: semáforo con sensor de cantidad de carros.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem3-sensor",
+      "type": "SERVICE",
+      "name": "Sensor carros S3",
+      "parentId": "sem3-block",
+      "layout": {
+        "x": 35,
+        "y": 185
+      },
+      "ports": [
+        {
+          "id": "sem3-sensor-out",
+          "name": "carros",
+          "direction": "output",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cantidad de carros detectados al frente.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem3-fb-verde",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Dar verde (≥ 6)",
+      "parentId": "sem3-block",
+      "layout": {
+        "x": 180,
+        "y": 50
+      },
+      "ports": [
+        {
+          "id": "sem3-verde-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem3-verde-out",
+          "name": "activar_verde",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a verde.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros >= 6",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem3-fb-amarillo",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Dar amarillo (< 6)",
+      "parentId": "sem3-block",
+      "layout": {
+        "x": 180,
+        "y": 175
+      },
+      "ports": [
+        {
+          "id": "sem3-amarillo-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem3-amarillo-out",
+          "name": "activar_amarillo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a amarillo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros < 6",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem3-fb-rojo",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Volver a rojo (= 0)",
+      "parentId": "sem3-block",
+      "layout": {
+        "x": 180,
+        "y": 300
+      },
+      "ports": [
+        {
+          "id": "sem3-rojo-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem3-rojo-out",
+          "name": "activar_rojo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros === 0",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem3-rojo",
+      "type": "PLACE",
+      "name": "🔴 Rojo",
+      "parentId": "sem3-block",
+      "layout": {
+        "x": 390,
+        "y": 60
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado rojo del semáforo 3.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem3-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "sem3-block",
+      "layout": {
+        "x": 620,
+        "y": 60
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado verde del semáforo 3.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem3-amarillo",
+      "type": "PLACE",
+      "name": "🟡 Amarillo",
+      "parentId": "sem3-block",
+      "layout": {
+        "x": 620,
+        "y": 300
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado amarillo del semáforo 3.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem3-t-verde",
+      "type": "TRANSITION",
+      "name": "T · Encender verde",
+      "parentId": "sem3-block",
+      "layout": {
+        "x": 505,
+        "y": 60
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado verde.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros >= 6",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem3-t-amarillo",
+      "type": "TRANSITION",
+      "name": "T · Encender amarillo",
+      "parentId": "sem3-block",
+      "layout": {
+        "x": 620,
+        "y": 185
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado amarillo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros < 6",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem3-t-rojo",
+      "type": "TRANSITION",
+      "name": "T · Encender rojo",
+      "parentId": "sem3-block",
+      "layout": {
+        "x": 505,
+        "y": 300
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros === 0",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem4-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo inteligente 4",
+      "layout": {
+        "x": 920,
+        "y": 580,
+        "width": 760,
+        "height": 420
+      },
+      "ports": [],
+      "properties": {
+        "description": "Instancia 4: semáforo con sensor de cantidad de carros.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem4-sensor",
+      "type": "SERVICE",
+      "name": "Sensor carros S4",
+      "parentId": "sem4-block",
+      "layout": {
+        "x": 35,
+        "y": 185
+      },
+      "ports": [
+        {
+          "id": "sem4-sensor-out",
+          "name": "carros",
+          "direction": "output",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cantidad de carros detectados al frente.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem4-fb-verde",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Dar verde (≥ 6)",
+      "parentId": "sem4-block",
+      "layout": {
+        "x": 180,
+        "y": 50
+      },
+      "ports": [
+        {
+          "id": "sem4-verde-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem4-verde-out",
+          "name": "activar_verde",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a verde.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros >= 6",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem4-fb-amarillo",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Dar amarillo (< 6)",
+      "parentId": "sem4-block",
+      "layout": {
+        "x": 180,
+        "y": 175
+      },
+      "ports": [
+        {
+          "id": "sem4-amarillo-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem4-amarillo-out",
+          "name": "activar_amarillo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a amarillo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros < 6",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem4-fb-rojo",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Volver a rojo (= 0)",
+      "parentId": "sem4-block",
+      "layout": {
+        "x": 180,
+        "y": 300
+      },
+      "ports": [
+        {
+          "id": "sem4-rojo-in",
+          "name": "carros",
+          "direction": "input",
+          "dataType": "real",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "sem4-rojo-out",
+          "name": "activar_rojo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Condición del cambio a rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "carros === 0",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "code": "",
+        "codeLanguage": "javascript"
+      }
+    },
+    {
+      "id": "sem4-rojo",
+      "type": "PLACE",
+      "name": "🔴 Rojo",
+      "parentId": "sem4-block",
+      "layout": {
+        "x": 390,
+        "y": 60
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado rojo del semáforo 4.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem4-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "sem4-block",
+      "layout": {
+        "x": 620,
+        "y": 60
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado verde del semáforo 4.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem4-amarillo",
+      "type": "PLACE",
+      "name": "🟡 Amarillo",
+      "parentId": "sem4-block",
+      "layout": {
+        "x": 620,
+        "y": 300
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado amarillo del semáforo 4.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem4-t-verde",
+      "type": "TRANSITION",
+      "name": "T · Encender verde",
+      "parentId": "sem4-block",
+      "layout": {
+        "x": 505,
+        "y": 60
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado verde.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros >= 6",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem4-t-amarillo",
+      "type": "TRANSITION",
+      "name": "T · Encender amarillo",
+      "parentId": "sem4-block",
+      "layout": {
+        "x": 620,
+        "y": 185
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado amarillo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros < 6",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sem4-t-rojo",
+      "type": "TRANSITION",
+      "name": "T · Encender rojo",
+      "parentId": "sem4-block",
+      "layout": {
+        "x": 505,
+        "y": 300
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio al estado rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "carros === 0",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    }
+  ],
+  "relationNode": [
+    {
+      "nodeId": "sem1-block",
+      "elementIds": [
+        "sem1-sensor",
+        "sem1-fb-verde",
+        "sem1-fb-amarillo",
+        "sem1-fb-rojo",
+        "sem1-rojo",
+        "sem1-t-verde",
+        "sem1-verde",
+        "sem1-t-amarillo",
+        "sem1-amarillo",
+        "sem1-t-rojo"
+      ]
+    },
+    {
+      "nodeId": "sem2-block",
+      "elementIds": [
+        "sem2-sensor",
+        "sem2-fb-verde",
+        "sem2-fb-amarillo",
+        "sem2-fb-rojo",
+        "sem2-rojo",
+        "sem2-t-verde",
+        "sem2-verde",
+        "sem2-t-amarillo",
+        "sem2-amarillo",
+        "sem2-t-rojo"
+      ]
+    },
+    {
+      "nodeId": "sem3-block",
+      "elementIds": [
+        "sem3-sensor",
+        "sem3-fb-verde",
+        "sem3-fb-amarillo",
+        "sem3-fb-rojo",
+        "sem3-rojo",
+        "sem3-t-verde",
+        "sem3-verde",
+        "sem3-t-amarillo",
+        "sem3-amarillo",
+        "sem3-t-rojo"
+      ]
+    },
+    {
+      "nodeId": "sem4-block",
+      "elementIds": [
+        "sem4-sensor",
+        "sem4-fb-verde",
+        "sem4-fb-amarillo",
+        "sem4-fb-rojo",
+        "sem4-rojo",
+        "sem4-t-verde",
+        "sem4-verde",
+        "sem4-t-amarillo",
+        "sem4-amarillo",
+        "sem4-t-rojo"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "sem1-cch-1",
+      "source": "sem1-sensor",
+      "sourceHandle": "sem1-sensor-out",
+      "target": "sem1-fb-verde",
+      "targetHandle": "sem1-verde-in",
+      "label": "CCH1",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-cch-2",
+      "source": "sem1-fb-verde",
+      "sourceHandle": "sem1-verde-out",
+      "target": "sem1-t-verde",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH2",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-cch-3",
+      "source": "sem1-sensor",
+      "sourceHandle": "sem1-sensor-out",
+      "target": "sem1-fb-amarillo",
+      "targetHandle": "sem1-amarillo-in",
+      "label": "CCH3",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-cch-4",
+      "source": "sem1-fb-amarillo",
+      "sourceHandle": "sem1-amarillo-out",
+      "target": "sem1-t-amarillo",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH4",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-cch-5",
+      "source": "sem1-sensor",
+      "sourceHandle": "sem1-sensor-out",
+      "target": "sem1-fb-rojo",
+      "targetHandle": "sem1-rojo-in",
+      "label": "CCH5",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-cch-6",
+      "source": "sem1-fb-rojo",
+      "sourceHandle": "sem1-rojo-out",
+      "target": "sem1-t-rojo",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH6",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-lch-1",
+      "source": "sem1-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sem1-t-verde",
+      "targetHandle": "petri-in",
+      "label": "LCH1",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-lch-2",
+      "source": "sem1-t-verde",
+      "sourceHandle": "petri-out",
+      "target": "sem1-verde",
+      "targetHandle": "petri-in",
+      "label": "LCH2",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-lch-3",
+      "source": "sem1-verde",
+      "sourceHandle": "petri-out",
+      "target": "sem1-t-amarillo",
+      "targetHandle": "petri-in",
+      "label": "LCH3",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-lch-4",
+      "source": "sem1-t-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sem1-amarillo",
+      "targetHandle": "petri-in",
+      "label": "LCH4",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-lch-5",
+      "source": "sem1-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sem1-t-rojo",
+      "targetHandle": "petri-in",
+      "label": "LCH5",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem1-lch-6",
+      "source": "sem1-t-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sem1-rojo",
+      "targetHandle": "petri-in",
+      "label": "LCH6",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-cch-7",
+      "source": "sem2-sensor",
+      "sourceHandle": "sem2-sensor-out",
+      "target": "sem2-fb-verde",
+      "targetHandle": "sem2-verde-in",
+      "label": "CCH7",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-cch-8",
+      "source": "sem2-fb-verde",
+      "sourceHandle": "sem2-verde-out",
+      "target": "sem2-t-verde",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH8",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-cch-9",
+      "source": "sem2-sensor",
+      "sourceHandle": "sem2-sensor-out",
+      "target": "sem2-fb-amarillo",
+      "targetHandle": "sem2-amarillo-in",
+      "label": "CCH9",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-cch-10",
+      "source": "sem2-fb-amarillo",
+      "sourceHandle": "sem2-amarillo-out",
+      "target": "sem2-t-amarillo",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH10",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-cch-11",
+      "source": "sem2-sensor",
+      "sourceHandle": "sem2-sensor-out",
+      "target": "sem2-fb-rojo",
+      "targetHandle": "sem2-rojo-in",
+      "label": "CCH11",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-cch-12",
+      "source": "sem2-fb-rojo",
+      "sourceHandle": "sem2-rojo-out",
+      "target": "sem2-t-rojo",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH12",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-lch-7",
+      "source": "sem2-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sem2-t-verde",
+      "targetHandle": "petri-in",
+      "label": "LCH7",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-lch-8",
+      "source": "sem2-t-verde",
+      "sourceHandle": "petri-out",
+      "target": "sem2-verde",
+      "targetHandle": "petri-in",
+      "label": "LCH8",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-lch-9",
+      "source": "sem2-verde",
+      "sourceHandle": "petri-out",
+      "target": "sem2-t-amarillo",
+      "targetHandle": "petri-in",
+      "label": "LCH9",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-lch-10",
+      "source": "sem2-t-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sem2-amarillo",
+      "targetHandle": "petri-in",
+      "label": "LCH10",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-lch-11",
+      "source": "sem2-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sem2-t-rojo",
+      "targetHandle": "petri-in",
+      "label": "LCH11",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem2-lch-12",
+      "source": "sem2-t-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sem2-rojo",
+      "targetHandle": "petri-in",
+      "label": "LCH12",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-cch-13",
+      "source": "sem3-sensor",
+      "sourceHandle": "sem3-sensor-out",
+      "target": "sem3-fb-verde",
+      "targetHandle": "sem3-verde-in",
+      "label": "CCH13",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-cch-14",
+      "source": "sem3-fb-verde",
+      "sourceHandle": "sem3-verde-out",
+      "target": "sem3-t-verde",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH14",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-cch-15",
+      "source": "sem3-sensor",
+      "sourceHandle": "sem3-sensor-out",
+      "target": "sem3-fb-amarillo",
+      "targetHandle": "sem3-amarillo-in",
+      "label": "CCH15",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-cch-16",
+      "source": "sem3-fb-amarillo",
+      "sourceHandle": "sem3-amarillo-out",
+      "target": "sem3-t-amarillo",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH16",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-cch-17",
+      "source": "sem3-sensor",
+      "sourceHandle": "sem3-sensor-out",
+      "target": "sem3-fb-rojo",
+      "targetHandle": "sem3-rojo-in",
+      "label": "CCH17",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-cch-18",
+      "source": "sem3-fb-rojo",
+      "sourceHandle": "sem3-rojo-out",
+      "target": "sem3-t-rojo",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH18",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-lch-13",
+      "source": "sem3-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sem3-t-verde",
+      "targetHandle": "petri-in",
+      "label": "LCH13",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-lch-14",
+      "source": "sem3-t-verde",
+      "sourceHandle": "petri-out",
+      "target": "sem3-verde",
+      "targetHandle": "petri-in",
+      "label": "LCH14",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-lch-15",
+      "source": "sem3-verde",
+      "sourceHandle": "petri-out",
+      "target": "sem3-t-amarillo",
+      "targetHandle": "petri-in",
+      "label": "LCH15",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-lch-16",
+      "source": "sem3-t-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sem3-amarillo",
+      "targetHandle": "petri-in",
+      "label": "LCH16",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-lch-17",
+      "source": "sem3-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sem3-t-rojo",
+      "targetHandle": "petri-in",
+      "label": "LCH17",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem3-lch-18",
+      "source": "sem3-t-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sem3-rojo",
+      "targetHandle": "petri-in",
+      "label": "LCH18",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-cch-19",
+      "source": "sem4-sensor",
+      "sourceHandle": "sem4-sensor-out",
+      "target": "sem4-fb-verde",
+      "targetHandle": "sem4-verde-in",
+      "label": "CCH19",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-cch-20",
+      "source": "sem4-fb-verde",
+      "sourceHandle": "sem4-verde-out",
+      "target": "sem4-t-verde",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH20",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-cch-21",
+      "source": "sem4-sensor",
+      "sourceHandle": "sem4-sensor-out",
+      "target": "sem4-fb-amarillo",
+      "targetHandle": "sem4-amarillo-in",
+      "label": "CCH21",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-cch-22",
+      "source": "sem4-fb-amarillo",
+      "sourceHandle": "sem4-amarillo-out",
+      "target": "sem4-t-amarillo",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH22",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-cch-23",
+      "source": "sem4-sensor",
+      "sourceHandle": "sem4-sensor-out",
+      "target": "sem4-fb-rojo",
+      "targetHandle": "sem4-rojo-in",
+      "label": "CCH23",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "real",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-cch-24",
+      "source": "sem4-fb-rojo",
+      "sourceHandle": "sem4-rojo-out",
+      "target": "sem4-t-rojo",
+      "targetHandle": "transition-condition-in",
+      "label": "CCH24",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-lch-19",
+      "source": "sem4-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sem4-t-verde",
+      "targetHandle": "petri-in",
+      "label": "LCH19",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-lch-20",
+      "source": "sem4-t-verde",
+      "sourceHandle": "petri-out",
+      "target": "sem4-verde",
+      "targetHandle": "petri-in",
+      "label": "LCH20",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-lch-21",
+      "source": "sem4-verde",
+      "sourceHandle": "petri-out",
+      "target": "sem4-t-amarillo",
+      "targetHandle": "petri-in",
+      "label": "LCH21",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-lch-22",
+      "source": "sem4-t-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sem4-amarillo",
+      "targetHandle": "petri-in",
+      "label": "LCH22",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-lch-23",
+      "source": "sem4-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sem4-t-rojo",
+      "targetHandle": "petri-in",
+      "label": "LCH23",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "sem4-lch-24",
+      "source": "sem4-t-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sem4-rojo",
+      "targetHandle": "petri-in",
+      "label": "LCH24",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    }
+  ]
+}

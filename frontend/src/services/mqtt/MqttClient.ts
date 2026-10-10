@@ -1,5 +1,12 @@
 import mqtt, { type IClientOptions, type MqttClient as BrowserMqttClient } from 'mqtt';
-import { getMqttConfig, MQTT_TOPICS, type MqttConnectionStatus, type MqttTopic } from './config';
+import {
+  getMqttConfig,
+  MQTT_MAX_PAYLOAD_BYTES,
+  MQTT_TOPIC_POLICIES,
+  MQTT_TOPICS,
+  type MqttConnectionStatus,
+  type MqttTopic,
+} from './config';
 import { validarMensajeMqtt, type AccionLed, type MensajeMqtt } from './messages';
 
 export type MqttMessageHandler = (topic: MqttTopic, payload: MensajeMqtt) => void;
@@ -161,7 +168,13 @@ class MqttBrowserClient {
 
     try {
       const message = typeof payload === 'string' ? payload : JSON.stringify(payload);
-      this.client.publish(topic, message, (error) => {
+      if (new TextEncoder().encode(message).byteLength > MQTT_MAX_PAYLOAD_BYTES) {
+        console.error(`MQTT publish failed: ${topic}; payload exceeds ${MQTT_MAX_PAYLOAD_BYTES} bytes`);
+        this.notifyStatus('ERROR');
+        return false;
+      }
+      const policy = MQTT_TOPIC_POLICIES[topic as MqttTopic] ?? { qos: 0 as const, retain: false };
+      this.client.publish(topic, message, policy, (error) => {
         if (error) {
           console.error(`MQTT publish failed: ${topic}`, error);
           this.notifyStatus('ERROR');

@@ -42,4 +42,40 @@ describe('contrato de mensajes MQTT', () => {
     expect(resultado).toMatchObject({ valido: false });
     if (!resultado.valido) expect(resultado.error).toContain('no pertenece al contrato MQTT de HiLeS');
   });
+
+  it('valida versión, límites y estructura del modelo ejecutable', () => {
+    expect(validarMensajeMqtt(MQTT_TOPICS.MODELO_CARGAR, {
+      modelo_id: 'modelo-1',
+      version: 1,
+      ir_version: 99,
+      modelo: { elementos: [], conexiones: [] },
+      id_mensaje: 'modelo-error',
+    })).toMatchObject({ valido: false });
+
+    expect(validarMensajeMqtt(MQTT_TOPICS.MODELO_CARGAR, {
+      modelo_id: 'modelo-1',
+      version: 1,
+      ir_version: 1,
+      modelo: { elementos: 'no-es-lista', conexiones: [] },
+      id_mensaje: 'modelo-error',
+    })).toMatchObject({ valido: false });
+  });
+
+  it('rechaza estados remotos con secuencias o tokens inválidos', () => {
+    expect(validarMensajeMqtt(MQTT_TOPICS.SIMULACION_ESTADO, {
+      modelo_id: 'modelo-1',
+      version: 1,
+      secuencia: -1,
+      estado: 'pausada',
+      elementos: {},
+    })).toMatchObject({ valido: false });
+
+    expect(validarMensajeMqtt(MQTT_TOPICS.SIMULACION_ESTADO, {
+      modelo_id: 'modelo-1',
+      version: 1,
+      secuencia: 1,
+      estado: 'pausada',
+      elementos: { lugar: { tokens: -1 } },
+    })).toMatchObject({ valido: false });
+  });
 });

@@ -33,8 +33,15 @@ const depthOf = (node: Node, nodesById: Map<string, Node>) => {
 
 const CanvasInner: React.FC = () => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const rightPanStart = useRef<{
+    pointerId: number;
+    clientX: number;
+    clientY: number;
+    viewport: { x: number; y: number; zoom: number };
+  } | null>(null);
   const [zoom, setZoom] = useState(1);
-  const { screenToFlowPosition } = useReactFlow();
+  const [isRightPanning, setIsRightPanning] = useState(false);
+  const { screenToFlowPosition, getViewport, setViewport } = useReactFlow();
   const store = useEditorStore();
   const { nodes, edges, activeConnectionType } = store;
 
@@ -118,6 +125,39 @@ const CanvasInner: React.FC = () => {
   const onEdgeClick: EdgeMouseHandler = useCallback((_, edge) => store.setSelectedConnection(edge.id), [store]);
   const onPaneClick = useCallback(() => { store.setSelectedElement(null); store.clearConnectionError(); }, [store]);
   const onPaneContextMenu = useCallback((event: globalThis.MouseEvent | React.MouseEvent<Element>) => event.preventDefault(), []);
+  const onRightPanStart = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 2 || !(event.target as Element).closest('.react-flow__node')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    rightPanStart.current = {
+      pointerId: event.pointerId,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      viewport: getViewport(),
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsRightPanning(true);
+  }, [getViewport]);
+  const onRightPanMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const start = rightPanStart.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    void setViewport({
+      x: start.viewport.x + event.clientX - start.clientX,
+      y: start.viewport.y + event.clientY - start.clientY,
+      zoom: start.viewport.zoom,
+    });
+  }, [setViewport]);
+  const onRightPanEnd = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const start = rightPanStart.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    event.stopPropagation();
+    rightPanStart.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    setIsRightPanning(false);
+  }, []);
   const onNodeDragStart: OnNodeDrag = useCallback(() => store.beginHistoryTransaction(), [store]);
   const onNodeDragStop: OnNodeDrag = useCallback(() => store.endHistoryTransaction(), [store]);
   useEffect(() => {
@@ -133,7 +173,15 @@ const CanvasInner: React.FC = () => {
   }, [store]);
 
   return (
-    <div style={{ flex: 1, position: 'relative' }} ref={reactFlowWrapper}>
+    <div
+      style={{ flex: 1, position: 'relative', cursor: isRightPanning ? 'grabbing' : undefined }}
+      ref={reactFlowWrapper}
+      onPointerDownCapture={onRightPanStart}
+      onPointerMoveCapture={onRightPanMove}
+      onPointerUpCapture={onRightPanEnd}
+      onPointerCancelCapture={onRightPanEnd}
+      onContextMenu={(event) => event.preventDefault()}
+    >
       <ReactFlow
         nodes={visibleNodes} edges={visibleEdges}
         onNodesChange={store.onNodesChange} onEdgesChange={store.onEdgesChange} onConnect={store.onConnect}

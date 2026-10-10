@@ -9,9 +9,40 @@ export const MQTT_TOPICS = {
   ENTRADA_ESTABLECER: 'udfjc/hiles/v1/equipo1/pico01/entrada/establecer',
   MODELO_CARGAR: 'udfjc/hiles/v1/equipo1/pico01/modelo/cargar',
   MODELO_CONFIRMACION: 'udfjc/hiles/v1/equipo1/pico01/modelo/confirmacion',
+  SIMULACION_ESTADO: 'udfjc/hiles/v1/equipo1/pico01/simulacion/estado',
 } as const;
 
 export type MqttTopic = (typeof MQTT_TOPICS)[keyof typeof MQTT_TOPICS];
+
+export interface MqttTopicPolicy {
+  qos: 0 | 1;
+  retain: boolean;
+}
+
+/**
+ * Los comandos nunca se retienen: un cliente que reconecta no debe volver a
+ * ejecutar accidentalmente un paso anterior. Los estados oficiales sí se
+ * retienen para que la interfaz pueda reconstruirse al reconectar.
+ */
+export const MQTT_TOPIC_POLICIES: Record<MqttTopic, MqttTopicPolicy> = {
+  [MQTT_TOPICS.LED_COMANDO]: { qos: 1, retain: false },
+  [MQTT_TOPICS.LED_ESTADO]: { qos: 1, retain: true },
+  [MQTT_TOPICS.ESTADO_CONEXION]: { qos: 1, retain: true },
+  [MQTT_TOPICS.TELEMETRIA]: { qos: 0, retain: false },
+  [MQTT_TOPICS.SALIDA]: { qos: 1, retain: false },
+  [MQTT_TOPICS.ERROR]: { qos: 1, retain: false },
+  [MQTT_TOPICS.SIMULACION_COMANDO]: { qos: 1, retain: false },
+  [MQTT_TOPICS.ENTRADA_ESTABLECER]: { qos: 1, retain: false },
+  [MQTT_TOPICS.MODELO_CARGAR]: { qos: 1, retain: false },
+  [MQTT_TOPICS.MODELO_CONFIRMACION]: { qos: 1, retain: false },
+  [MQTT_TOPICS.SIMULACION_ESTADO]: { qos: 1, retain: true },
+};
+
+/** Límite conservador para no agotar la memoria de la Pico al decodificar JSON. */
+export const MQTT_MAX_PAYLOAD_BYTES = 32 * 1024;
+export const MQTT_IR_VERSION = 1;
+export const MQTT_MAX_MODEL_ELEMENTS = 64;
+export const MQTT_MAX_MODEL_CONNECTIONS = 128;
 
 export type MqttConnectionStatus = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR';
 

@@ -152,6 +152,17 @@ Ejemplo de estado remoto:
 
 Responsable de que web y Pico puedan intercambiar modelos y estados sin ambigüedad.
 
+Estado al 9 de octubre:
+
+- [x] Topic `simulacion/estado` centralizado en el frontend.
+- [x] Contratos y validadores de carga, confirmación, entrada, comando, estado y error.
+- [x] Correlación mediante `id_mensaje`, identidad de modelo, versión y secuencia.
+- [x] Límites iniciales de mensaje, elementos y conexiones.
+- [x] Política QoS/retención aplicada por el cliente web.
+- [x] Reglas de reconexión, orden y duplicados documentadas.
+- [ ] Verificar los mensajes nuevos contra Mosquitto y la Pico después de integrar el motor de Felipe.
+- [ ] Implementar en la Pico el registro de los últimos 32 `id_mensaje` junto con Felipe.
+
 Tareas para el demostrador:
 
 - agregar `simulacion/estado` a la lista central de topics;
@@ -336,4 +347,3 @@ Los nombres pueden ajustarse al integrar, pero deben mantenerse separados el pro
 5. Añadir ejecución continua y temporización.
 6. Ejecutar los mismos modelos de conformidad en web y Pico.
 7. Medir el límite real de elementos y conexiones que soporta la memoria de la Pico.
-
