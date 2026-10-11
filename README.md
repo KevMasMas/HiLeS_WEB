@@ -1,233 +1,410 @@
 # HiLeS Web
 
-Editor web para modelar circuitos HiLeS y ejecutar una demostración inicial conectada a un backend NestJS.
+Editor y simulador web de modelos HiLeS con integración MQTT para Raspberry Pi Pico W.
 
-## Estructura
+El proyecto permite construir circuitos gráficamente, configurar sus elementos y conexiones, ejecutar el motor de simulación en el navegador e intercambiar entradas y estados con dispositivos externos mediante Mosquitto. La aplicación actual es un frontend autónomo: **este repositorio ya no contiene ni requiere un backend NestJS, Prisma o PostgreSQL**.
 
+## Estado actual
 
+Actualmente están implementados:
+
+- editor visual de diagramas HiLeS;
+- motor local de simulación escrito en TypeScript;
+- redes de Petri con `Place`, `Transition`, pesos, capacidades y detección de conflictos;
+- propagación de datos por canales continuos y eventos discretos;
+- elementos `Structural Block`, `Functional Block`, `Service`, `Sample` y `Hold`;
+- código JavaScript y Python en `Functional Block` con ejecución aislada;
+- importación, exportación, migración y autoguardado de modelos JSON;
+- cliente MQTT sobre WebSockets en la aplicación;
+- integración de entradas MQTT con elementos `Service`;
+- comunicación física web → Mosquitto → Pico W → web;
+- control y confirmación del LED integrado de la Pico W;
+- reconexión básica de la web, Wi-Fi y MQTT;
+- contrato inicial para trasladar progresivamente el motor a MicroPython.
+
+La Pico **todavía no ejecuta el motor HiLeS completo**. Actualmente procesa comandos MQTT para el LED y publica su estado. La simulación general continúa ejecutándose en TypeScript dentro del navegador. El protocolo para cargar modelos y publicar estados remotos está definido, pero el intérprete MicroPython continúa pendiente.
+
+## Arquitectura
+
+### Simulación local
+
+```text
+Editor React
+    │
+    ▼
+MotorSimulacion TypeScript
+    ├── propagación CCH/DCH
+    ├── BusObserver
+    ├── evaluación de Functional Blocks
+    └── red de Petri y movimiento de tokens
+```
+
+### Integración física MQTT
+
+```text
+Aplicación HiLeS
+    │ MQTT sobre WebSockets · puerto 9001
+    ▼
+Mosquitto local
+    │ MQTT sobre TCP · puerto 1883
+    ▼
+Raspberry Pi Pico W + MicroPython
+```
+
+La web y la Pico no se conectan directamente. Ambas son clientes de Mosquitto y se comunican mediante topics y objetos JSON validados.
+
+## Tecnologías
+
+- React 19 y TypeScript 6.
+- Vite 8.
+- React Flow para el editor gráfico.
+- Zustand para el estado del editor y la simulación.
+- Vitest y ESLint.
+- CodeMirror para editar código de los bloques funcionales.
+- Web Workers para aislar la ejecución de código.
+- Pyodide incluido localmente para ejecutar Python en el navegador.
+- MQTT.js para MQTT sobre WebSockets.
+- Eclipse Mosquitto como broker.
+- MicroPython y `umqtt.simple` para Raspberry Pi Pico W.
+
+## Estructura del repositorio
+
+```text
 HiLeS_WEB/
-├── backend/                    API NestJS + Prisma + motor de simulación
-├── frontend/                   React + Vite + editor visual HiLeS
-└── entregas/
-    └── entrega-2-18-septiembre/  Plan, criterios y registro de la entrega
+├── frontend/                       Aplicación React y motor local
+│   ├── public/pyodide/             Runtime Python servido localmente
+│   └── src/
+│       ├── domain/                 Documento y migración del modelo
+│       ├── engine/                 Motor, elementos, Petri y propagación
+│       ├── features/editor/        Canvas, paleta y propiedades
+│       ├── features/simulation/    Panel del motor local
+│       ├── features/mqtt/          Panel de conexión MQTT
+│       ├── services/mqtt/          Cliente, contrato y puente con Services
+│       ├── stores/                 Estado del editor y la simulación
+│       └── workers/                Ejecución aislada de JavaScript/Python
+├── output/                         Modelos JSON de ejemplo
+├── entregas/
+│   ├── entrega-2-18-septiembre/    Documentación histórica del editor
+│   ├── entrega-3-26-septiembre/    Documentación histórica del motor
+│   └── entrega-4-9-octubre/        MQTT, Pico W y plan MicroPython
+└── README.md
+```
 
+## Requisitos
 
-Documentos de la entrega actual:
+Para utilizar solamente el editor y el motor local:
 
-- [Plan de trabajo](entregas/entrega-2-18-septiembre/PLAN_PRESENTACION_MANANA.md)
-- [Registro de cambios](entregas/entrega-2-18-septiembre/REGISTRO_CAMBIOS_PRESENTACION.md)
+- Git 2.40 o superior.
+- Node.js 22 LTS.
+- npm.
+- Un navegador moderno con soporte para Web Workers.
 
-## Requisitos previos
+Para la integración física también se necesita:
 
-Instalar antes de clonar o ejecutar el proyecto:
+- Eclipse Mosquitto 2.x.
+- Raspberry Pi Pico W con MicroPython.
+- Thonny u otra herramienta para copiar archivos a la placa.
+- La librería `umqtt.simple` instalada en la Pico.
+- Todos los equipos en una red que permita comunicación directa, o un broker MQTT accesible desde sus redes.
 
-1. [Git](https://git-scm.com/) 2.40 o superior.
-2. Node.js 22 LTS y npm. Verificar con:
+No se necesita PostgreSQL, Prisma ni un servidor backend.
 
-   powershell
-   node --version
-   npm --version
+## Inicio rápido
 
+Clonar el repositorio e instalar las dependencias del frontend:
 
-3. PostgreSQL 16 o compatible, encendido y accesible localmente.
-4. Una base de datos llamada `hiles`. El ejemplo usa el puerto `5433`; si tu PostgreSQL usa el puerto estándar `5432`, se debe cambiar en `backend/.env`.
-5. Identidad de Git configurada para poder hacer commits:
-
-   powershell
-   git config --global user.name "Tu Nombre"
-   git config --global user.email "tu-correo@ejemplo.com"
-  
-
-No subir `node_modules`, `dist`, archivos `.env`, contraseñas ni claves al repositorio.
-
-## Traer el proyecto desde cero
-
-Reemplaza `<URL_DEL_REPOSITORIO>` por la URL real del remoto:
-
-powershell
-git clone <URL_DEL_REPOSITORIO> HiLeS_WEB
-cd HiLeS_WEB
-git status
-
-
-Si el proyecto ya está clonado, antes de empezar cualquier tarea:
-
-powershell
-git status
-git switch main
-git pull --ff-only origin main
-
-
-Si `git status` muestra archivos modificados que no son tuyos, no los borres ni ejecutes `git reset`. Consulta primero con el responsable de esos cambios.
-
-> El repositorio tiene dos proyectos Node independientes. Por eso `npm ci` se ejecuta una vez dentro de `backend` y otra dentro de `frontend`; no se ejecuta en la raíz.
-
-## Configurar base de datos y backend
-
-El backend debe iniciarse primero, porque el frontend redirige las peticiones `/api` hacia él.
-
-1. Crear la base de datos si todavía no existe. Puedes hacerlo desde pgAdmin o mediante PostgreSQL:
-
-   sql
-   CREATE DATABASE hiles;
-   
-
-2. Ir al backend e instalar las dependencias exactas del `package-lock.json`:
-
-   powershell
-   cd backend
-   npm ci
-
-
-3. Crear el archivo local de configuración y editar la URL con tus credenciales. Nunca comitear este archivo:
-
-  powershell
-   Copy-Item .env.example .env
-   notepad .env
-  
-
-   Ejemplo para PostgreSQL local en el puerto 5433:
-
-  env
-   DATABASE_URL="postgresql://postgres:TU_CONTRASENA@localhost:5433/hiles?schema=public"
-  
-
-4. Generar el cliente Prisma y aplicar las migraciones ya incluidas:
-
-  powershell
-   npm run prisma:generate
-   npx prisma migrate deploy
-  
-
-5. Iniciar el backend en modo desarrollo. Por defecto queda disponible en `http://localhost:3000`:
-
-powershell
-   npm run start:dev
-  
-
-Mantén esta terminal abierta mientras trabajas. Si el backend no inicia, revisa primero que PostgreSQL esté encendido y que `DATABASE_URL` sea correcta.
-
-## Configurar e iniciar el frontend
-
-Abrir una segunda terminal desde la raíz del repositorio:
-
-powershell
-cd frontend
+```powershell
+git clone https://github.com/KevMasMas/HiLeS_WEB.git
+cd HiLeS_WEB\frontend
 npm ci
 npm run dev
+```
 
+Vite mostrará la dirección local, normalmente:
 
-Vite mostrará la URL local, normalmente `http://localhost:5173`. Ábrela en el navegador sólo después de tener el backend encendido.
+```text
+http://localhost:5173/
+```
 
-Para probar el circuito demo:
+No es necesario iniciar Mosquitto ni conectar la Pico para editar modelos o utilizar el motor local.
 
-1. Pulsar **Cargar circuito demo**.
-2. Pulsar **Enviar 1**: el token pasa de `Espera` a `Activo` y la salida queda `ON`.
-3. Pulsar **Enviar 0**: el token vuelve a `Espera` y la salida queda `OFF`.
+Para permitir que otros computadores de la misma red abran la aplicación:
 
-## Validaciones antes de entregar
+```powershell
+npm run dev -- --host 0.0.0.0
+```
 
-En una tercera terminal, o deteniendo antes los servidores si es necesario:
+Después pueden visitar `http://IP_DEL_PC:5173/`, siempre que el firewall permita el puerto utilizado por Vite.
 
-powershell
-# Backend
-cd backend
+## Uso del editor
+
+### Crear un modelo
+
+1. Abrir la paleta con el botón de menú.
+2. Arrastrar elementos al canvas.
+3. Seleccionar el tipo de conexión.
+4. Unir un puerto de salida con un puerto compatible de entrada.
+5. Seleccionar un nodo o conexión para editar sus propiedades.
+
+Elementos disponibles:
+
+| Grupo | Elementos |
+|---|---|
+| Bloques | `Structural Block`, `Functional Block` |
+| Red de Petri | `Place`, `Transition` |
+| Interfaz | `Service` |
+| Conversores | `Sample`, `Hold` |
+
+Canales disponibles:
+
+| Canal | Uso visual y lógico |
+|---|---|
+| `CONTINUOUS` / CCH | Datos continuos, flecha cerrada |
+| `DISCRETE` / DCH | Evento discreto, punta abierta |
+| `PETRI` / LCH | Flujo lógico o de tokens, línea discontinua |
+
+Semántica de los conversores:
+
+```text
+CCH + LCH → Sample → DCH → Hold → CCH + LCH
+```
+
+- `Sample` recibe el dato CCH y la activación LCH por el lado ancho; produce DCH por la punta.
+- `Hold` recibe DCH por la punta; mantiene el dato y produce CCH + LCH por el lado ancho.
+
+### Navegación
+
+- Botón izquierdo: seleccionar, mover, redimensionar y conectar elementos.
+- Arrastre con botón derecho: desplazar el canvas, incluso cuando se inicia dentro de un `Structural Block` o sobre un nodo.
+- Rueda del ratón: zoom.
+- `Ctrl + Z`: deshacer.
+- `Ctrl + Shift + Z` o `Ctrl + Y`: rehacer.
+- Doble clic sobre una conexión: insertar un punto manual de ruta.
+- Arrastrar un punto de ruta: modificar el recorrido; mantener `Alt` evita el ajuste magnético.
+
+Los `Structural Block` pueden redimensionarse, bloquearse y colapsarse. Al alejar suficientemente el zoom se muestran en modo resumen y se oculta su lógica interna.
+
+### Guardado
+
+- El editor guarda automáticamente el proyecto en `localStorage`.
+- **Export JSON** descarga el modelo con `schemaVersion: 2`.
+- **Import JSON** acepta documentos versión 1 o 2 y migra los campos anteriores cuando es necesario.
+- **New Project** limpia el canvas después de solicitar confirmación.
+
+El estado temporal de ejecución no se serializa dentro del modelo.
+
+## Motor local de simulación
+
+El panel **Motor local** se sincroniza automáticamente con el circuito del editor.
+
+Flujo recomendado:
+
+1. Importar o construir un modelo.
+2. Elegir un `Service` en el panel.
+3. Inyectar un valor booleano, numérico o textual compatible.
+4. Pulsar **Paso** para ejecutar un ciclo.
+5. Pulsar **Ejecutar** para avanzar hasta estabilización o hasta el límite de seguridad.
+6. Consultar los eventos recientes y el estado mostrado sobre los nodos.
+7. Pulsar **Reiniciar** para restaurar tokens y valores iniciales.
+
+Cada paso primero propaga CCH/DCH en orden topológico y después evalúa la red de Petri. Si dos transiciones compiten por los mismos tokens, el motor registra el conflicto y conserva el marcado. Los ciclos en el flujo de datos y las ejecuciones que no se estabilizan se reportan como error.
+
+### Functional Blocks
+
+Un `Functional Block` puede utilizar JavaScript o Python:
+
+- JavaScript sencillo se evalúa directamente; código no trivial se ejecuta en un Worker con límite de tiempo.
+- Python se ejecuta en un Worker mediante Pyodide incluido en `frontend/public/pyodide`.
+- La opción **Probar** utiliza los valores actuales del circuito o valores neutros para comprobar el resultado.
+- Los nombres de los puertos de entrada se normalizan como variables disponibles para el código.
+
+No se requiere una instalación local de Python.
+
+## Modelos de ejemplo
+
+Los ejemplos se importan desde el botón **Import JSON**:
+
+| Archivo | Propósito |
+|---|---|
+| `output/circuito-presentacion-demo.json` | Circuito básico de presentación con Services, Places y Transitions |
+| `output/demo-2-humedad-token.json` | Control de humedad con umbrales y movimiento de tokens |
+| `output/demo-parqueadero-converters.json` | Ejemplo de parqueadero con `Sample` y `Hold` |
+| `output/figure-29-hiles-wsn.json` | Modelo HiLeS basado en una red de sensores |
+| `output/demo-4-semaforos-inteligentes.json` | Prototipo visual con cuatro bloques de semáforo independientes |
+
+El ejemplo de cuatro semáforos todavía **no representa un cruce coordinado ni cuatro procesos distribuidos**. El diseño previsto debe agrupar Norte–Sur y Este–Oeste, comparar las colas de vehículos y garantizar que las fases incompatibles nunca estén en verde simultáneamente.
+
+`output/Ejemplo_pico.json` está reservado y actualmente no contiene un modelo utilizable.
+
+## Configuración MQTT de la web
+
+MQTT es opcional para el editor local. Para activarlo, copiar la plantilla y completar los valores sin subir el archivo resultante a Git:
+
+```powershell
+cd frontend
+Copy-Item .env.example .env.local
+notepad .env.local
+```
+
+Variables disponibles:
+
+```env
+VITE_MQTT_HOST=localhost
+VITE_MQTT_WS_PORT=9001
+VITE_MQTT_WS_PATH=/mqtt
+VITE_MQTT_WS_PROTOCOL=ws
+VITE_MQTT_USERNAME=usuario_local
+VITE_MQTT_PASSWORD=contraseña_local
+```
+
+Después de modificar `.env.local`, reiniciar `npm run dev`. El panel **MQTT local** permite conectar, desconectar, controlar el LED y consultar los mensajes recientes.
+
+## Mosquitto local
+
+La configuración de desarrollo utiliza:
+
+- MQTT TCP en `1883` para la Pico y clientes de terminal.
+- MQTT sobre WebSockets en `9001` para el navegador.
+- autenticación obligatoria;
+- estados importantes retenidos y comandos no retenidos.
+
+Las instrucciones de instalación, autenticación, servicio de Windows y pruebas PUB/SUB están en:
+
+- [`entregas/entrega-4-9-octubre/mosquitto/README.md`](entregas/entrega-4-9-octubre/mosquitto/README.md)
+- [`entregas/entrega-4-9-octubre/mosquitto/mosquitto.conf.example`](entregas/entrega-4-9-octubre/mosquitto/mosquitto.conf.example)
+
+La IP incluida en la ficha de la entrega fue la utilizada durante esa demostración y puede cambiar. Siempre se debe confirmar la IPv4 vigente con `ipconfig`.
+
+## Raspberry Pi Pico W
+
+Archivos disponibles:
+
+| Archivo | Uso |
+|---|---|
+| `pico/config_local.example.py` | Plantilla de Wi-Fi, broker y credenciales |
+| `pico/wifi_test.py` | Prueba independiente de Wi-Fi con timeout |
+| `pico/mqtt_led.py` | Cliente MQTT, LED, estado y reconexión |
+
+Ruta completa: `entregas/entrega-4-9-octubre/pico/`.
+
+Preparación general de la placa:
+
+1. Instalar MicroPython en la Pico W.
+2. Instalar `umqtt.simple`.
+3. Copiar `config_local.example.py` como `config_local.py` en la placa.
+4. Completar SSID, contraseña Wi-Fi, host y credenciales MQTT.
+5. Copiar `mqtt_led.py` a la placa con el nombre `main.py`.
+6. Reiniciar la Pico.
+
+`config_local.py` no debe agregarse al repositorio.
+
+La implementación actual de la placa:
+
+- se conecta al Wi-Fi con timeout;
+- se conecta a Mosquitto por `1883`;
+- se suscribe a `led/comando`;
+- ejecuta `encender`, `apagar` y `titilar`;
+- publica `led/estado`, `estado/conexion` y `error`;
+- utiliza Last Will, keepalive, ping periódico y reintentos.
+
+## Topics MQTT
+
+Prefijo actual:
+
+```text
+udfjc/hiles/v1/equipo1/pico01/
+```
+
+Topics principales:
+
+| Dirección | Sufijo | Estado |
+|---|---|---|
+| Web → Pico | `led/comando` | Implementado en web y Pico |
+| Pico → web | `led/estado` | Implementado en web y Pico |
+| Pico → web | `estado/conexion` | Implementado en web y Pico |
+| Pico → web | `telemetria` | Contrato preparado |
+| MQTT → Service local | `entrada/establecer` | Implementado en la web |
+| Motor → MQTT | `salida` | API preparada en el puente |
+| Ambos | `error` | Implementado |
+| Web → Pico | `modelo/cargar` | Contrato preparado; motor remoto pendiente |
+| Pico → web | `modelo/confirmacion` | Contrato preparado; motor remoto pendiente |
+| Web → Pico | `simulacion/comando` | Contrato preparado; motor remoto pendiente |
+| Pico → web | `simulacion/estado` | Contrato preparado; motor remoto pendiente |
+
+El contrato completo, límites de tamaño, QoS, retención, secuencia y tratamiento de duplicados está documentado en [`CONTRATO_MENSAJES_MQTT.md`](entregas/entrega-4-9-octubre/CONTRATO_MENSAJES_MQTT.md).
+
+## Pruebas y validación
+
+Desde `frontend/`:
+
+```powershell
+npm run test:run
+npm run lint
+npm run build
+```
+
+En la última revisión se aprobaron 48 pruebas, además de lint y build. La suite cubre el motor, elementos, red de Petri, grafo de datos, ejecución de código, editor y contrato MQTT.
+
+Para ejecutar Vitest en modo interactivo:
+
+```powershell
 npm test
-npm run lint
-npm run build
+```
 
-# Frontend
-cd ../frontend
-npm run lint
-npm run build
+## Seguridad y configuración local
 
+No se deben versionar:
 
-Además de los comandos, se debe completar el checklist de la entrega y probar manualmente el circuito desde un lienzo vacío.
+- `.env.local`;
+- `config_local.py`;
+- SSID o contraseña Wi-Fi;
+- usuarios y contraseñas MQTT reales;
+- `passwords.txt` de Mosquitto;
+- tokens, certificados o claves privadas;
+- `node_modules` ni `dist`.
 
-## Flujo Git obligatorio
+Los mensajes MQTT tienen un límite inicial de 32 KiB. El contrato remoto admite inicialmente hasta 64 elementos y 128 conexiones para proteger la memoria de la Pico.
 
-No se trabaja directamente sobre `main`.
+## Documentación relevante
 
-### Crear la rama de la entrega
+- [Plan general MQTT y Pico W](entregas/entrega-4-9-octubre/PLAN_MQTT_PICO.md)
+- [Contrato de mensajes MQTT](entregas/entrega-4-9-octubre/CONTRATO_MENSAJES_MQTT.md)
+- [Ficha de conexión de la demostración](entregas/entrega-4-9-octubre/FICHA_CONEXION_MQTT.md)
+- [Guía de demostración](entregas/entrega-4-9-octubre/GUIA_DEMO_MQTT_HILES.md)
+- [Plan de traducción del motor a MicroPython](entregas/entrega-4-9-octubre/PLAN_TRADUCCION_MOTOR_MICROPYTHON.md)
+- [Plan del motor frontend](entregas/entrega-3-26-septiembre/PLAN_MOTOR_FRONTEND.md)
 
-Desde la raíz del proyecto, y después de actualizar `main`:
+## Trabajo pendiente
 
-powershell
-git switch main
-git pull --ff-only origin main
-git switch -c presentacion-circuito
+Las siguientes tareas forman parte de la evolución planificada, no del alcance ya completado:
 
+- compilar el documento visual a una representación intermedia ejecutable;
+- cargar y validar modelos en la Pico;
+- implementar `Service`, `Functional Block`, `Place` y `Transition` en MicroPython;
+- mover tokens y publicar instantáneas desde la Pico;
+- portar CCH, DCH, `Sample`, `Hold`, retardos y ejecución continua;
+- aplicar estados remotos al canvas sin recalcularlos localmente;
+- deduplicar comandos QoS 1 en la Pico mediante `id_mensaje`;
+- hacer dinámico el identificador MQTT para múltiples dispositivos;
+- convertir el prototipo de semáforos en un cruce Norte–Sur / Este–Oeste coordinado;
+- ejecutar instancias distribuidas en varios computadores.
 
-Si la rama ya existe localmente:
+## Flujo de contribución
 
-powershell
-git switch presentacion-circuito
-git pull --ff-only origin presentacion-circuito
+Antes de trabajar:
 
-
-Si ya existe en el remoto pero todavía no aparece localmente:
-
-powershell
-git fetch origin
-git switch --track origin/presentacion-circuito
-
-
-### Trabajar y revisar cambios
-
-Antes de modificar archivos:
-
-powershell
-git status
-
-
-Después de una unidad de trabajo terminada:
-
-powershell
-git diff
-git status
-
-
-Registrar la tarea y la prueba en `entregas/entrega-2-18-septiembre/REGISTRO_CAMBIOS_PRESENTACION.md` antes de solicitar revisión.
-
-### Commit y push
-
-Agregar sólo los archivos de la tarea; evitar `git add .` si hay cambios ajenos en el directorio:
-
-powershell
-git add ruta/del/archivo1 ruta/del/archivo2
-git commit -m "fix: descripcion corta y verificable"
-git push -u origin presentacion-circuito
-
-
-Los siguientes pushes de la misma rama se hacen con:
-
-powershell
-git push
-
-
-El encargado de pruebas debe recibir el hash del commit, evidencia y el registro actualizado. Sólo después de aprobar el checklist se solicita revisión y se hace merge de `presentacion-circuito` a `main`.
-
-## Resolver cambios remotos en la rama de entrega
-
-Antes de subir cambios propios, traer los cambios que otro integrante ya haya subido a la misma rama:
-
-powershell
-git pull --ff-only origin presentacion-circuito
-
-
-Si Git indica que no puede avanzar de forma lineal, no fuerces un push ni uses `reset`. Coordina con el equipo, revisa los cambios y resuelve el conflicto en la rama de entrega antes de continuar.
-
-## Comandos útiles
-
-powershell
-# Estado del repositorio y rama actual
+```powershell
 git status
 git branch --show-current
+git pull --ff-only
+```
 
-# Restaurar dependencias exactas tras cambiar de equipo o clonar de cero
-npm ci
+No se deben eliminar ni restaurar cambios ajenos. Los commits deben contener una unidad comprobable y únicamente los archivos relacionados:
 
-# Abrir Prisma Studio, opcional
-cd backend
-npx prisma studio
+```powershell
+git add ruta\del\archivo
+git commit -m "tipo: descripción breve"
+git push
+```
 
+Antes de integrar un cambio funcional, ejecutar pruebas, lint y build.

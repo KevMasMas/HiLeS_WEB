@@ -1,75 +1,65 @@
-# React + TypeScript + Vite
+# Frontend de HiLeS Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación React + TypeScript que contiene el editor gráfico, el motor local de simulación y el cliente MQTT de HiLeS Web.
 
-Currently, two official plugins are available:
+La descripción completa del proyecto, instalación, ejemplos, Mosquitto y Raspberry Pi Pico W se encuentra en el [README de la raíz](../README.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Ejecutar
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+npm ci
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Vite sirve la aplicación normalmente en `http://localhost:5173/`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Para exponerla a otros equipos de la red:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```powershell
+npm run dev -- --host 0.0.0.0
 ```
+
+## Scripts
+
+| Comando | Función |
+|---|---|
+| `npm run dev` | Servidor de desarrollo |
+| `npm run build` | TypeScript y build de producción |
+| `npm run preview` | Vista previa del build |
+| `npm run test:run` | Suite completa de Vitest |
+| `npm test` | Vitest en modo interactivo |
+| `npm run lint` | ESLint |
+
+## Configuración MQTT opcional
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+Editar `.env.local` con el host, puerto WebSocket y credenciales del broker. Este archivo es local y no debe versionarse.
+
+```env
+VITE_MQTT_HOST=localhost
+VITE_MQTT_WS_PORT=9001
+VITE_MQTT_WS_PATH=/mqtt
+VITE_MQTT_WS_PROTOCOL=ws
+VITE_MQTT_USERNAME=usuario_local
+VITE_MQTT_PASSWORD=contraseña_local
+```
+
+La simulación local y el editor funcionan sin Mosquitto.
+
+## Directorios principales
+
+```text
+src/
+├── domain/          Formato y migración del documento
+├── engine/          Motor TypeScript y pruebas
+├── features/        Editor, simulación y panel MQTT
+├── services/mqtt/   Cliente, mensajes y puente con Services
+├── stores/          Estado Zustand
+├── types/           Tipos HiLeS
+└── workers/         JavaScript y Python aislados
+```
+
+Python se ejecuta mediante el runtime Pyodide incluido en `public/pyodide`; no requiere una instalación local de Python.
