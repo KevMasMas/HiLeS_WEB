@@ -14,7 +14,7 @@ cd "C:\Program Files\mosquitto"
 icacls passwords.txt /inheritance:e
 icacls passwords.txt /grant '*S-1-5-18:(R)'
 Copy-Item `
-  "RUTA_DEL_REPOSITORIO\entregas\entrega-4-9-octubre\mosquitto\mosquitto.conf.example" `
+  "RUTA_DEL_REPOSITORIO\infrastructure\mosquitto\mosquitto.conf.example" `
   "C:\Program Files\mosquitto\mosquitto.conf" -Force
 Restart-Service mosquitto
 ```

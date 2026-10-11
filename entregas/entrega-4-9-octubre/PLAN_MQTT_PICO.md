@@ -65,7 +65,7 @@ La entrega no se considera terminada si solamente funciona Mosquitto desde dos t
 - [ ] Responder con aceptación o error mediante `modelo/confirmacion`.
 - [ ] Ejecutar en MicroPython una regla sencilla del modelo, no el motor HiLeS completo.
 
-La arquitectura general, el demostrador con paso de token y la división de la migración completa entre las cuatro personas están definidos en [`PLAN_TRADUCCION_MOTOR_MICROPYTHON.md`](PLAN_TRADUCCION_MOTOR_MICROPYTHON.md).
+La continuación de este trabajo, ya reorganizada para cinco personas y basada en multitarea cooperativa, está definida en el [plan de implementación de la entrega del 13 de octubre](../entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md).
 
 ## Fuera de alcance para este viernes
 
@@ -231,7 +231,7 @@ La interfaz HiLeS puede continuar en desarrollo durante esta prueba. Para el hit
 - [x] Preparar el guion de demostración, checklist y matriz de evidencias.
 - [ ] Coordinar el ensayo completo del viernes.
 
-Contrato y ejemplos: [`CONTRATO_MENSAJES_MQTT.md`](CONTRATO_MENSAJES_MQTT.md). Guion, checklist y matriz de evidencia: [`GUIA_DEMO_MQTT_HILES.md`](GUIA_DEMO_MQTT_HILES.md). El ensayo físico permanece pendiente hasta ejecutarlo con las cuatro personas, el broker y la Pico disponibles.
+Contrato y ejemplos: [`CONTRATO_MENSAJES_MQTT.md`](../../docs/mqtt/CONTRATO_MENSAJES_MQTT.md). Guion, checklist y matriz de evidencia: [`GUIA_DEMO_MQTT_HILES.md`](GUIA_DEMO_MQTT_HILES.md). El ensayo físico permanece pendiente hasta ejecutarlo con las cuatro personas, el broker y la Pico disponibles.
 
 **Entrega del jueves:** contrato de topics/JSON cerrado y pruebas simuladas disponibles para el frontend.
 

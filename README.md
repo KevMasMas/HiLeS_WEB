@@ -82,11 +82,20 @@ HiLeS_WEB/
 │       ├── services/mqtt/          Cliente, contrato y puente con Services
 │       ├── stores/                 Estado del editor y la simulación
 │       └── workers/                Ejecución aislada de JavaScript/Python
+├── firmware/                       Código reutilizable de la Raspberry Pi Pico W
+│   ├── pico/                       Programa y ejemplos MicroPython
+│   └── tests/                      Pruebas de escritorio y dobles de hardware
+├── infrastructure/
+│   └── mosquitto/                  Configuración y guía del broker
+├── docs/
+│   ├── architecture/               Arquitectura permanente del proyecto
+│   └── mqtt/                       Contrato y ficha de conexión vigentes
 ├── output/                         Modelos JSON de ejemplo
 ├── entregas/
 │   ├── entrega-2-18-septiembre/    Documentación histórica del editor
 │   ├── entrega-3-26-septiembre/    Documentación histórica del motor
-│   └── entrega-4-9-octubre/        MQTT, Pico W y plan MicroPython
+│   ├── entrega-4-9-octubre/        Planes e informes históricos de MQTT
+│   └── entrega-5-13-octubre/       Plan e informes de la ejecución en Pico
 └── README.md
 ```
 
@@ -270,8 +279,8 @@ La configuración de desarrollo utiliza:
 
 Las instrucciones de instalación, autenticación, servicio de Windows y pruebas PUB/SUB están en:
 
-- [`entregas/entrega-4-9-octubre/mosquitto/README.md`](entregas/entrega-4-9-octubre/mosquitto/README.md)
-- [`entregas/entrega-4-9-octubre/mosquitto/mosquitto.conf.example`](entregas/entrega-4-9-octubre/mosquitto/mosquitto.conf.example)
+- [`infrastructure/mosquitto/README.md`](infrastructure/mosquitto/README.md)
+- [`infrastructure/mosquitto/mosquitto.conf.example`](infrastructure/mosquitto/mosquitto.conf.example)
 
 La IP incluida en la ficha de la entrega fue la utilizada durante esa demostración y puede cambiar. Siempre se debe confirmar la IPv4 vigente con `ipconfig`.
 
@@ -281,11 +290,11 @@ Archivos disponibles:
 
 | Archivo | Uso |
 |---|---|
-| `pico/config_local.example.py` | Plantilla de Wi-Fi, broker y credenciales |
-| `pico/wifi_test.py` | Prueba independiente de Wi-Fi con timeout |
-| `pico/mqtt_led.py` | Cliente MQTT, LED, estado y reconexión |
+| `config_local.example.py` | Plantilla de Wi-Fi, broker y credenciales |
+| `examples/wifi_test.py` | Prueba independiente de Wi-Fi con timeout |
+| `examples/led_mqtt.py` | Cliente MQTT, LED, estado y reconexión de la entrega anterior |
 
-Ruta completa: `entregas/entrega-4-9-octubre/pico/`.
+Ruta base: `firmware/pico/`.
 
 Preparación general de la placa:
 
@@ -293,7 +302,7 @@ Preparación general de la placa:
 2. Instalar `umqtt.simple`.
 3. Copiar `config_local.example.py` como `config_local.py` en la placa.
 4. Completar SSID, contraseña Wi-Fi, host y credenciales MQTT.
-5. Copiar `mqtt_led.py` a la placa con el nombre `main.py`.
+5. Para repetir la demostración anterior, copiar `examples/led_mqtt.py` a la placa con el nombre `main.py`.
 6. Reiniciar la Pico.
 
 `config_local.py` no debe agregarse al repositorio.
@@ -331,7 +340,7 @@ Topics principales:
 | Web → Pico | `simulacion/comando` | Contrato preparado; motor remoto pendiente |
 | Pico → web | `simulacion/estado` | Contrato preparado; motor remoto pendiente |
 
-El contrato completo, límites de tamaño, QoS, retención, secuencia y tratamiento de duplicados está documentado en [`CONTRATO_MENSAJES_MQTT.md`](entregas/entrega-4-9-octubre/CONTRATO_MENSAJES_MQTT.md).
+El contrato completo, límites de tamaño, QoS, retención, secuencia y tratamiento de duplicados está documentado en [`CONTRATO_MENSAJES_MQTT.md`](docs/mqtt/CONTRATO_MENSAJES_MQTT.md).
 
 ## Pruebas y validación
 
@@ -368,10 +377,10 @@ Los mensajes MQTT tienen un límite inicial de 32 KiB. El contrato remoto admite
 ## Documentación relevante
 
 - [Plan general MQTT y Pico W](entregas/entrega-4-9-octubre/PLAN_MQTT_PICO.md)
-- [Contrato de mensajes MQTT](entregas/entrega-4-9-octubre/CONTRATO_MENSAJES_MQTT.md)
-- [Ficha de conexión de la demostración](entregas/entrega-4-9-octubre/FICHA_CONEXION_MQTT.md)
+- [Plan de implementación de la ejecución en Pico](entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md)
+- [Contrato de mensajes MQTT](docs/mqtt/CONTRATO_MENSAJES_MQTT.md)
+- [Ficha de conexión de la demostración](docs/mqtt/FICHA_CONEXION_MQTT.md)
 - [Guía de demostración](entregas/entrega-4-9-octubre/GUIA_DEMO_MQTT_HILES.md)
-- [Plan de traducción del motor a MicroPython](entregas/entrega-4-9-octubre/PLAN_TRADUCCION_MOTOR_MICROPYTHON.md)
 - [Plan del motor frontend](entregas/entrega-3-26-septiembre/PLAN_MOTOR_FRONTEND.md)
 
 ## Trabajo pendiente
