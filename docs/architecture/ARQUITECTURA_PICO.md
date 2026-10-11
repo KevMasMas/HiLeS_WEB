@@ -33,4 +33,16 @@ Los navegadores editan, compilan y representan el circuito. En modo remoto enví
 
 Toda tarea concreta implementa `update()` y debe retornar rápidamente. Las esperas se representan mediante tiempo objetivo y estado persistente. Un ciclo con `sleep` dentro de `update()` bloquea todas las tareas y no es aceptable.
 
+### Contrato de `update()`
+
+- No contiene `while True`, ciclos de espera activa ni pausas para completar una secuencia.
+- Procesa una cantidad acotada de trabajo y conserva en atributos lo que falte para la siguiente llamada.
+- Un callback de MQTT valida, actualiza estado o encola trabajo y retorna; no ejecuta una simulación completa.
+- Cada tarea que pueda tardar configura `max_update_ms`. El scheduler mide la duración y registra los sobrepasos.
+- Una excepción incrementa las métricas de la tarea, se entrega al manejador de errores y no impide ejecutar la siguiente tarea.
+- Después de una ejecución, el siguiente periodo se cuenta desde el momento real de terminación. No se recuperan iteraciones atrasadas en ráfaga.
+- Una tarea se deshabilita de forma explícita; un primer error no la elimina ni cancela su suscripción.
+
+El presupuesto concreto se define por tarea después de medir el hardware. Como regla inicial, una actualización debe ocupar solo una fracción de su periodo y nunca debe usar una espera para alcanzar ese periodo.
+
 El plan y los criterios comprobables de la entrega actual están en [`PLAN_IMPLEMENTACION_PICO_HILES.md`](../../entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md).

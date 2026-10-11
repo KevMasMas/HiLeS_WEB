@@ -131,8 +131,8 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 
 ### Organización y contrato
 
-- [ ] Crear la estructura modular mínima de `firmware/pico/`.
-- [ ] Actualizar todas las rutas documentales después de la reorganización.
+- [x] Crear la estructura modular mínima de `firmware/pico/`.
+- [x] Actualizar todas las rutas documentales después de la reorganización.
 - [ ] Cerrar la IR versión 1 antes de implementar el motor.
 - [ ] Definir un identificador de sesión o ejecución compartido por los cuatro navegadores.
 - [ ] Definir reglas de `modelo_id`, `version`, `secuencia` e `id_mensaje`.
@@ -140,9 +140,9 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 
 ### Multitarea y pub/sub
 
-- [ ] Implementar `Task` con periodo, prioridad, nombre y próxima ejecución.
-- [ ] Implementar `Scheduler` usando `ticks_ms`, `ticks_add` y `ticks_diff`.
-- [ ] Garantizar que toda subclase concreta de `Task` implemente `update()`.
+- [x] Implementar `Task` con periodo, prioridad, nombre y próxima ejecución.
+- [x] Implementar `Scheduler` usando `ticks_ms`, `ticks_add` y `ticks_diff`.
+- [x] Garantizar que toda subclase concreta de `Task` implemente `update()`.
 - [ ] Implementar `Node` con suscripción, desuscripción y publicación local.
 - [ ] Implementar `MqttTransport` como tarea periódica no bloqueante.
 - [ ] Enrutar mensajes externos hacia callbacks internos.
@@ -191,10 +191,10 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 
 ### Pruebas sin la Pico
 
-- [ ] Crear `FakeClock` para avanzar el tiempo sin esperas reales.
+- [x] Crear `FakeClock` para avanzar el tiempo sin esperas reales.
 - [ ] Crear `FakeLed` para observar cambios de GPIO.
 - [ ] Crear `FakeTransport` para publicar y recibir sin broker.
-- [ ] Probar periodos, prioridades y tareas vencidas del scheduler.
+- [x] Probar periodos, prioridades y tareas vencidas del scheduler.
 - [ ] Probar que un titilado no bloquea otra tarea.
 - [ ] Probar callbacks y aislamiento entre topics internos.
 - [ ] Probar carga válida e inválida de la IR.
@@ -226,12 +226,12 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 
 Responsable de que los módulos encajen y de mantener el alcance general.
 
-- [ ] Crear las clases base `Task`, `Scheduler` y reloj intercambiable.
-- [ ] Definir normas de duración y manejo de errores para `update()`.
-- [ ] Preparar `main.py` como composición de módulos, sin lógica de negocio extensa.
+- [x] Crear las clases base `Task`, `Scheduler` y reloj intercambiable.
+- [x] Definir normas de duración y manejo de errores para `update()`.
+- [x] Preparar `main.py` como composición de módulos, sin lógica de negocio extensa.
 - [ ] Integrar los aportes de las otras cuatro personas según el flujo acordado por el equipo.
-- [ ] Revisar que no se introduzcan dependencias circulares.
-- [ ] Mantener actualizados el plan y el registro de cambios.
+- [x] Revisar que no se introduzcan dependencias circulares.
+- [x] Mantener actualizados el plan y el registro de cambios.
 - [ ] Dirigir el ensayo de cuatro navegadores.
 
 **Criterio de terminación:** el scheduler ejecuta varias tareas periódicas sin bloqueos y el sistema integrado inicia desde un único `main.py`.

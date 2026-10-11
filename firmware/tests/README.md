@@ -12,3 +12,11 @@ Casos mínimos previstos:
 - serialización de instantáneas.
 
 Los archivos de prueba se agregarán junto con cada módulo implementado; no se crearán esqueletos vacíos que aparenten funcionalidad inexistente.
+
+Desde la raíz del repositorio se ejecutan con:
+
+```powershell
+python -m unittest discover -s firmware/tests -t . -v
+```
+
+Si `python` no está publicado en el `PATH`, se debe utilizar el ejecutable Python disponible en el entorno de desarrollo conservando los mismos argumentos.
