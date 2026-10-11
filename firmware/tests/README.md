@@ -19,4 +19,16 @@ Desde la raíz del repositorio se ejecutan con:
 python -m unittest discover -s firmware/tests -t . -v
 ```
 
+## Copiar el firmware a una Pico W
+
+La validacion fisica sigue pendiente. Cuando la placa este disponible:
+
+1. Instalar MicroPython en la Pico W y abrir Thonny o `mpremote`.
+2. Copiar `firmware/pico/core/`, `firmware/pico/devices/` y los `__init__.py` al dispositivo.
+3. Copiar `firmware/pico/main.py` y crear en la placa `config_local.py` a partir de `config_local.example.py`, sin guardar credenciales en Git.
+4. Instalar en la placa el cliente `umqtt.simple` usado por el transporte cuando ese modulo sea integrado.
+5. Ejecutar primero las pruebas de escritorio; despues reiniciar la Pico y observar la consola serie.
+
+La copia no se ha ejecutado porque no hay una Pico conectada y el transporte MQTT modular aun depende de `Node` y su contrato Python.
+
 Si `python` no está publicado en el `PATH`, se debe utilizar el ejecutable Python disponible en el entorno de desarrollo conservando los mismos argumentos.

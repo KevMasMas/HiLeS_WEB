@@ -151,9 +151,9 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 
 ### Demostrador de LED no bloqueante
 
-- [ ] Implementar los estados `APAGADO`, `ENCENDIDO` y `TITILANDO`.
-- [ ] Hacer que el callback solamente valide la orden y cambie el estado deseado.
-- [ ] Realizar el titilado mediante ejecuciones periódicas de `update()`.
+- [x] Implementar los estados `APAGADO`, `ENCENDIDO` y `TITILANDO`.
+- [x] Hacer que el callback solamente valide la orden y cambie el estado deseado.
+- [x] Realizar el titilado mediante ejecuciones periódicas de `update()`.
 - [ ] Confirmar que MQTT y las demás tareas continúan ejecutándose durante el titilado.
 - [ ] Publicar estado y error mediante JSON válido.
 
@@ -192,10 +192,10 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 ### Pruebas sin la Pico
 
 - [x] Crear `FakeClock` para avanzar el tiempo sin esperas reales.
-- [ ] Crear `FakeLed` para observar cambios de GPIO.
+- [x] Crear `FakeLed` para observar cambios de GPIO.
 - [ ] Crear `FakeTransport` para publicar y recibir sin broker.
 - [x] Probar periodos, prioridades y tareas vencidas del scheduler.
-- [ ] Probar que un titilado no bloquea otra tarea.
+- [x] Probar que un titilado no bloquea otra tarea.
 - [ ] Probar callbacks y aislamiento entre topics internos.
 - [ ] Probar carga válida e inválida de la IR.
 - [ ] Probar movimiento de tokens y límites de capacidad.
@@ -238,14 +238,18 @@ Responsable de que los módulos encajen y de mantener el alcance general.
 
 ### Persona 2 — Plataforma Pico, MQTT y LED
 
+Responsable asignado: **Julian Romero**.
+
 Responsable de adaptar el trabajo anterior a PicoROS y al modelo no bloqueante.
 
 - [ ] Separar Wi-Fi, GPIO y cliente MQTT del ejemplo anterior.
+- [x] Separar la lógica del LED en `devices/led_task.py` mediante una salida con `on()`/`off()`.
+- [ ] Separar Wi-Fi y cliente MQTT; pendiente de `Node` y del contrato Python del transporte.
 - [ ] Implementar `MqttTransport` como subclase de `Task`.
-- [ ] Implementar `LedTask` mediante máquina de estados.
-- [ ] Eliminar el ciclo de titilado con esperas bloqueantes.
-- [ ] Preparar dobles de hardware para desarrollar sin la Pico.
-- [ ] Documentar los pasos de copia del firmware a la placa.
+- [x] Implementar `LedTask` mediante máquina de estados; probado en escritorio.
+- [x] Eliminar el ciclo de titilado con esperas bloqueantes; `update()` realiza como máximo un cambio.
+- [x] Preparar `FakeLed` y reutilizar `FakeClock` para desarrollar sin la Pico; probado en escritorio.
+- [x] Documentar los pasos de copia del firmware a la placa; copia no ejecutada.
 - [ ] Ejecutar la validación física cuando la Pico esté disponible.
 
 **Criterio de terminación:** durante el titilado se siguen procesando mensajes y tareas; el hardware real puede reemplazar los dobles sin modificar la lógica.
