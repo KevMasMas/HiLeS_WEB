@@ -1,8 +1,10 @@
 # Plan de implementación — ejecución remota HiLeS con PicoROS y MQTT
 
-**Entrega:** martes 13 de octubre de 2026, 10:00 a. m. (hora de Colombia)  
-**Equipo:** cinco personas; asignación pendiente por el grupo  
-**Estado inicial:** planificación; todas las actividades de esta entrega permanecen por comprobar.
+**Entrega:** martes 13 de octubre de 2026, 10:00 a. m. (hora de Colombia)
+
+**Equipo:** cinco personas; responsables registrados para Personas 1, 2 y 4; asignación de Personas 3 y 5 pendiente por el grupo
+
+**Estado actual:** núcleo cooperativo, LED no bloqueante, pub/sub interno, contrato e IR implementados y probados; motor MicroPython, transporte MQTT de la Pico, cliente remoto y demostración de cuatro navegadores todavía pendientes.
 
 ## Objetivo no negociable
 
@@ -175,7 +177,7 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 - [ ] Publicar el modelo y esperar `modelo/confirmacion`.
 - [ ] Enviar entradas y comandos con `id_mensaje` único.
 - [ ] Aplicar `simulacion/estado` al canvas sin ejecutar el motor local.
-- [ ] Ignorar instantáneas de otra sesión, versión o secuencia anterior.
+- [ ] Integrar en el cliente remoto el descarte de instantáneas de otra sesión, versión o secuencia anterior; `ControlSecuenciaRemota` ya está implementado y probado, pero todavía no está conectado al canvas.
 - [ ] Confirmar que cuatro navegadores reciben el mismo estado oficial.
 - [ ] Definir qué navegador carga el modelo y cómo los demás se incorporan a la sesión.
 - [ ] Mostrar conexión, carga, error y última secuencia recibida.
@@ -321,15 +323,15 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 ### Domingo 11 — interfaces y estructura
 
 - [ ] Aprobar alcance P0 y reparto.
-- [ ] Congelar IR, topics, mensajes y estado remoto.
+- [x] Congelar IR, topics, mensajes y estado remoto.
 - [ ] Crear esqueletos mínimos de scheduler, pub/sub y cliente remoto.
-- [ ] Preparar fixtures y dobles para trabajar sin hardware.
+- [x] Preparar fixtures y dobles para trabajar sin hardware.
 
 ### Lunes 12, mañana — implementación paralela
 
-- [ ] Completar scheduler, pub/sub y LED no bloqueante.
+- [x] Completar scheduler, pub/sub interno y LED no bloqueante.
 - [ ] Completar el subconjunto inicial del motor MicroPython.
-- [ ] Completar compilador a IR.
+- [x] Completar compilador a IR.
 - [ ] Completar recepción y aplicación de instantáneas en la web.
 - [ ] Convertir el modelo de semáforos en un cruce coordinado.
 
@@ -339,7 +341,7 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 - [ ] Ejecutar el flujo completo con transporte y hardware falsos.
 - [ ] Abrir cuatro navegadores y comprobar sincronización por broker.
 - [ ] Corregir errores del contrato sin ampliar el alcance.
-- [ ] Ejecutar todas las pruebas del firmware y frontend.
+- [x] Ejecutar todas las pruebas disponibles del firmware y frontend.
 
 ### Lunes 12, noche — congelación
 
@@ -359,12 +361,12 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 
 ## Criterios de aceptación
 
-- [ ] El proyecto compila y las pruebas anteriores continúan aprobando.
+- [x] El proyecto compila y las pruebas anteriores continúan aprobando.
 - [ ] Todas las tareas concretas heredan de `Task` e implementan `update()`.
 - [ ] Ninguna acción periódica usa una espera que bloquee las demás tareas.
 - [ ] MQTT externo y pub/sub interno permanecen separados.
 - [ ] El LED titila sin impedir que se procese otro mensaje.
-- [ ] La web genera una IR desde un documento real del editor.
+- [x] La web genera una IR desde documentos reales del editor.
 - [ ] La Pico o su runtime simulado carga y ejecuta el modelo.
 - [ ] El motor no contiene reglas codificadas exclusivamente para el semáforo.
 - [ ] La Pico es la fuente oficial del estado remoto.

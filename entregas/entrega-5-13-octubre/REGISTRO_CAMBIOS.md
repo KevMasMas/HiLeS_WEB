@@ -38,8 +38,18 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
   - Frontend tests: 10 archivos de prueba y 63 pruebas aprobadas (`vitest run`).
   - Frontend lint y build: `eslint .` sin errores y `tsc -b && vite build` completado en 1,02 s.
 - **Evidencia adicional opcional:** salida de consola de `unittest`, `vitest`, `eslint` y `vite build`.
-- **Commit:** [PENDIENTE]
+- **Commit:** `723a7d6`
 - **Riesgos o pendientes:** cuando Persona 3 implemente el motor MicroPython (`firmware/pico/hiles/`), deberá ejecutar los mismos vectores de `docs/mqtt/vectores_ir_v1/` para cerrar la comparación cruzada. `DeduplicadorMensajes` está probado como utilidad web, pero la deduplicación de comandos QoS 1 continúa pendiente en el receptor de la Pico.
+
+#### Revisión de alcance y solapamientos de Persona 4
+
+- **Trabajo propio de Persona 4:** cerró la IR v1 y el contrato MQTT, implementó el compilador y validador web, definió límites, preparó los vectores de conformidad y probó mensajes, secuencias y deduplicación como utilidades web.
+- **Trabajo asumido de Persona 1 (arquitectura e integración):** creó el bus interno `Node`, el catálogo de topics y amplió las pruebas de arquitectura para comprobar que `pubsub` no dependa de `devices`, `hiles` ni `platform`. Este aporte queda integrado, pero no significa que esté terminada la integración general de las cinco personas.
+- **Trabajo relacionado con Persona 2:** creó `FakeTransport` y lo exportó desde los dobles de prueba. Esto habilita las futuras pruebas de `MqttTransport`, pero no implementa Wi-Fi, el transporte MQTT real ni modifica la lógica de `LedTask` de Persona 2.
+- **Trabajo adelantado de Persona 5:** agregó `ControlSecuenciaRemota` y `DeduplicadorMensajes` en la web. Son piezas de apoyo probadas, pero todavía no existe el cliente remoto que las conecte al canvas; por ello las casillas de aplicación visual, sesión multiusuario y deduplicación en la Pico permanecen abiertas.
+- **Trabajo relacionado con Persona 3:** dejó vectores de ejecución que deberá consumir el futuro motor MicroPython. No implementó ni modificó el motor asignado a Persona 3.
+- **Cambio fuera de alcance corregido:** el commit de Persona 4 había limitado a tres los reintentos del cliente MQTT web y había agregado archivos `__pycache__/*.pyc`. La revisión posterior restauró la reconexión continua y eliminó esos artefactos generados en el commit `f7a8ebf`.
+- **Conclusión de la revisión:** no se marcaron como terminadas las tareas de Personas 2, 3 o 5 que solo recibieron infraestructura preparatoria. Las casillas cerradas cuentan con código y pruebas; las integraciones reales con Pico, MQTT externo y cuatro navegadores continúan pendientes.
 
 ### [2026-10-11] — Responsable: Julian Romero
 
@@ -50,7 +60,7 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 - **Resultado esperado:** una salida sin `value()` debe alternar y finalizar apagada; `FakeLed` y otra tarea deben continuar funcionando durante el titilado.
 - **Resultado obtenido:** pruebas específicas, scheduler y suite completa aprobadas; 16 pruebas en total.
 - **Evidencia adicional opcional:** salida de unittest en la consola de trabajo.
-- **Commit:** [PENDIENTE]
+- **Commit:** `8173811`
 - **Riesgos o pendientes:** `MqttTransport`, integración MQTT, publicación JSON y validación física continúan pendientes.
 
 ### [2026-10-11] — Responsable: Julian Romero
@@ -62,7 +72,7 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 - **Resultado esperado:** validar estados, rechazo de órdenes inválidas, titilado con `FakeClock`, ejecución concurrente de otra tarea e independencia del GPIO.
 - **Resultado obtenido:** 15 pruebas aprobadas; la suite incluyó 4 pruebas nuevas de LED y las 11 pruebas existentes. No se usó broker ni hardware físico.
 - **Evidencia adicional opcional:** salida de unittest en la consola de trabajo.
-- **Commit:** [PENDIENTE]
+- **Commit:** `8173811`
 - **Riesgos o pendientes:** `MqttTransport` no se implementó porque el repositorio aún no contiene `Node` ni una interfaz Python congelada; Wi-Fi, MQTT y validación en Pico quedan pendientes.
 
 ### [2026-10-11 16:35] — Responsable: Kevin Rincón (Persona 1)
@@ -74,7 +84,7 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 - **Resultado esperado:** ejecutar tareas vencidas por prioridad, respetar periodos, aislar errores, detectar actualizaciones lentas, detener el ciclo de forma controlada y conservar la independencia del núcleo.
 - **Resultado obtenido:** 11 pruebas aprobadas en 0,004 segundos; se verificaron planificación, prioridades, periodos, aislamiento de errores, sobrepasos, detención controlada, composición y límites de arquitectura.
 - **Evidencia adicional opcional:** no aplica.
-- **Commit:** [PENDIENTE]
+- **Commit:** `5b86d90`
 - **Riesgos o pendientes:** integrar las tareas MQTT, LED y motor; validar temporización y memoria en la Pico física.
 
 - [x] Persona 1 registra sus entregas.
