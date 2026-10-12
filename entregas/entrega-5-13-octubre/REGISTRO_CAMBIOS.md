@@ -92,3 +92,15 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 - [ ] Persona 3 registra sus entregas.
 - [x] Persona 4 registra sus entregas.
 - [ ] Persona 5 registra sus entregas.
+
+### [2026-10-12 17:45] — Responsable: Julian Romero (Persona 2)
+
+- **Actividad del plan:** Persona 2 — separación de plataforma Pico, transporte MQTT cooperativo, enrutamiento Node ↔ MQTT y continuidad del LED durante el transporte.
+- **Qué se implementó:** se separaron los adaptadores de GPIO, Wi‑Fi y cliente `umqtt` en `firmware/pico/platform/`; se implementó `MqttTransport` como tarea `Task` no bloqueante; se agregaron suscripciones a los topics entrantes, publicación de topics salientes con QoS/retención del contrato, serialización JSON, validación de tamaño, errores de JSON/topic y estado de conexión.
+- **Archivos modificados:** `firmware/pico/platform/__init__.py`, `firmware/pico/platform/hardware.py`, `firmware/pico/platform/wifi.py`, `firmware/pico/platform/mqtt_client.py`, `firmware/pico/pubsub/mqtt_transport.py`, `firmware/pico/pubsub/__init__.py`, `firmware/tests/test_mqtt_transport.py`, `entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md`.
+- **Cómo se probó:** `& "C:\Program Files\PostgreSQL\18\pgAdmin 4\python\python.exe" -m unittest discover -s firmware/tests -t . -v`; además `npm.cmd run test:run`, `npm.cmd run lint` y `npm.cmd run build` desde `frontend/`.
+- **Resultado esperado:** el transporte conecta sin bloquear, enruta mensajes en ambas direcciones, conserva las políticas MQTT, informa errores como JSON y permite que el scheduler siga ejecutando el LED durante el titilado.
+- **Resultado obtenido:** 28 pruebas de firmware aprobadas; 10 archivos y 63 pruebas de frontend aprobadas; lint sin errores; build exitoso. Las pruebas del transporte verifican conexión, cuatro suscripciones, publicación retenida del estado LED, recepción JSON, rechazo de JSON/topic inválidos, ausencia de cliente sin Wi‑Fi y titilado concurrente.
+- **Evidencia adicional opcional:** salida de consola de unittest, vitest, eslint y vite build.
+- **Commit:** `6f1313b` como base de trabajo; estos cambios quedan sin commit hasta la integración del equipo.
+- **Riesgos o pendientes:** la validación física con una Pico W, Wi‑Fi real y Mosquitto queda pendiente de disponer del hardware y credenciales locales. `config_local.py` no se crea ni se versiona.

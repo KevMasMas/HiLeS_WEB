@@ -146,9 +146,9 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 - [x] Implementar `Scheduler` usando `ticks_ms`, `ticks_add` y `ticks_diff`.
 - [x] Garantizar que toda subclase concreta de `Task` implemente `update()`.
 - [x] Implementar `Node` con suscripción, desuscripción y publicación local.
-- [ ] Implementar `MqttTransport` como tarea periódica no bloqueante.
-- [ ] Enrutar mensajes externos hacia callbacks internos.
-- [ ] Enrutar publicaciones internas hacia MQTT sin acoplar el motor al cliente.
+- [x] Implementar `MqttTransport` como tarea periódica no bloqueante.
+- [x] Enrutar mensajes externos hacia callbacks internos.
+- [x] Enrutar publicaciones internas hacia MQTT sin acoplar el motor al cliente.
 - [x] Evitar que un callback defectuoso elimine silenciosamente una suscripción válida.
 
 ### Demostrador de LED no bloqueante
@@ -156,8 +156,8 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 - [x] Implementar los estados `APAGADO`, `ENCENDIDO` y `TITILANDO`.
 - [x] Hacer que el callback solamente valide la orden y cambie el estado deseado.
 - [x] Realizar el titilado mediante ejecuciones periódicas de `update()`.
-- [ ] Confirmar que MQTT y las demás tareas continúan ejecutándose durante el titilado.
-- [ ] Publicar estado y error mediante JSON válido.
+- [x] Confirmar que MQTT y las demás tareas continúan ejecutándose durante el titilado.
+- [x] Publicar estado y error mediante JSON válido.
 
 ### Motor HiLeS MicroPython
 
@@ -246,10 +246,10 @@ Responsable asignado: **Julian Romero**.
 
 Responsable de adaptar el trabajo anterior a PicoROS y al modelo no bloqueante.
 
-- [ ] Separar Wi-Fi, GPIO y cliente MQTT del ejemplo anterior.
+- [x] Separar Wi-Fi, GPIO y cliente MQTT del ejemplo anterior.
 - [x] Separar la lógica del LED en `devices/led_task.py` mediante una salida con `on()`/`off()`.
-- [ ] Separar Wi-Fi y cliente MQTT; pendiente de `Node` y del contrato Python del transporte.
-- [ ] Implementar `MqttTransport` como subclase de `Task`.
+- [x] Separar Wi-Fi y cliente MQTT; conectar el transporte a `Node` y al contrato Python.
+- [x] Implementar `MqttTransport` como subclase de `Task`.
 - [x] Implementar `LedTask` mediante máquina de estados; probado en escritorio.
 - [x] Eliminar el ciclo de titilado con esperas bloqueantes; `update()` realiza como máximo un cambio.
 - [x] Preparar `FakeLed` y reutilizar `FakeClock` para desarrollar sin la Pico; probado en escritorio.
@@ -364,7 +364,7 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 - [x] El proyecto compila y las pruebas anteriores continúan aprobando.
 - [ ] Todas las tareas concretas heredan de `Task` e implementan `update()`.
 - [ ] Ninguna acción periódica usa una espera que bloquee las demás tareas.
-- [ ] MQTT externo y pub/sub interno permanecen separados.
+- [x] MQTT externo y pub/sub interno permanecen separados.
 - [ ] El LED titila sin impedir que se procese otro mensaje.
 - [x] La web genera una IR desde documentos reales del editor.
 - [ ] La Pico o su runtime simulado carga y ejecuta el modelo.
@@ -372,7 +372,7 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 - [ ] La Pico es la fuente oficial del estado remoto.
 - [ ] Cuatro navegadores muestran la misma secuencia y estado.
 - [ ] Norte–Sur y Este–Oeste nunca están verdes simultáneamente.
-- [ ] Un JSON inválido produce un error y no detiene el scheduler.
+- [x] Un JSON inválido produce un error y no detiene el scheduler.
 - [ ] Las credenciales permanecen fuera del repositorio.
 - [ ] El procedimiento de demostración puede ser repetido por otra persona.
 
