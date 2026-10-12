@@ -163,6 +163,25 @@ Si `aceptado` es `false`, se pueden agregar `codigo` (por ejemplo `IR_TIPO_NO_SO
 
 `estado` puede ser `sin_modelo`, `lista`, `ejecutando`, `pausada`, `detenida` o `error`. `id_mensaje` es opcional únicamente para estados espontáneos, como el publicado después de una reconexión.
 
+## Respuestas del motor MicroPython
+
+Implementación: `firmware/pico/hiles/engine_task.py` (Persona 3, Juan Ramos). Sección agregada el 12 de octubre de 2026 para que el cliente remoto conozca las respuestas reales de la Pico.
+
+| Mensaje recibido | Respuesta de la Pico |
+|---|---|
+| `modelo/cargar` válido | `modelo/confirmacion` con `aceptado: true` y luego `simulacion/estado` con `secuencia: 0` y `estado: "lista"`. |
+| `modelo/cargar` con IR inválida o `ir_version` distinta de `1` | `modelo/confirmacion` con `aceptado: false`, `codigo` (`CodigoIr`) y `error`. El campo `ir_version` informa la versión soportada (`1`). El modelo activo se conserva. |
+| `modelo/cargar` sin `modelo_id`, `version` o `id_mensaje` válidos | `error` con `codigo: "IR_ESTRUCTURA_INVALIDA"`, porque no puede construirse una confirmación válida. |
+| `simulacion/comando` `paso` | Un paso y `simulacion/estado` con `estado: "pausada"` (o `"ejecutando"` si la ejecución continua está activa). |
+| `simulacion/comando` `reiniciar` | Estado inicial del modelo y `simulacion/estado` con `estado: "lista"`. La `secuencia` **aumenta** para que la web no descarte la instantánea. |
+| `simulacion/comando` `iniciar` / `detener` | `simulacion/estado` con `"ejecutando"` / `"detenida"`. En ejecución continua, la Pico publica un paso por intervalo sin `id_mensaje`. |
+| `entrada/establecer` válida | Sin respuesta inmediata; el valor se propaga en el siguiente paso. |
+| Comando sin modelo cargado, de otro `modelo_id`/`version` o con `accion` inválida | `error` con `codigo: "COMANDO_RECHAZADO"`. |
+| Entrada de un Service inexistente, de otro tipo o de otro modelo | `error` con `codigo: "ENTRADA_HILES_RECHAZADA"`. |
+| Cola interna del motor llena | `error` con `codigo: "MOTOR_OCUPADO"`; el mensaje se descarta. |
+
+En la Pico, `modelo_id` y `version` son obligatorios en `simulacion/comando` y `entrada/establecer`. La deduplicación por `id_mensaje` y el límite de 32768 bytes se aplican en el transporte MQTT, todavía pendiente.
+
 ## Reconexión, duplicados y orden
 
 1. La web se vuelve a suscribir a los topics configurados cuando MQTT confirma la reconexión.

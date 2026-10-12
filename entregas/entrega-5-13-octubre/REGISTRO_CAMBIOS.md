@@ -18,6 +18,53 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 
 ## Entradas
 
+### [2026-10-12 17:55] — Responsable: Juan Ramos (Persona 3)
+
+- **Actividad del plan:** Persona 3 — Motor HiLeS en MicroPython (las siete casillas de la sección) y, en el alcance P0, «Motor HiLeS MicroPython» y «Probar movimiento de tokens y límites de capacidad».
+- **Revisión previa:** se revisaron el plan, este registro, `docs/mqtt/IR_V1.md`, `docs/mqtt/CONTRATO_MENSAJES_MQTT.md`, los 14 vectores de `docs/mqtt/vectores_ir_v1/`, el firmware existente (`core`, `pubsub`, `devices`, dobles de prueba) y el motor y validador de referencia en TypeScript (`validadorIr.ts`, `expresiones.ts`, `EvaluadorPetri.ts`, `ElementoTransicion.ts`, `GrafoDatos.ts`). La línea base del firmware tenía 23 pruebas aprobadas.
+- **Qué se implementó:**
+  1. `hiles/expressions.py`: validación de la gramática del AST y evaluador sin `eval` con la semántica normativa de §5 (valor ausente `None`, igualdad por tipo lógico, orden solo numérico, `/` y `%` entre cero retornan ausente, `%` con el signo del dividendo como en JavaScript y resultados enteros representados como `int`).
+  2. `hiles/model.py`: carga y validación de la IR v1 (`validate_ir_v1`) y del sobre de `modelo/cargar` (`validate_load_message`). Replica el orden de comprobación de `validarIrV1` y se detiene en el primer problema, de modo que web y Pico reportan el mismo `CodigoIr`. Incluye límites (64 elementos, 128 conexiones, profundidad 16), puertos, arcos, identificadores duplicados y ciclos de datos mediante Kahn.
+  3. `hiles/elements.py`: clases `Service`, `FunctionalBlock`, `Place` y `Transition` con su configuración y estado de ejecución. `Transition` acumula pesos por Place, comprueba el balance neto (consumo, producción y capacidad) y mueve los tokens de forma atómica.
+  4. `hiles/engine.py`: `HilesEngine` con `reset()`, `set_input()`, `step()` (propagación en orden topológico, red de Petri con política de conflicto) y `snapshot()` con la representación exacta de `simulacion/estado.elementos`.
+  5. `hiles/engine_task.py`: `EngineTask`, subclase de `Task`. Los callbacks de `Node` solo encolan (cola acotada, 8 mensajes por defecto). Cada `update()` atiende como máximo `max_commands_per_update` mensajes (1 por defecto) o un paso automático. Publica `modelo/confirmacion`, `simulacion/estado` (con `modelo_id`, `version`, `secuencia`, `estado` e `id_mensaje`) y `error`. Soporta `paso`, `reiniciar`, `iniciar` y `detener`.
+  6. Pruebas de escritorio: 45 pruebas nuevas en cuatro archivos y un módulo auxiliar para leer los vectores compartidos.
+- **Decisiones que afectan a otras personas:**
+  - `reiniciar` publica una instantánea con la secuencia **incrementada** (no vuelve a `0`), porque la web descarta secuencias menores o iguales a la última. Solo una carga nueva reinicia la secuencia a `0`.
+  - Una carga rechazada responde con `ir_version: 1` (la versión soportada), porque el validador web exige ese valor en `modelo/confirmacion`.
+  - Nuevos códigos de `error` del motor: `COMANDO_RECHAZADO`, `MOTOR_OCUPADO` y `ERROR_INTERNO_MOTOR`; para entradas se reutiliza `ENTRADA_HILES_RECHAZADA`.
+  - En la Pico, `modelo_id` y `version` son obligatorios en comandos y entradas, como indica el contrato.
+- **Archivos creados:** `firmware/pico/hiles/__init__.py`, `firmware/pico/hiles/expressions.py`, `firmware/pico/hiles/model.py`, `firmware/pico/hiles/elements.py`, `firmware/pico/hiles/engine.py`, `firmware/pico/hiles/engine_task.py`, `firmware/tests/hiles_vectors.py`, `firmware/tests/test_hiles_expressions.py`, `firmware/tests/test_hiles_model.py`, `firmware/tests/test_hiles_engine.py`, `firmware/tests/test_engine_task.py`.
+- **Archivos modificados:** `entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md`, `entregas/entrega-5-13-octubre/REGISTRO_CAMBIOS.md`, `docs/mqtt/CONTRATO_MENSAJES_MQTT.md`, `firmware/tests/test_architecture.py`, `firmware/tests/README.md`.
+- **Cómo se probó:** desde la raíz del repositorio, `python -m unittest discover -s firmware/tests -t . -v` (Python 3.13.2). Los vectores se leen directamente de `docs/mqtt/vectores_ir_v1/`, sin copias.
+- **Resultado esperado:**
+  - Aceptar los 3 vectores válidos y rechazar los 8 inválidos con su `codigo_esperado`.
+  - Reproducir paso a paso los 3 vectores de ejecución generados con `MotorSimulacion`.
+  - Respetar pesos, capacidad, balance neto y conflicto sin movimientos parciales.
+  - Devolver el estado inicial al reiniciar y producir instantáneas idénticas en ejecuciones repetidas.
+  - Procesar como máximo un mensaje por `update()` sin bloquear otras tareas.
+  - Conservar el modelo activo ante una carga inválida y no incluir reglas propias del semáforo.
+- **Resultado obtenido:** 68 pruebas aprobadas en 0,050 s (`OK`): las 23 anteriores y 45 nuevas. Los 14 vectores compartidos pasan sin modificaciones. El mismo vector del semáforo con identificadores renombrados produce los mismos resultados, y una prueba verifica que `firmware/pico/hiles/` no contiene términos del semáforo.
+- **Evidencia adicional opcional:** salida de `unittest` en la consola de trabajo.
+- **Commit:** pendiente; los cambios quedaron sin confirmar en la rama `mqtt-pico`.
+- **Riesgos o pendientes:**
+  - No hay intérprete MicroPython ni Pico disponibles. El código evita funciones exclusivas de CPython, pero falta medir memoria y la duración de `update()` en la placa (`max_update_ms` queda configurable).
+  - Falta registrar `EngineTask` en `main.py` (integración de Persona 1) y conectarla al `MqttTransport` real (Persona 2).
+  - La deduplicación de 32 `id_mensaje` y el límite de 32768 bytes siguen a cargo del receptor o transporte. Volver a cargar el mismo `modelo_id` y la misma `version` reinicia la secuencia a `0`, y la web podría descartar esas instantáneas hasta que exista la deduplicación.
+
+#### Cambios en trabajo de otras personas
+
+- **Persona 4 (Ivan Felipe Prado Blanco):**
+  - En el plan se marcó «Comparar instantáneas esperadas del motor web y MicroPython», que estaba pendiente del motor de Persona 3.
+  - En `docs/mqtt/CONTRATO_MENSAJES_MQTT.md` se agregó la sección «Respuestas del motor MicroPython», con los nuevos códigos y la regla de secuencia de `reiniciar`. No se modificó ninguna regla existente del contrato ni los vectores.
+- **Personas 1 y 4:** en `firmware/tests/test_architecture.py` se agregó una prueba que impide que `hiles` importe `devices`, `platform`, `machine`, `network` o `umqtt`. Las pruebas existentes no cambiaron.
+- **Persona 2 (Julian Romero):** en `firmware/tests/README.md` se agregaron `pubsub/` y `hiles/` a la lista de carpetas que se copian a la Pico, junto con la descripción de las nuevas pruebas. No se modificó código de Persona 2.
+- **Plan general:**
+  - Se registró a Juan Ramos como responsable de Persona 3.
+  - Se actualizaron «Equipo», «Estado actual» y el árbol de `hiles/`, que ahora incluye `expressions.py` y `engine.py`.
+  - Se marcaron como cumplidos los criterios «La Pico o su runtime simulado carga y ejecuta el modelo» (solo con el runtime simulado) y «El motor no contiene reglas codificadas exclusivamente para el semáforo».
+  - No se modificó `main.py`.
+
 ### [2026-10-12 15:49] — Responsable: Ivan Felipe Prado Blanco (Persona 4)
 
 - **Actividad del plan:** Persona 4 — Contrato, compilador `HilesModelDocument → IR v1`, validador, vectores compartidos de conformidad, filtro de secuencia/deduplicación y bus interno `Node` + `FakeTransport`.
@@ -89,6 +136,6 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 
 - [x] Persona 1 registra sus entregas.
 - [x] Persona 2 registra sus entregas.
-- [ ] Persona 3 registra sus entregas.
+- [x] Persona 3 registra sus entregas.
 - [x] Persona 4 registra sus entregas.
 - [ ] Persona 5 registra sus entregas.

@@ -19,12 +19,20 @@ Desde la raíz del repositorio se ejecutan con:
 python -m unittest discover -s firmware/tests -t . -v
 ```
 
+Pruebas del motor HiLeS (Persona 3, Juan Ramos):
+
+- `test_hiles_expressions.py`: gramática y semántica del AST sin `eval`.
+- `test_hiles_model.py`: vectores `validos/` e `invalidos/` compartidos con la web y reglas adicionales de la IR v1.
+- `test_hiles_engine.py`: vectores `ejecucion/` paso a paso, tokens, pesos, capacidad, conflicto, reinicio y generalidad.
+- `test_engine_task.py`: flujo completo `FakeTransport → Node → EngineTask → Node` con `Scheduler` y `FakeClock`.
+- `hiles_vectors.py`: lectura de `docs/mqtt/vectores_ir_v1/` y constructores de modelos pequeños.
+
 ## Copiar el firmware a una Pico W
 
 La validacion fisica sigue pendiente. Cuando la placa este disponible:
 
 1. Instalar MicroPython en la Pico W y abrir Thonny o `mpremote`.
-2. Copiar `firmware/pico/core/`, `firmware/pico/devices/` y los `__init__.py` al dispositivo.
+2. Copiar `firmware/pico/core/`, `firmware/pico/devices/`, `firmware/pico/pubsub/`, `firmware/pico/hiles/` y los `__init__.py` al dispositivo.
 3. Copiar `firmware/pico/main.py` y crear en la placa `config_local.py` a partir de `config_local.example.py`, sin guardar credenciales en Git.
 4. Instalar en la placa el cliente `umqtt.simple` usado por el transporte cuando ese modulo sea integrado.
 5. Ejecutar primero las pruebas de escritorio; despues reiniciar la Pico y observar la consola serie.

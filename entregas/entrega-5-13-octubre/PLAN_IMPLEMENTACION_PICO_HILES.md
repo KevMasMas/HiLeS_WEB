@@ -2,9 +2,9 @@
 
 **Entrega:** martes 13 de octubre de 2026, 10:00 a. m. (hora de Colombia)
 
-**Equipo:** cinco personas; responsables registrados para Personas 1, 2 y 4; asignación de Personas 3 y 5 pendiente por el grupo
+**Equipo:** cinco personas; responsables registrados para Personas 1, 2, 3 y 4; asignación de Persona 5 pendiente por el grupo
 
-**Estado actual:** núcleo cooperativo, LED no bloqueante, pub/sub interno, contrato e IR implementados y probados; motor MicroPython, transporte MQTT de la Pico, cliente remoto y demostración de cuatro navegadores todavía pendientes.
+**Estado actual:** núcleo cooperativo, LED no bloqueante, pub/sub interno, contrato, IR y motor HiLeS MicroPython con `EngineTask` implementados y probados en escritorio; transporte MQTT de la Pico, integración en `main.py`, cliente remoto y demostración de cuatro navegadores todavía pendientes.
 
 ## Objetivo no negociable
 
@@ -54,8 +54,10 @@ firmware/pico/
 │   ├── mqtt_transport.py
 │   └── topics.py
 ├── hiles/
+│   ├── expressions.py
 │   ├── model.py
 │   ├── elements.py
+│   ├── engine.py
 │   └── engine_task.py
 ├── devices/
 │   ├── led_task.py
@@ -129,6 +131,8 @@ Antes de esta entrega ya existen:
 
 Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el motor MicroPython, el modo remoto de la web ni la coordinación real de los cuatro semáforos.
 
+> Actualización del 12 de octubre: el compilador a IR (Persona 4) y el motor MicroPython con `EngineTask` (Persona 3) ya están implementados y probados en escritorio; su integración en `main.py` continúa pendiente.
+
 ## Alcance P0 obligatorio
 
 ### Organización y contrato
@@ -161,14 +165,14 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 
 ### Motor HiLeS MicroPython
 
-- [ ] Cargar y validar una IR sin usar `eval`.
-- [ ] Implementar inicialmente `Service`, `Functional Block`, `Place` y `Transition`.
-- [ ] Implementar conexiones continuas y flujo de tokens necesarios para el demo.
-- [ ] Ejecutar un paso de manera acotada y no bloqueante.
-- [ ] Respetar capacidad, peso y movimiento atómico de tokens.
-- [ ] Implementar `reiniciar` a partir del estado inicial del modelo.
-- [ ] Publicar instantáneas con modelo, versión y secuencia.
-- [ ] Rechazar elementos u operaciones no soportados con un error legible.
+- [x] Cargar y validar una IR sin usar `eval`.
+- [x] Implementar inicialmente `Service`, `Functional Block`, `Place` y `Transition`.
+- [x] Implementar conexiones continuas y flujo de tokens necesarios para el demo.
+- [x] Ejecutar un paso de manera acotada y no bloqueante.
+- [x] Respetar capacidad, peso y movimiento atómico de tokens.
+- [x] Implementar `reiniciar` a partir del estado inicial del modelo.
+- [x] Publicar instantáneas con modelo, versión y secuencia (en `Node`; el envío al broker depende de `MqttTransport`).
+- [x] Rechazar elementos u operaciones no soportados con un error legible.
 
 ### Web y cuatro navegadores
 
@@ -200,7 +204,7 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 - [x] Probar que un titilado no bloquea otra tarea.
 - [x] Probar callbacks y aislamiento entre topics internos.
 - [x] Probar carga válida e inválida de la IR.
-- [ ] Probar movimiento de tokens y límites de capacidad.
+- [x] Probar movimiento de tokens y límites de capacidad.
 - [x] Probar orden y descarte de instantáneas en la web.
 - [x] Ejecutar pruebas, lint y build del frontend.
 
@@ -260,15 +264,18 @@ Responsable de adaptar el trabajo anterior a PicoROS y al modelo no bloqueante.
 
 ### Persona 3 — Motor HiLeS en MicroPython
 
+Responsable asignado: **Juan Ramos**.
+
 Responsable del núcleo ejecutable que recibe la IR.
 
-- [ ] Implementar carga y validación de la IR versión 1.
-- [ ] Implementar elementos `Service`, `Functional Block`, `Place` y `Transition`.
-- [ ] Implementar propagación mínima y movimiento atómico de tokens.
-- [ ] Crear `EngineTask` con trabajo acotado por actualización.
-- [ ] Implementar paso y reinicio.
-- [ ] Serializar instantáneas generales del modelo.
-- [ ] Cubrir el motor con pruebas de escritorio.
+- [x] Implementar carga y validación de la IR versión 1.
+- [x] Implementar elementos `Service`, `Functional Block`, `Place` y `Transition`.
+- [x] Implementar propagación mínima y movimiento atómico de tokens.
+- [x] Crear `EngineTask` con trabajo acotado por actualización.
+- [x] Implementar paso y reinicio.
+- [x] Serializar instantáneas generales del modelo.
+- [x] Cubrir el motor con pruebas de escritorio.
+- [ ] Validar memoria y tiempos del motor en la Pico física.
 
 **Criterio de terminación:** un modelo válido produce instantáneas reproducibles sin reglas específicas del semáforo.
 
@@ -283,7 +290,7 @@ Responsable de que web y Pico interpreten exactamente el mismo modelo y mensajes
 - [x] Rechazar conexiones, tipos u operaciones no soportados antes de publicar.
 - [x] Preparar vectores JSON compartidos entre TypeScript y MicroPython.
 - [x] Probar mensajes válidos, inválidos, repetidos y fuera de orden.
-- [ ] Comparar instantáneas esperadas del motor web y MicroPython (vectores del motor web listos en `docs/mqtt/vectores_ir_v1/ejecucion/`; pendiente ejecución en motor MicroPython de Persona 3).
+- [x] Comparar instantáneas esperadas del motor web y MicroPython (los vectores de `docs/mqtt/vectores_ir_v1/ejecucion/` se reproducen paso a paso en `firmware/tests/test_hiles_engine.py`; casilla cerrada por Juan Ramos, Persona 3, el 12 de octubre).
 - [x] Revisar límites de tamaño del contrato.
 
 **Criterio de terminación:** un modelo soportado se genera desde el editor sin edición manual y pasa los mismos casos de conformidad en ambos lados.
@@ -330,7 +337,7 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 ### Lunes 12, mañana — implementación paralela
 
 - [x] Completar scheduler, pub/sub interno y LED no bloqueante.
-- [ ] Completar el subconjunto inicial del motor MicroPython.
+- [x] Completar el subconjunto inicial del motor MicroPython.
 - [x] Completar compilador a IR.
 - [ ] Completar recepción y aplicación de instantáneas en la web.
 - [ ] Convertir el modelo de semáforos en un cruce coordinado.
@@ -367,8 +374,8 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 - [ ] MQTT externo y pub/sub interno permanecen separados.
 - [ ] El LED titila sin impedir que se procese otro mensaje.
 - [x] La web genera una IR desde documentos reales del editor.
-- [ ] La Pico o su runtime simulado carga y ejecuta el modelo.
-- [ ] El motor no contiene reglas codificadas exclusivamente para el semáforo.
+- [x] La Pico o su runtime simulado carga y ejecuta el modelo (runtime simulado con `Scheduler`, `FakeClock`, `Node` y `FakeTransport`; falta la Pico física).
+- [x] El motor no contiene reglas codificadas exclusivamente para el semáforo.
 - [ ] La Pico es la fuente oficial del estado remoto.
 - [ ] Cuatro navegadores muestran la misma secuencia y estado.
 - [ ] Norte–Sur y Este–Oeste nunca están verdes simultáneamente.
