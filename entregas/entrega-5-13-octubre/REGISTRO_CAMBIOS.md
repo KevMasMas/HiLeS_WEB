@@ -46,11 +46,11 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
   - Conservar el modelo activo ante una carga inválida y no incluir reglas propias del semáforo.
 - **Resultado obtenido:** 68 pruebas aprobadas en 0,050 s (`OK`): las 23 anteriores y 45 nuevas. Los 14 vectores compartidos pasan sin modificaciones. El mismo vector del semáforo con identificadores renombrados produce los mismos resultados, y una prueba verifica que `firmware/pico/hiles/` no contiene términos del semáforo.
 - **Evidencia adicional opcional:** salida de `unittest` en la consola de trabajo.
-- **Commit:** pendiente; los cambios quedaron sin confirmar en la rama `mqtt-pico`.
+- **Commit:** `1739c9a` (motor y pruebas); integrado con los cambios de Personas 1 y 2 en el merge `db242b8`. Después del merge, la suite completa del firmware aprobó 78 pruebas (`OK`).
 - **Riesgos o pendientes:**
   - No hay intérprete MicroPython ni Pico disponibles. El código evita funciones exclusivas de CPython, pero falta medir memoria y la duración de `update()` en la placa (`max_update_ms` queda configurable).
-  - Falta registrar `EngineTask` en `main.py` (integración de Persona 1) y conectarla al `MqttTransport` real (Persona 2).
-  - La deduplicación de 32 `id_mensaje` y el límite de 32768 bytes siguen a cargo del receptor o transporte. Volver a cargar el mismo `modelo_id` y la misma `version` reinicia la secuencia a `0`, y la web podría descartar esas instantáneas hasta que exista la deduplicación.
+  - Falta registrar `EngineTask` en `main.py` para conectarla al `MqttTransport` que se incorporó en el commit `3af1bfc` (integración de Persona 1).
+  - `MqttTransport` ya aplica el límite de 32768 bytes; la deduplicación de 32 `id_mensaje` sigue pendiente. Volver a cargar el mismo `modelo_id` y la misma `version` reinicia la secuencia a `0`, y la web podría descartar esas instantáneas hasta que exista la deduplicación.
 
 #### Cambios en trabajo de otras personas
 
