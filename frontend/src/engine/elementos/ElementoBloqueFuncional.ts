@@ -5,7 +5,7 @@ import type { EstadoElemento, IElementoHiLeS, ValorRuntime } from './interfaces'
 export interface ConfiguracionBloqueFuncional { properties?: Partial<HilesNodeProperties>; ports?: readonly HilesPort[]; }
 
 /** Convierte la etiqueta visual del puerto en un identificador usable en código. */
-const nombreVariable = (nombre: string): string => {
+export const nombreVariable = (nombre: string): string => {
   const normalizado = nombre.normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^A-Za-z0-9_$]+/g, '_')

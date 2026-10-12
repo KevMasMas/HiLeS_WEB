@@ -1,0 +1,127 @@
+{
+  "descripcion": "Circuito de humedad: guarda falsa conserva el token y guarda verdadera lo mueve a activo",
+  "modelo_id": "humedad-01",
+  "version": 1,
+  "ir_version": 1,
+  "modelo": {
+    "elementos": [
+      {
+        "id": "sensor",
+        "tipo": "service",
+        "nombre": "Sensor humedad",
+        "tipo_dato": "real",
+        "salidas": ["sensor-out"],
+        "entradas": []
+      },
+      {
+        "id": "condicion",
+        "tipo": "functional_block",
+        "nombre": "Humedad baja (< 76)",
+        "habilitado": true,
+        "entradas": [
+          { "puerto": "humedad-in", "variable": "humedad" }
+        ],
+        "salidas": ["condicion-out"],
+        "expresion": {
+          "op": "<",
+          "args": [
+            { "var": "humedad" },
+            { "lit": 76 }
+          ]
+        }
+      },
+      {
+        "id": "espera",
+        "tipo": "place",
+        "nombre": "Espera",
+        "tokens": 1,
+        "capacidad": 1
+      },
+      {
+        "id": "transicion",
+        "tipo": "transition",
+        "nombre": "Activar riego",
+        "habilitada": true,
+        "puerto_accion": "transition-action-out"
+      },
+      {
+        "id": "activo",
+        "tipo": "place",
+        "nombre": "Activo",
+        "tokens": 0,
+        "capacidad": 1
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "sensor-condicion",
+        "tipo": "dato",
+        "origen": "sensor",
+        "puerto_origen": "sensor-out",
+        "destino": "condicion",
+        "puerto_destino": "humedad-in"
+      },
+      {
+        "id": "condicion-transicion",
+        "tipo": "dato",
+        "origen": "condicion",
+        "puerto_origen": "condicion-out",
+        "destino": "transicion",
+        "puerto_destino": "condicion"
+      },
+      {
+        "id": "espera-transicion",
+        "tipo": "arco",
+        "origen": "espera",
+        "destino": "transicion",
+        "peso": 1
+      },
+      {
+        "id": "transicion-activo",
+        "tipo": "arco",
+        "origen": "transicion",
+        "destino": "activo",
+        "peso": 1
+      }
+    ]
+  },
+  "estado_inicial": {
+    "sensor": {},
+    "condicion": {},
+    "espera": { "tokens": 1 },
+    "transicion": { "habilitada": false, "disparada": false },
+    "activo": { "tokens": 0 }
+  },
+  "pasos": [
+    {
+      "entradas": { "sensor": 80 },
+      "elementos_esperados": {
+        "sensor": { "valor": 80 },
+        "condicion": { "salida": false },
+        "espera": { "tokens": 1 },
+        "transicion": { "habilitada": false, "disparada": false },
+        "activo": { "tokens": 0 }
+      }
+    },
+    {
+      "entradas": { "sensor": 70 },
+      "elementos_esperados": {
+        "sensor": { "valor": 70 },
+        "condicion": { "salida": true },
+        "espera": { "tokens": 0 },
+        "transicion": { "habilitada": true, "disparada": true },
+        "activo": { "tokens": 1 }
+      }
+    },
+    {
+      "entradas": {},
+      "elementos_esperados": {
+        "sensor": { "valor": 70 },
+        "condicion": { "salida": true },
+        "espera": { "tokens": 0 },
+        "transicion": { "habilitada": true, "disparada": false },
+        "activo": { "tokens": 1 }
+      }
+    }
+  ]
+}

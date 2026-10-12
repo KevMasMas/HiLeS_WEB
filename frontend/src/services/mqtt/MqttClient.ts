@@ -58,19 +58,23 @@ class MqttBrowserClient {
     this.validationErrorListeners.forEach((listener) => listener(validationError));
   }
 
+  private reconnectAttempts = 0;
+  private readonly maxReconnectAttempts = 3;
+
   public connect(): void {
     if (this.status === 'CONNECTING' || this.client?.connected) {
       return;
     }
 
+    this.reconnectAttempts = 0;
     this.client?.end(true);
 
     const config = getMqttConfig();
     const options: IClientOptions = {
       clientId: config.clientId,
       clean: true,
-      reconnectPeriod: 5000,
-      connectTimeout: 30000,
+      reconnectPeriod: 3000,
+      connectTimeout: 10000,
       protocolVersion: 4,
       username: config.username,
       password: config.password,
@@ -83,6 +87,7 @@ class MqttBrowserClient {
 
     client.on('connect', () => {
       if (this.client !== client) return;
+      this.reconnectAttempts = 0;
       this.notifyStatus('CONNECTED');
       this.subscriptions.forEach((topic) => {
         client.subscribe(topic, (error) => {
@@ -96,6 +101,15 @@ class MqttBrowserClient {
 
     client.on('reconnect', () => {
       if (this.client !== client) return;
+      this.reconnectAttempts += 1;
+      if (this.reconnectAttempts > this.maxReconnectAttempts) {
+        client.end(true);
+        if (this.client === client) {
+          this.client = null;
+        }
+        this.notifyStatus('ERROR');
+        return;
+      }
       this.notifyStatus('CONNECTING');
     });
 
@@ -114,6 +128,12 @@ class MqttBrowserClient {
     client.on('error', (error) => {
       if (this.client !== client) return;
       console.error('MQTT client error', error);
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        client.end(true);
+        if (this.client === client) {
+          this.client = null;
+        }
+      }
       this.notifyStatus('ERROR');
     });
 
@@ -198,6 +218,7 @@ class MqttBrowserClient {
   }
 
   public disconnect(): void {
+    this.reconnectAttempts = 0;
     if (this.client) {
       this.client.end(true);
       this.client = null;

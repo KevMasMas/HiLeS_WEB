@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { MQTT_TOPICS } from './config';
-import { EJEMPLOS_MENSAJES_MQTT, validarMensajeMqtt } from './messages';
+import { MQTT_MAX_PAYLOAD_BYTES, MQTT_TOPICS } from './config';
+import {
+  ControlSecuenciaRemota,
+  DeduplicadorMensajes,
+  EJEMPLOS_MENSAJES_MQTT,
+  MQTT_VENTANA_DEDUPLICACION,
+  validarMensajeMqtt,
+} from './messages';
 
 describe('contrato de mensajes MQTT', () => {
   it('acepta el ejemplo documentado de cada topic', () => {
@@ -59,6 +65,25 @@ describe('contrato de mensajes MQTT', () => {
       modelo: { elementos: 'no-es-lista', conexiones: [] },
       id_mensaje: 'modelo-error',
     })).toMatchObject({ valido: false });
+
+    expect(validarMensajeMqtt(MQTT_TOPICS.MODELO_CARGAR, {
+      modelo_id: 'modelo-1',
+      version: 1,
+      ir_version: 1,
+      modelo: {
+        elementos: [{ id: 'x', tipo: 'sample', nombre: 'No soportado' }],
+        conexiones: [],
+      },
+      id_mensaje: 'modelo-ir-invalida',
+    })).toMatchObject({ valido: false });
+  });
+
+  it('rechaza cargas que superan el límite de 32768 bytes del contrato', () => {
+    const resultado = validarMensajeMqtt(MQTT_TOPICS.ERROR, {
+      mensaje: 'x'.repeat(MQTT_MAX_PAYLOAD_BYTES),
+    });
+    expect(resultado.valido).toBe(false);
+    if (!resultado.valido) expect(resultado.error).toContain(`${MQTT_MAX_PAYLOAD_BYTES} bytes`);
   });
 
   it('rechaza estados remotos con secuencias o tokens inválidos', () => {
@@ -77,5 +102,49 @@ describe('contrato de mensajes MQTT', () => {
       estado: 'pausada',
       elementos: { lugar: { tokens: -1 } },
     })).toMatchObject({ valido: false });
+  });
+
+  it('descarta instantáneas fuera de orden, repetidas o de otro modelo/versión', () => {
+    const control = new ControlSecuenciaRemota();
+    const base = {
+      modelo_id: 'cruce-01',
+      version: 2,
+      secuencia: 0,
+      estado: 'lista' as const,
+      elementos: {},
+    };
+
+    expect(control.evaluar(base)).toEqual({ aplicar: false, motivo: 'sin_sesion' });
+
+    control.activarModelo('cruce-01', 2);
+    expect(control.evaluar(base)).toEqual({ aplicar: true, secuencia: 0 });
+    expect(control.evaluar(base)).toEqual({ aplicar: false, motivo: 'secuencia_antigua' });
+    expect(control.evaluar({ ...base, secuencia: 3 })).toEqual({ aplicar: true, secuencia: 3 });
+    expect(control.evaluar({ ...base, secuencia: 2 })).toEqual({ aplicar: false, motivo: 'secuencia_antigua' });
+    expect(control.evaluar({ ...base, modelo_id: 'otro-modelo', secuencia: 4 })).toEqual({
+      aplicar: false,
+      motivo: 'modelo_distinto',
+    });
+    expect(control.evaluar({ ...base, version: 1, secuencia: 4 })).toEqual({
+      aplicar: false,
+      motivo: 'version_distinta',
+    });
+
+    control.activarModelo('cruce-01', 3);
+    expect(control.evaluar({ ...base, version: 3, secuencia: 0 })).toEqual({ aplicar: true, secuencia: 0 });
+  });
+
+  it('conserva al menos los últimos 32 id_mensaje para deduplicar comandos repetidos', () => {
+    const deduplicador = new DeduplicadorMensajes<string>();
+    for (let i = 1; i <= MQTT_VENTANA_DEDUPLICACION; i += 1) {
+      deduplicador.registrar(`cmd-${i}`, `resp-${i}`);
+    }
+    expect(deduplicador.esDuplicado('cmd-1')).toBe(true);
+    expect(deduplicador.obtenerRespuesta('cmd-32')).toBe('resp-32');
+
+    deduplicador.registrar('cmd-33', 'resp-33');
+    expect(deduplicador.esDuplicado('cmd-1')).toBe(false);
+    expect(deduplicador.esDuplicado('cmd-2')).toBe(true);
+    expect(deduplicador.esDuplicado('cmd-33')).toBe(true);
   });
 });

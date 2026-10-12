@@ -133,9 +133,9 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 
 - [x] Crear la estructura modular mínima de `firmware/pico/`.
 - [x] Actualizar todas las rutas documentales después de la reorganización.
-- [ ] Cerrar la IR versión 1 antes de implementar el motor.
+- [x] Cerrar la IR versión 1 antes de implementar el motor.
 - [ ] Definir un identificador de sesión o ejecución compartido por los cuatro navegadores.
-- [ ] Definir reglas de `modelo_id`, `version`, `secuencia` e `id_mensaje`.
+- [x] Definir reglas de `modelo_id`, `version`, `secuencia` e `id_mensaje`.
 - [ ] Mantener credenciales reales fuera de Git.
 
 ### Multitarea y pub/sub
@@ -143,11 +143,11 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 - [x] Implementar `Task` con periodo, prioridad, nombre y próxima ejecución.
 - [x] Implementar `Scheduler` usando `ticks_ms`, `ticks_add` y `ticks_diff`.
 - [x] Garantizar que toda subclase concreta de `Task` implemente `update()`.
-- [ ] Implementar `Node` con suscripción, desuscripción y publicación local.
+- [x] Implementar `Node` con suscripción, desuscripción y publicación local.
 - [ ] Implementar `MqttTransport` como tarea periódica no bloqueante.
 - [ ] Enrutar mensajes externos hacia callbacks internos.
 - [ ] Enrutar publicaciones internas hacia MQTT sin acoplar el motor al cliente.
-- [ ] Evitar que un callback defectuoso elimine silenciosamente una suscripción válida.
+- [x] Evitar que un callback defectuoso elimine silenciosamente una suscripción válida.
 
 ### Demostrador de LED no bloqueante
 
@@ -170,7 +170,7 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 
 ### Web y cuatro navegadores
 
-- [ ] Implementar el compilador `HilesModelDocument → IR v1`.
+- [x] Implementar el compilador `HilesModelDocument → IR v1`.
 - [ ] Agregar selección entre ejecución local y ejecución en Pico.
 - [ ] Publicar el modelo y esperar `modelo/confirmacion`.
 - [ ] Enviar entradas y comandos con `id_mensaje` único.
@@ -193,18 +193,18 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 
 - [x] Crear `FakeClock` para avanzar el tiempo sin esperas reales.
 - [x] Crear `FakeLed` para observar cambios de GPIO.
-- [ ] Crear `FakeTransport` para publicar y recibir sin broker.
+- [x] Crear `FakeTransport` para publicar y recibir sin broker.
 - [x] Probar periodos, prioridades y tareas vencidas del scheduler.
 - [x] Probar que un titilado no bloquea otra tarea.
-- [ ] Probar callbacks y aislamiento entre topics internos.
-- [ ] Probar carga válida e inválida de la IR.
+- [x] Probar callbacks y aislamiento entre topics internos.
+- [x] Probar carga válida e inválida de la IR.
 - [ ] Probar movimiento de tokens y límites de capacidad.
-- [ ] Probar orden y descarte de instantáneas en la web.
-- [ ] Ejecutar pruebas, lint y build del frontend.
+- [x] Probar orden y descarte de instantáneas en la web.
+- [x] Ejecutar pruebas, lint y build del frontend.
 
 ## Alcance P1 si P0 queda estable
 
-- [ ] Deduplicar al menos los últimos 32 `id_mensaje` recibidos.
+- [x] Deduplicar al menos los últimos 32 `id_mensaje` recibidos.
 - [ ] Agregar reconexión de Wi-Fi y MQTT como tarea o estado no bloqueante.
 - [ ] Recuperar suscripciones después de reconectar.
 - [ ] Añadir telemetría de memoria, tiempos de tareas y RSSI.
@@ -270,15 +270,17 @@ Responsable del núcleo ejecutable que recibe la IR.
 
 ### Persona 4 — Contrato, compilador y conformidad
 
+Responsable asignado: **Felipe**.
+
 Responsable de que web y Pico interpreten exactamente el mismo modelo y mensajes.
 
-- [ ] Congelar la IR versión 1 y actualizar el contrato MQTT vigente.
-- [ ] Implementar el compilador del documento visual a IR.
-- [ ] Rechazar conexiones, tipos u operaciones no soportados antes de publicar.
-- [ ] Preparar vectores JSON compartidos entre TypeScript y MicroPython.
-- [ ] Probar mensajes válidos, inválidos, repetidos y fuera de orden.
-- [ ] Comparar instantáneas esperadas del motor web y MicroPython.
-- [ ] Revisar límites de tamaño del contrato.
+- [x] Congelar la IR versión 1 y actualizar el contrato MQTT vigente.
+- [x] Implementar el compilador del documento visual a IR.
+- [x] Rechazar conexiones, tipos u operaciones no soportados antes de publicar.
+- [x] Preparar vectores JSON compartidos entre TypeScript y MicroPython.
+- [x] Probar mensajes válidos, inválidos, repetidos y fuera de orden.
+- [ ] Comparar instantáneas esperadas del motor web y MicroPython (vectores del motor web listos en `docs/mqtt/vectores_ir_v1/ejecucion/`; pendiente ejecución en motor MicroPython de Persona 3).
+- [x] Revisar límites de tamaño del contrato.
 
 **Criterio de terminación:** un modelo soportado se genera desde el editor sin edición manual y pasa los mismos casos de conformidad en ambos lados.
 

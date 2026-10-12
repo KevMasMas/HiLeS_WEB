@@ -4,11 +4,11 @@ Responsable del protocolo: **Kevin Rincon**
 
 Responsable de validación e integración: **Juan David Romero**
 
-Versión del contrato: `v1.1`
+Versión del contrato: `v1.2`
 
 Prefijo común: `udfjc/hiles/v1/equipo1/pico01/`
 
-Este documento describe la frontera compartida por la aplicación web, Mosquitto y la Raspberry Pi Pico W. La fuente de verdad del frontend está en `frontend/src/services/mqtt/config.ts` y `frontend/src/services/mqtt/messages.ts`.
+Este documento describe la frontera compartida por la aplicación web, Mosquitto y la Raspberry Pi Pico W. La fuente de verdad del frontend está en `frontend/src/services/mqtt/config.ts`, `frontend/src/services/mqtt/messages.ts` y `frontend/src/services/ir/`.
 
 ## Reglas comunes
 
@@ -17,7 +17,7 @@ Este documento describe la frontera compartida por la aplicación web, Mosquitto
 - `id_mensaje` es un texto no vacío que permite relacionar un comando con su respuesta.
 - `modelo_id` y `version` evitan aplicar una entrada o un comando a un modelo diferente del que está activo.
 - `secuencia` comienza en `0` y aumenta con cada instantánea. La web descarta estados con una secuencia menor o igual a la última aplicada.
-- `ir_version` vale `1` para la primera representación ejecutable soportada por la Pico.
+- `ir_version` vale `1` para la primera representación ejecutable soportada por la Pico (especificación normativa en [`IR_V1.md`](IR_V1.md)).
 - Los valores de un `Service` admitidos en esta versión son `boolean`, `number` o `string`.
 - `version` debe ser un número entero positivo.
 - El tamaño máximo de un mensaje es `32768` bytes codificados en UTF-8.
@@ -132,7 +132,7 @@ Para conservar compatibilidad con la integración local existente, la web todav�
 {"modelo_id":"paso-token-01","version":1,"ir_version":1,"modelo":{"elementos":[],"conexiones":[]},"id_mensaje":"modelo-001"}
 ```
 
-`modelo` contiene la representación intermedia compilada por la web, no el documento visual completo ni código JavaScript o Python.
+`modelo` contiene la representación intermedia compilada por la web (`IrModeloV1`, documentada en [`IR_V1.md`](IR_V1.md)), no el documento visual completo ni código JavaScript o Python.
 
 ### `modelo/confirmacion`
 
@@ -140,7 +140,7 @@ Para conservar compatibilidad con la integración local existente, la web todav�
 {"modelo_id":"paso-token-01","version":1,"ir_version":1,"aceptado":true,"id_mensaje":"modelo-001"}
 ```
 
-Si `aceptado` es `false`, se puede agregar `error` con una explicación no vacía.
+Si `aceptado` es `false`, se pueden agregar `codigo` (por ejemplo `IR_TIPO_NO_SOPORTADO`, `IR_CICLO_DATOS`) y `error` con una explicación legible en español.
 
 ### `simulacion/estado`
 
@@ -205,7 +205,7 @@ El método `publicarSalida` aplica el recorrido inverso y genera un `MensajeSali
 Desde `frontend/`:
 
 ```powershell
-npm run test:run -- src/services/mqtt/messages.test.ts src/services/mqtt/MqttHilesBridge.test.ts
+npm run test:run -- src/services/mqtt src/services/ir
 ```
 
-La prueba recorre todos los ejemplos del contrato, valida límites y errores, y comprueba la integración MQTT existente con un `Service`.
+La prueba recorre todos los ejemplos del contrato, valida límites, errores y vectores de conformidad de la IR v1, y comprueba la integración MQTT existente con un `Service`.

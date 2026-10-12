@@ -1,0 +1,26 @@
+{
+  "descripcion": "Expresión referencia una variable que no está en entradas",
+  "codigo_esperado": "IR_REFERENCIA_INVALIDA",
+  "modelo": {
+    "elementos": [
+      {
+        "id": "bloque-1",
+        "tipo": "functional_block",
+        "nombre": "Comparar",
+        "habilitado": true,
+        "entradas": [
+          { "puerto": "in-1", "variable": "carros" }
+        ],
+        "salidas": ["out-1"],
+        "expresion": {
+          "op": ">",
+          "args": [
+            { "var": "inexistente" },
+            { "lit": 5 }
+          ]
+        }
+      }
+    ],
+    "conexiones": []
+  }
+}

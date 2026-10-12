@@ -1,0 +1,33 @@
+{
+  "descripcion": "Conexión de datos usa un puerto de salida inexistente",
+  "codigo_esperado": "IR_PUERTO_INVALIDO",
+  "modelo": {
+    "elementos": [
+      {
+        "id": "sensor-1",
+        "tipo": "service",
+        "nombre": "Sensor",
+        "tipo_dato": "real",
+        "salidas": ["sensor-out"],
+        "entradas": []
+      },
+      {
+        "id": "transicion-1",
+        "tipo": "transition",
+        "nombre": "Transición",
+        "habilitada": true,
+        "puerto_accion": null
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "conn-1",
+        "tipo": "dato",
+        "origen": "sensor-1",
+        "puerto_origen": "puerto-fantasma",
+        "destino": "transicion-1",
+        "puerto_destino": "condicion"
+      }
+    ]
+  }
+}

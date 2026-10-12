@@ -1,0 +1,197 @@
+{
+  "elementos": [
+    {
+      "id": "sem1-sensor",
+      "tipo": "service",
+      "nombre": "Sensor carros S1",
+      "tipo_dato": "real",
+      "salidas": ["sem1-sensor-out"],
+      "entradas": []
+    },
+    {
+      "id": "sem1-fb-verde",
+      "tipo": "functional_block",
+      "nombre": "Dar verde (>= 6)",
+      "habilitado": true,
+      "entradas": [
+        { "puerto": "sem1-verde-in", "variable": "carros" }
+      ],
+      "salidas": ["sem1-verde-out"],
+      "expresion": {
+        "op": ">=",
+        "args": [
+          { "var": "carros" },
+          { "lit": 6 }
+        ]
+      }
+    },
+    {
+      "id": "sem1-fb-amarillo",
+      "tipo": "functional_block",
+      "nombre": "Dar amarillo (< 6)",
+      "habilitado": true,
+      "entradas": [
+        { "puerto": "sem1-amarillo-in", "variable": "carros" }
+      ],
+      "salidas": ["sem1-amarillo-out"],
+      "expresion": {
+        "op": "<",
+        "args": [
+          { "var": "carros" },
+          { "lit": 6 }
+        ]
+      }
+    },
+    {
+      "id": "sem1-fb-rojo",
+      "tipo": "functional_block",
+      "nombre": "Volver a rojo (= 0)",
+      "habilitado": true,
+      "entradas": [
+        { "puerto": "sem1-rojo-in", "variable": "carros" }
+      ],
+      "salidas": ["sem1-rojo-out"],
+      "expresion": {
+        "op": "==",
+        "args": [
+          { "var": "carros" },
+          { "lit": 0 }
+        ]
+      }
+    },
+    {
+      "id": "sem1-rojo",
+      "tipo": "place",
+      "nombre": "Rojo",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "sem1-verde",
+      "tipo": "place",
+      "nombre": "Verde",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "sem1-amarillo",
+      "tipo": "place",
+      "nombre": "Amarillo",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "sem1-t-verde",
+      "tipo": "transition",
+      "nombre": "T · Encender verde",
+      "habilitada": true,
+      "puerto_accion": "transition-action-out"
+    },
+    {
+      "id": "sem1-t-amarillo",
+      "tipo": "transition",
+      "nombre": "T · Encender amarillo",
+      "habilitada": true,
+      "puerto_accion": "transition-action-out"
+    },
+    {
+      "id": "sem1-t-rojo",
+      "tipo": "transition",
+      "nombre": "T · Encender rojo",
+      "habilitada": true,
+      "puerto_accion": "transition-action-out"
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "sem1-cch-1",
+      "tipo": "dato",
+      "origen": "sem1-sensor",
+      "puerto_origen": "sem1-sensor-out",
+      "destino": "sem1-fb-verde",
+      "puerto_destino": "sem1-verde-in"
+    },
+    {
+      "id": "sem1-cch-2",
+      "tipo": "dato",
+      "origen": "sem1-fb-verde",
+      "puerto_origen": "sem1-verde-out",
+      "destino": "sem1-t-verde",
+      "puerto_destino": "condicion"
+    },
+    {
+      "id": "sem1-cch-3",
+      "tipo": "dato",
+      "origen": "sem1-sensor",
+      "puerto_origen": "sem1-sensor-out",
+      "destino": "sem1-fb-amarillo",
+      "puerto_destino": "sem1-amarillo-in"
+    },
+    {
+      "id": "sem1-cch-4",
+      "tipo": "dato",
+      "origen": "sem1-fb-amarillo",
+      "puerto_origen": "sem1-amarillo-out",
+      "destino": "sem1-t-amarillo",
+      "puerto_destino": "condicion"
+    },
+    {
+      "id": "sem1-cch-5",
+      "tipo": "dato",
+      "origen": "sem1-sensor",
+      "puerto_origen": "sem1-sensor-out",
+      "destino": "sem1-fb-rojo",
+      "puerto_destino": "sem1-rojo-in"
+    },
+    {
+      "id": "sem1-cch-6",
+      "tipo": "dato",
+      "origen": "sem1-fb-rojo",
+      "puerto_origen": "sem1-rojo-out",
+      "destino": "sem1-t-rojo",
+      "puerto_destino": "condicion"
+    },
+    {
+      "id": "sem1-lch-1",
+      "tipo": "arco",
+      "origen": "sem1-rojo",
+      "destino": "sem1-t-verde",
+      "peso": 1
+    },
+    {
+      "id": "sem1-lch-2",
+      "tipo": "arco",
+      "origen": "sem1-t-verde",
+      "destino": "sem1-verde",
+      "peso": 1
+    },
+    {
+      "id": "sem1-lch-3",
+      "tipo": "arco",
+      "origen": "sem1-verde",
+      "destino": "sem1-t-amarillo",
+      "peso": 1
+    },
+    {
+      "id": "sem1-lch-4",
+      "tipo": "arco",
+      "origen": "sem1-t-amarillo",
+      "destino": "sem1-amarillo",
+      "peso": 1
+    },
+    {
+      "id": "sem1-lch-5",
+      "tipo": "arco",
+      "origen": "sem1-amarillo",
+      "destino": "sem1-t-rojo",
+      "peso": 1
+    },
+    {
+      "id": "sem1-lch-6",
+      "tipo": "arco",
+      "origen": "sem1-t-rojo",
+      "destino": "sem1-rojo",
+      "peso": 1
+    }
+  ]
+}

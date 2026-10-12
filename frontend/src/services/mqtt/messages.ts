@@ -6,6 +6,7 @@ import {
   MQTT_TOPICS,
   type MqttTopic,
 } from './config';
+import { validarIrV1, type IrModeloV1 } from '../ir';
 
 export type ValorMensajeMqtt = boolean | number | string;
 export type AccionLed = 'encender' | 'apagar' | 'titilar';
@@ -71,10 +72,7 @@ export interface MensajeSalidaHiles {
   id_mensaje: string;
 }
 
-export interface ModeloEjecutableMqtt {
-  elementos: Array<Record<string, unknown>>;
-  conexiones: Array<Record<string, unknown>>;
-}
+export type ModeloEjecutableMqtt = IrModeloV1;
 
 export interface MensajeModeloCargar {
   modelo_id: string;
@@ -90,6 +88,7 @@ export interface MensajeModeloConfirmacion {
   ir_version: number;
   aceptado: boolean;
   id_mensaje: string;
+  codigo?: string;
   error?: string;
 }
 
@@ -242,6 +241,10 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
       if (payload.modelo.conexiones.length > MQTT_MAX_MODEL_CONNECTIONS) {
         return error(topic, `modelo.conexiones supera el límite de ${MQTT_MAX_MODEL_CONNECTIONS}`);
       }
+      const validacionIr = validarIrV1(payload.modelo);
+      if (!validacionIr.valido) {
+        return error(topic, validacionIr.avisos[0].mensaje);
+      }
       break;
     }
     case MQTT_TOPICS.MODELO_CONFIRMACION: {
@@ -251,6 +254,7 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
       if (!esEnteroPositivo(payload.version)) return error(topic, 'version debe ser un entero positivo');
       if (payload.ir_version !== MQTT_IR_VERSION) return error(topic, `ir_version debe ser ${MQTT_IR_VERSION}`);
       if (typeof payload.aceptado !== 'boolean') return error(topic, 'aceptado debe ser booleano');
+      if (payload.codigo !== undefined && !esTexto(payload.codigo)) return error(topic, 'codigo debe ser texto');
       if (payload.error !== undefined && !esTexto(payload.error)) return error(topic, 'error debe ser texto');
       break;
     }
@@ -315,3 +319,81 @@ export const EJEMPLOS_MENSAJES_MQTT: MensajesMqttPorTopic = {
     id_mensaje: 'sim-001',
   },
 };
+
+export const MQTT_VENTANA_DEDUPLICACION = 32;
+
+export type DecisionInstantanea =
+  | { aplicar: true; secuencia: number }
+  | { aplicar: false; motivo: 'sin_sesion' | 'modelo_distinto' | 'version_distinta' | 'secuencia_antigua' };
+
+/**
+ * Administra la sesión activa (`modelo_id` y `version`) y descarta instantáneas
+ * remotas repetidas, antiguas o pertenecientes a otro modelo/versión.
+ */
+export class ControlSecuenciaRemota {
+  private modeloId: string | null = null;
+  private version: number | null = null;
+  private ultimaSecuencia = -1;
+
+  activarModelo(modeloId: string, version: number): void {
+    this.modeloId = modeloId;
+    this.version = version;
+    this.ultimaSecuencia = -1;
+  }
+
+  evaluar(estado: MensajeSimulacionEstado): DecisionInstantanea {
+    if (this.modeloId === null || this.version === null) {
+      return { aplicar: false, motivo: 'sin_sesion' };
+    }
+    if (estado.modelo_id !== this.modeloId) {
+      return { aplicar: false, motivo: 'modelo_distinto' };
+    }
+    if (estado.version !== this.version) {
+      return { aplicar: false, motivo: 'version_distinta' };
+    }
+    if (estado.secuencia <= this.ultimaSecuencia) {
+      return { aplicar: false, motivo: 'secuencia_antigua' };
+    }
+    this.ultimaSecuencia = estado.secuencia;
+    return { aplicar: true, secuencia: estado.secuencia };
+  }
+
+  obtenerUltimaSecuencia(): number {
+    return this.ultimaSecuencia;
+  }
+}
+
+/**
+ * Conserva los últimos `capacidad` identificadores `id_mensaje` (por defecto 32)
+ * para detectar entregas duplicadas de MQTT QoS 1.
+ */
+export class DeduplicadorMensajes<T = unknown> {
+  private readonly capacidad: number;
+  private readonly respuestas = new Map<string, T>();
+
+  constructor(capacidad = MQTT_VENTANA_DEDUPLICACION) {
+    this.capacidad = Math.max(1, capacidad);
+  }
+
+  esDuplicado(idMensaje: string): boolean {
+    return this.respuestas.has(idMensaje);
+  }
+
+  obtenerRespuesta(idMensaje: string): T | undefined {
+    return this.respuestas.get(idMensaje);
+  }
+
+  registrar(idMensaje: string, respuesta: T): void {
+    if (this.respuestas.has(idMensaje)) {
+      this.respuestas.delete(idMensaje);
+    } else if (this.respuestas.size >= this.capacidad) {
+      const masAntiguo = this.respuestas.keys().next().value;
+      if (masAntiguo !== undefined) this.respuestas.delete(masAntiguo);
+    }
+    this.respuestas.set(idMensaje, respuesta);
+  }
+
+  limpiar(): void {
+    this.respuestas.clear();
+  }
+}

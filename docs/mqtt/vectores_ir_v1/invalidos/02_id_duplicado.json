@@ -1,0 +1,23 @@
+{
+  "descripcion": "Dos elementos comparten el mismo identificador",
+  "codigo_esperado": "IR_ID_DUPLICADO",
+  "modelo": {
+    "elementos": [
+      {
+        "id": "lugar-repetido",
+        "tipo": "place",
+        "nombre": "Lugar A",
+        "tokens": 1,
+        "capacidad": 1
+      },
+      {
+        "id": "lugar-repetido",
+        "tipo": "place",
+        "nombre": "Lugar B",
+        "tokens": 0,
+        "capacidad": 1
+      }
+    ],
+    "conexiones": []
+  }
+}

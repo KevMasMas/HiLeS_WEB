@@ -1,0 +1,31 @@
+{
+  "descripcion": "Arco Petri une dos places directamente sin pasar por una transition",
+  "codigo_esperado": "IR_ARCO_INVALIDO",
+  "modelo": {
+    "elementos": [
+      {
+        "id": "lugar-1",
+        "tipo": "place",
+        "nombre": "Lugar 1",
+        "tokens": 1,
+        "capacidad": 1
+      },
+      {
+        "id": "lugar-2",
+        "tipo": "place",
+        "nombre": "Lugar 2",
+        "tokens": 0,
+        "capacidad": 1
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "arco-1",
+        "tipo": "arco",
+        "origen": "lugar-1",
+        "destino": "lugar-2",
+        "peso": 1
+      }
+    ]
+  }
+}

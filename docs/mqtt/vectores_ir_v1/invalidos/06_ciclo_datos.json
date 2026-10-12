@@ -1,0 +1,44 @@
+{
+  "descripcion": "Dos bloques funcionales conectados en un ciclo de datos",
+  "codigo_esperado": "IR_CICLO_DATOS",
+  "modelo": {
+    "elementos": [
+      {
+        "id": "fb-a",
+        "tipo": "functional_block",
+        "nombre": "Bloque A",
+        "habilitado": true,
+        "entradas": [{ "puerto": "a-in", "variable": "x" }],
+        "salidas": ["a-out"],
+        "expresion": { "var": "x" }
+      },
+      {
+        "id": "fb-b",
+        "tipo": "functional_block",
+        "nombre": "Bloque B",
+        "habilitado": true,
+        "entradas": [{ "puerto": "b-in", "variable": "y" }],
+        "salidas": ["b-out"],
+        "expresion": { "var": "y" }
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "c-1",
+        "tipo": "dato",
+        "origen": "fb-a",
+        "puerto_origen": "a-out",
+        "destino": "fb-b",
+        "puerto_destino": "b-in"
+      },
+      {
+        "id": "c-2",
+        "tipo": "dato",
+        "origen": "fb-b",
+        "puerto_origen": "b-out",
+        "destino": "fb-a",
+        "puerto_destino": "a-in"
+      }
+    ]
+  }
+}

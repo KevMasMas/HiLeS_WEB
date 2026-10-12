@@ -1,0 +1,21 @@
+{
+  "descripcion": "Árbol de expresión contiene un operador no permitido",
+  "codigo_esperado": "IR_EXPRESION_INVALIDA",
+  "modelo": {
+    "elementos": [
+      {
+        "id": "fb-1",
+        "tipo": "functional_block",
+        "nombre": "Bloque",
+        "habilitado": true,
+        "entradas": [{ "puerto": "in-1", "variable": "x" }],
+        "salidas": ["out-1"],
+        "expresion": {
+          "op": "eval",
+          "args": [{ "var": "x" }, { "lit": 1 }]
+        }
+      }
+    ],
+    "conexiones": []
+  }
+}

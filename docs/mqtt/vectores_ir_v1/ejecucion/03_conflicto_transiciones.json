@@ -1,0 +1,120 @@
+{
+  "descripcion": "Conflicto Petri: cuando dos transiciones están habilitadas simultáneamente, los tokens se conservan",
+  "modelo_id": "conflicto-01",
+  "version": 1,
+  "ir_version": 1,
+  "modelo": {
+    "elementos": [
+      {
+        "id": "orden",
+        "tipo": "service",
+        "nombre": "Orden",
+        "tipo_dato": "boolean",
+        "salidas": ["orden-out"],
+        "entradas": []
+      },
+      {
+        "id": "origen",
+        "tipo": "place",
+        "nombre": "Origen",
+        "tokens": 1,
+        "capacidad": 1
+      },
+      {
+        "id": "destino-a",
+        "tipo": "place",
+        "nombre": "Destino A",
+        "tokens": 0,
+        "capacidad": 1
+      },
+      {
+        "id": "destino-b",
+        "tipo": "place",
+        "nombre": "Destino B",
+        "tokens": 0,
+        "capacidad": 1
+      },
+      {
+        "id": "t-a",
+        "tipo": "transition",
+        "nombre": "Hacia A",
+        "habilitada": true,
+        "puerto_accion": null
+      },
+      {
+        "id": "t-b",
+        "tipo": "transition",
+        "nombre": "Hacia B",
+        "habilitada": true,
+        "puerto_accion": null
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "c-orden-a",
+        "tipo": "dato",
+        "origen": "orden",
+        "puerto_origen": "orden-out",
+        "destino": "t-a",
+        "puerto_destino": "condicion"
+      },
+      {
+        "id": "c-orden-b",
+        "tipo": "dato",
+        "origen": "orden",
+        "puerto_origen": "orden-out",
+        "destino": "t-b",
+        "puerto_destino": "condicion"
+      },
+      {
+        "id": "a-origen-ta",
+        "tipo": "arco",
+        "origen": "origen",
+        "destino": "t-a",
+        "peso": 1
+      },
+      {
+        "id": "a-ta-da",
+        "tipo": "arco",
+        "origen": "t-a",
+        "destino": "destino-a",
+        "peso": 1
+      },
+      {
+        "id": "a-origen-tb",
+        "tipo": "arco",
+        "origen": "origen",
+        "destino": "t-b",
+        "peso": 1
+      },
+      {
+        "id": "a-tb-db",
+        "tipo": "arco",
+        "origen": "t-b",
+        "destino": "destino-b",
+        "peso": 1
+      }
+    ]
+  },
+  "estado_inicial": {
+    "orden": {},
+    "origen": { "tokens": 1 },
+    "destino-a": { "tokens": 0 },
+    "destino-b": { "tokens": 0 },
+    "t-a": { "habilitada": false, "disparada": false },
+    "t-b": { "habilitada": false, "disparada": false }
+  },
+  "pasos": [
+    {
+      "entradas": { "orden": true },
+      "elementos_esperados": {
+        "orden": { "valor": true },
+        "origen": { "tokens": 1 },
+        "destino-a": { "tokens": 0 },
+        "destino-b": { "tokens": 0 },
+        "t-a": { "habilitada": true, "disparada": false },
+        "t-b": { "habilitada": true, "disparada": false }
+      }
+    }
+  ]
+}

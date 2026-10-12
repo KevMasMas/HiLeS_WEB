@@ -1,0 +1,82 @@
+{
+  "elementos": [
+    {
+      "id": "sensor",
+      "tipo": "service",
+      "nombre": "Sensor humedad",
+      "tipo_dato": "real",
+      "salidas": ["sensor-out"],
+      "entradas": []
+    },
+    {
+      "id": "condicion",
+      "tipo": "functional_block",
+      "nombre": "Humedad baja (< 76)",
+      "habilitado": true,
+      "entradas": [
+        { "puerto": "humedad-in", "variable": "humedad" }
+      ],
+      "salidas": ["condicion-out"],
+      "expresion": {
+        "op": "<",
+        "args": [
+          { "var": "humedad" },
+          { "lit": 76 }
+        ]
+      }
+    },
+    {
+      "id": "espera",
+      "tipo": "place",
+      "nombre": "Espera",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "transicion",
+      "tipo": "transition",
+      "nombre": "Activar riego",
+      "habilitada": true,
+      "puerto_accion": "transition-action-out"
+    },
+    {
+      "id": "activo",
+      "tipo": "place",
+      "nombre": "Activo",
+      "tokens": 0,
+      "capacidad": 1
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "sensor-condicion",
+      "tipo": "dato",
+      "origen": "sensor",
+      "puerto_origen": "sensor-out",
+      "destino": "condicion",
+      "puerto_destino": "humedad-in"
+    },
+    {
+      "id": "condicion-transicion",
+      "tipo": "dato",
+      "origen": "condicion",
+      "puerto_origen": "condicion-out",
+      "destino": "transicion",
+      "puerto_destino": "condicion"
+    },
+    {
+      "id": "espera-transicion",
+      "tipo": "arco",
+      "origen": "espera",
+      "destino": "transicion",
+      "peso": 1
+    },
+    {
+      "id": "transicion-activo",
+      "tipo": "arco",
+      "origen": "transicion",
+      "destino": "activo",
+      "peso": 1
+    }
+  ]
+}

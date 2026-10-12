@@ -1,0 +1,17 @@
+{
+  "descripcion": "Service declara un tipo_dato fuera del contrato v1",
+  "codigo_esperado": "IR_TIPO_DATO_INVALIDO",
+  "modelo": {
+    "elementos": [
+      {
+        "id": "svc-1",
+        "tipo": "service",
+        "nombre": "Sensor",
+        "tipo_dato": "vector",
+        "salidas": ["svc-out"],
+        "entradas": []
+      }
+    ],
+    "conexiones": []
+  }
+}

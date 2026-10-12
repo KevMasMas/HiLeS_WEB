@@ -1,0 +1,14 @@
+{
+  "descripcion": "Elemento de tipo sample no soportado en la IR v1",
+  "codigo_esperado": "IR_TIPO_NO_SOPORTADO",
+  "modelo": {
+    "elementos": [
+      {
+        "id": "muestreador-1",
+        "tipo": "sample",
+        "nombre": "Muestreador"
+      }
+    ],
+    "conexiones": []
+  }
+}
