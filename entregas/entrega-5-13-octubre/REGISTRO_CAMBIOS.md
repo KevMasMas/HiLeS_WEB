@@ -102,5 +102,17 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 - **Resultado esperado:** el transporte conecta sin bloquear, enruta mensajes en ambas direcciones, conserva las políticas MQTT, informa errores como JSON y permite que el scheduler siga ejecutando el LED durante el titilado.
 - **Resultado obtenido:** 28 pruebas de firmware aprobadas; 10 archivos y 63 pruebas de frontend aprobadas; lint sin errores; build exitoso. Las pruebas del transporte verifican conexión, cuatro suscripciones, publicación retenida del estado LED, recepción JSON, rechazo de JSON/topic inválidos, ausencia de cliente sin Wi‑Fi y titilado concurrente.
 - **Evidencia adicional opcional:** salida de consola de unittest, vitest, eslint y vite build.
-- **Commit:** `6f1313b` como base de trabajo; estos cambios quedan sin commit hasta la integración del equipo.
-- **Riesgos o pendientes:** la validación física con una Pico W, Wi‑Fi real y Mosquitto queda pendiente de disponer del hardware y credenciales locales. `config_local.py` no se crea ni se versiona.
+- **Commit:** `f2efe24`.
+- **Riesgos o pendientes:** la revisión posterior encontró que todavía faltaban la composición real en `main.py`, recuperación de conexiones, validación de tamaño saliente y publicación automática del estado LED. Estos puntos se corrigieron en la entrada siguiente. La validación física con una Pico W continúa pendiente; `config_local.py` no se crea ni se versiona.
+
+### [2026-10-12 17:58] — Responsable: Kevin Rincón (revisión y correcciones de Persona 2)
+
+- **Actividad del plan:** revisión de integración del transporte MQTT, reconexión cooperativa, composición del firmware y corrección de evidencia/casillas.
+- **Qué se corrigió:** `main.py` ahora compone `Node`, `WifiConnection`, salida GPIO, `LedTask` y `MqttTransport`; los comandos LED publican automáticamente su estado o un error; Wi‑Fi y MQTT reintentan con intervalos no bloqueantes; una caída de `check_msg()` limpia el cliente y recupera las cuatro suscripciones; las publicaciones salientes mayores de 32768 bytes se rechazan antes de llegar al broker; el adaptador `umqtt` convierte identificador y credenciales a bytes como requiere la Pico.
+- **Archivos modificados:** `firmware/pico/main.py`, `firmware/pico/platform/wifi.py`, `firmware/pico/platform/mqtt_client.py`, `firmware/pico/pubsub/mqtt_transport.py`, `firmware/tests/test_mqtt_transport.py`, `firmware/tests/README.md`, `entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md`, `entregas/entrega-5-13-octubre/REGISTRO_CAMBIOS.md`.
+- **Cómo se probó:** prueba focal `python -m unittest firmware.tests.test_mqtt_transport -v`, seguida de la suite completa de firmware; además se repiten pruebas, lint y build del frontend.
+- **Resultado esperado:** iniciar el runtime modular desde `main.py`, procesar otro comando MQTT durante el titilado, publicar el estado LED, rechazar una salida sobredimensionada y reconectar sin un ciclo cerrado ni `sleep` dentro de las tareas.
+- **Resultado obtenido:** las pruebas focales aprobaron, incluyendo composición completa, publicación automática del estado, segundo mensaje durante el titilado, caída y reconexión MQTT, espera entre reintentos, recuperación de suscripciones, reconexión Wi‑Fi, límite de salida y codificación compatible con `umqtt`. La suite completa aprobó 33 pruebas de firmware y 63 de frontend; `eslint` finalizó sin errores y el build de producción se completó correctamente.
+- **Evidencia adicional opcional:** salida de las suites en consola.
+- **Commit:** [PENDIENTE]
+- **Riesgos o pendientes:** falta validar los adaptadores `machine`, `network` y `umqtt` en la Pico física y ejecutar una integración contra Mosquitto con las credenciales locales. El motor MicroPython y el cliente remoto pertenecen a Personas 3 y 5.

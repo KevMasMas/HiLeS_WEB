@@ -4,7 +4,7 @@
 
 **Equipo:** cinco personas; responsables registrados para Personas 1, 2 y 4; asignación de Personas 3 y 5 pendiente por el grupo
 
-**Estado actual:** núcleo cooperativo, LED no bloqueante, pub/sub interno, contrato e IR implementados y probados; motor MicroPython, transporte MQTT de la Pico, cliente remoto y demostración de cuatro navegadores todavía pendientes.
+**Estado actual:** núcleo cooperativo, LED no bloqueante, pub/sub interno, transporte MQTT modular, reconexión, contrato e IR implementados y probados en escritorio; motor MicroPython, cliente remoto, prueba física y demostración de cuatro navegadores todavía pendientes.
 
 ## Objetivo no negociable
 
@@ -127,7 +127,7 @@ Antes de esta entrega ya existen:
 - motor HiLeS local en TypeScript;
 - modelo visual con cuatro bloques de semáforo independientes.
 
-Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el motor MicroPython, el modo remoto de la web ni la coordinación real de los cuatro semáforos.
+El scheduler ya integra LED y transporte MQTT, y la web ya cuenta con compilador a IR. Todavía no existen el motor HiLeS MicroPython, el modo remoto integrado de la web ni la coordinación real de los cuatro semáforos.
 
 ## Alcance P0 obligatorio
 
@@ -207,8 +207,8 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 ## Alcance P1 si P0 queda estable
 
 - [ ] Deduplicar en la Pico al menos los últimos 32 `id_mensaje` recibidos; la utilidad web está implementada y probada, pero falta integrarla en el receptor MicroPython.
-- [ ] Agregar reconexión de Wi-Fi y MQTT como tarea o estado no bloqueante.
-- [ ] Recuperar suscripciones después de reconectar.
+- [x] Agregar reconexión de Wi-Fi y MQTT como estado no bloqueante con intervalo entre intentos.
+- [x] Recuperar suscripciones después de reconectar.
 - [ ] Añadir telemetría de memoria, tiempos de tareas y RSSI.
 - [ ] Comparar automáticamente una ejecución del motor web con la ejecución MicroPython.
 - [ ] Incorporar ejecución continua con iniciar, detener y pausar.
@@ -362,10 +362,10 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 ## Criterios de aceptación
 
 - [x] El proyecto compila y las pruebas anteriores continúan aprobando.
-- [ ] Todas las tareas concretas heredan de `Task` e implementan `update()`.
-- [ ] Ninguna acción periódica usa una espera que bloquee las demás tareas.
+- [x] Todas las tareas concretas actuales (`LedTask` y `MqttTransport`) heredan de `Task` e implementan `update()`.
+- [x] Ninguna acción periódica del runtime modular actual usa una espera que bloquee las demás tareas.
 - [x] MQTT externo y pub/sub interno permanecen separados.
-- [ ] El LED titila sin impedir que se procese otro mensaje.
+- [x] El LED titila sin impedir que se procese otro mensaje MQTT.
 - [x] La web genera una IR desde documentos reales del editor.
 - [ ] La Pico o su runtime simulado carga y ejecuta el modelo.
 - [ ] El motor no contiene reglas codificadas exclusivamente para el semáforo.

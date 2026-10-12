@@ -18,9 +18,12 @@ class MqttTransport(Task):
 
     def __init__(self, scheduler, node, wifi, client_factory, client_id="pico01", host=None,
                  port=1883, username=None, password=None, prefix=TOPIC_PREFIX,
-                 period_ms=10, priority=0, keepalive=30, max_payload_bytes=MAX_PAYLOAD_BYTES):
+                 period_ms=10, priority=0, keepalive=30, max_payload_bytes=MAX_PAYLOAD_BYTES,
+                 reconnect_interval_ms=5000):
         if not callable(client_factory):
             raise ValueError("client_factory debe ser invocable")
+        if not isinstance(reconnect_interval_ms, int) or isinstance(reconnect_interval_ms, bool) or reconnect_interval_ms <= 0:
+            raise ValueError("reconnect_interval_ms debe ser un entero mayor que cero")
         self.node = node
         self.wifi = wifi
         self.client_factory = client_factory
@@ -32,9 +35,11 @@ class MqttTransport(Task):
         self.prefix = prefix
         self.keepalive = keepalive
         self.max_payload_bytes = max_payload_bytes
+        self.reconnect_interval_ms = reconnect_interval_ms
         self.client = None
         self.connected = False
         self.last_error = None
+        self._next_connect_at = None
         self._handles = []
         for suffix, policy in SALIENTES.items():
             self._handles.append(node.subscribe(suffix, self._make_publisher(suffix, policy)))
@@ -45,21 +50,43 @@ class MqttTransport(Task):
             if self.client is None or not self.connected:
                 return False
             raw = self._encode(payload)
-            self.client.publish(full_topic(suffix, self.prefix).encode(), raw,
-                                qos=policy["qos"], retain=policy["retain"])
+            if len(raw) > self.max_payload_bytes:
+                if suffix != ERROR:
+                    self._publish_error(
+                        "PAYLOAD_DEMASIADO_GRANDE",
+                        "El payload de {} supera el límite de {} bytes".format(suffix, self.max_payload_bytes),
+                    )
+                return False
+            try:
+                self.client.publish(full_topic(suffix, self.prefix).encode(), raw,
+                                    qos=policy["qos"], retain=policy["retain"])
+            except Exception as exc:
+                self._schedule_reconnect(exc)
+                return False
             return True
         return publish
 
     def update(self):
         if not self.wifi.poll():
+            if self.connected:
+                self._schedule_reconnect(RuntimeError("Wi-Fi desconectado"))
             return
         if self.client is None or not self.connected:
-            self._connect()
+            if not self._reconnect_due():
+                return
+            try:
+                self._connect()
+            except Exception as exc:
+                self._schedule_reconnect(exc)
             return
         check_msg = getattr(self.client, "check_msg", None)
         if not callable(check_msg):
-            raise RuntimeError("cliente MQTT debe implementar check_msg()")
-        check_msg()
+            self._schedule_reconnect(RuntimeError("cliente MQTT debe implementar check_msg()"))
+            return
+        try:
+            check_msg()
+        except Exception as exc:
+            self._schedule_reconnect(exc)
 
     def _connect(self):
         self.client = self.client_factory(self.client_id, self.host, self.port, self.username,
@@ -69,7 +96,34 @@ class MqttTransport(Task):
         for suffix in ENTRANTES:
             self.client.subscribe(full_topic(suffix, self.prefix).encode(), qos=1)
         self.connected = True
+        self.last_error = None
+        self._next_connect_at = None
         self.node.publish(ESTADO_CONEXION, {"conectado": True, "dispositivo": self.client_id})
+
+    def _reconnect_due(self):
+        if self._next_connect_at is None:
+            return True
+        return self.scheduler.clock.diff_ms(
+            self.scheduler.clock.now_ms(), self._next_connect_at
+        ) >= 0
+
+    def _schedule_reconnect(self, error):
+        self.last_error = error
+        client = self.client
+        self.client = None
+        self.connected = False
+        self._next_connect_at = self.scheduler.clock.add_ms(
+            self.scheduler.clock.now_ms(), self.reconnect_interval_ms
+        )
+        if client is not None:
+            disconnect = getattr(client, "disconnect", None)
+            if callable(disconnect):
+                try:
+                    disconnect()
+                except Exception:
+                    pass
+        self.node.publish(ESTADO_CONEXION, {"conectado": False, "dispositivo": self.client_id})
+        self._publish_error("MQTT_DESCONECTADO", str(error))
 
     def _on_message(self, topic, raw_payload):
         suffix = relative_topic(self._as_text(topic), self.prefix)
@@ -114,4 +168,5 @@ class MqttTransport(Task):
                 disconnect()
         self.client = None
         self.connected = False
+        self._next_connect_at = None
 
