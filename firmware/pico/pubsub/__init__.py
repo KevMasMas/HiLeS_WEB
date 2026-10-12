@@ -1,6 +1,7 @@
 """Pub/sub interno y catálogo de topics para el runtime de la Pico W."""
 
 from .node import Node
+from .mqtt_transport import MqttTransport
 from .topics import (
     ENTRANTES,
     ENTRADA_ESTABLECER,
