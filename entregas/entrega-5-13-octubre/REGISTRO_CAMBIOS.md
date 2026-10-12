@@ -39,7 +39,7 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
   - Frontend lint y build: `eslint .` sin errores y `tsc -b && vite build` completado en 1,02 s.
 - **Evidencia adicional opcional:** salida de consola de `unittest`, `vitest`, `eslint` y `vite build`.
 - **Commit:** [PENDIENTE]
-- **Riesgos o pendientes:** cuando Persona 3 implemente el motor MicroPython (`firmware/pico/hiles/`), deberá ejecutar los mismos vectores de `docs/mqtt/vectores_ir_v1/` para cerrar la comparación cruzada con MicroPython.
+- **Riesgos o pendientes:** cuando Persona 3 implemente el motor MicroPython (`firmware/pico/hiles/`), deberá ejecutar los mismos vectores de `docs/mqtt/vectores_ir_v1/` para cerrar la comparación cruzada. `DeduplicadorMensajes` está probado como utilidad web, pero la deduplicación de comandos QoS 1 continúa pendiente en el receptor de la Pico.
 
 ### [2026-10-11] — Responsable: Julian Romero
 
@@ -65,7 +65,7 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 - **Commit:** [PENDIENTE]
 - **Riesgos o pendientes:** `MqttTransport` no se implementó porque el repositorio aún no contiene `Node` ni una interfaz Python congelada; Wi-Fi, MQTT y validación en Pico quedan pendientes.
 
-### [2026-10-11 16:35] — Responsable: Persona 1
+### [2026-10-11 16:35] — Responsable: Kevin Rincón (Persona 1)
 
 - **Actividad del plan:** núcleo cooperativo, composición inicial y pruebas sin hardware.
 - **Qué se implementó:** reloj intercambiable, `Task`, `Scheduler`, métricas de duración, aislamiento de errores, detección de sobrepasos, `main.py` basado en fábricas y `FakeClock`.

@@ -204,7 +204,7 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 
 ## Alcance P1 si P0 queda estable
 
-- [x] Deduplicar al menos los últimos 32 `id_mensaje` recibidos.
+- [ ] Deduplicar en la Pico al menos los últimos 32 `id_mensaje` recibidos; la utilidad web está implementada y probada, pero falta integrarla en el receptor MicroPython.
 - [ ] Agregar reconexión de Wi-Fi y MQTT como tarea o estado no bloqueante.
 - [ ] Recuperar suscripciones después de reconectar.
 - [ ] Añadir telemetría de memoria, tiempos de tareas y RSSI.
@@ -223,6 +223,8 @@ Todavía no existen el scheduler integrado a HiLeS, el compilador real a IR, el 
 ## División entre cinco personas
 
 ### Persona 1 — Arquitectura, scheduler e integración
+
+Responsable asignado: **Kevin Rincón**.
 
 Responsable de que los módulos encajen y de mantener el alcance general.
 

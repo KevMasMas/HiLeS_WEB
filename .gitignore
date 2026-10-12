@@ -1,0 +1,4 @@
+# Python y MicroPython: artefactos generados localmente
+__pycache__/
+*.py[cod]
+
