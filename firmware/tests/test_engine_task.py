@@ -258,6 +258,29 @@ class EngineTaskTests(unittest.TestCase):
         self.send(SIMULACION_COMANDO, {"accion": "paso", "modelo_id": "m", "version": 1, "id_mensaje": "p"})
         self.assertEqual(self.task.pending(), 0)
 
+    def test_duplicate_message_id_replays_response_without_repeating_effect(self):
+        self.load()
+        self.command("paso", "paso-unico")
+        estado_original = self.states()[-1]
+        cantidad_antes = len(self.states())
+
+        self.command("paso", "paso-unico")
+
+        self.assertEqual(self.task.secuencia, 1)
+        self.assertEqual(len(self.states()), cantidad_antes + 1)
+        self.assertEqual(self.states()[-1], estado_original)
+        self.assertEqual(self.task.stats()["deduplicados"], 2)  # carga + paso
+
+    def test_deduplication_keeps_at_least_last_32_ids(self):
+        self.load()
+        for index in range(35):
+            self.command("detener", "cmd-{}".format(index))
+        self.assertEqual(self.task.stats()["deduplicados"], 32)
+
+        sequence_before = self.task.secuencia
+        self.command("detener", "cmd-34")
+        self.assertEqual(self.task.secuencia, sequence_before)
+
 
 if __name__ == "__main__":
     unittest.main()

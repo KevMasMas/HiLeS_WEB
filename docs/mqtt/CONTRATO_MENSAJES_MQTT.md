@@ -180,7 +180,7 @@ Implementación: `firmware/pico/hiles/engine_task.py` (Persona 3, Juan Ramos). S
 | Entrada de un Service inexistente, de otro tipo o de otro modelo | `error` con `codigo: "ENTRADA_HILES_RECHAZADA"`. |
 | Cola interna del motor llena | `error` con `codigo: "MOTOR_OCUPADO"`; el mensaje se descarta. |
 
-En la Pico, `modelo_id` y `version` son obligatorios en `simulacion/comando` y `entrada/establecer`. La deduplicación por `id_mensaje` y el límite de 32768 bytes se aplican en el transporte MQTT, todavía pendiente.
+En la Pico, `modelo_id` y `version` son obligatorios en `simulacion/comando` y `entrada/establecer`. `MqttTransport` aplica el límite de 32768 bytes y `EngineTask` conserva una ventana de 32 `id_mensaje`, evita repetir efectos y vuelve a publicar las respuestas almacenadas.
 
 ## Reconexión, duplicados y orden
 

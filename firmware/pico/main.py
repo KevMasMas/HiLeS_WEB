@@ -1,7 +1,7 @@
 """Punto de composición del firmware HiLeS.
 
-Los módulos de MQTT, dispositivos y motor se conectarán aquí mediante fábricas;
-la lógica de cada componente permanece fuera de este archivo.
+Conecta scheduler, bus interno, LED, motor HiLeS y transporte MQTT sin mover
+la lógica de negocio fuera de sus módulos especializados.
 """
 
 try:
@@ -40,6 +40,7 @@ def build_default_application(config=None, clock=None, machine_module=None,
 
     try:
         from devices.led_task import APAGADO, LedTask
+        from hiles.engine_task import EngineTask
         from platform.hardware import create_led_output
         from platform.mqtt_client import create_mqtt_client
         from platform.wifi import WifiConnection
@@ -48,6 +49,7 @@ def build_default_application(config=None, clock=None, machine_module=None,
         from pubsub.topics import ERROR, LED_COMANDO, LED_ESTADO
     except ImportError:  # Permite construir la aplicación desde las pruebas de escritorio.
         from .devices.led_task import APAGADO, LedTask
+        from .hiles.engine_task import EngineTask
         from .platform.hardware import create_led_output
         from .platform.mqtt_client import create_mqtt_client
         from .platform.wifi import WifiConnection
@@ -69,6 +71,12 @@ def build_default_application(config=None, clock=None, machine_module=None,
         node.publish(LED_ESTADO, payload)
 
     led_task = LedTask(scheduler, led_output, on_state_change=publish_led_state)
+    engine_task = EngineTask(
+        scheduler,
+        node,
+        period_ms=getattr(config, "ENGINE_PERIOD_MS", 20),
+        step_interval_ms=getattr(config, "ENGINE_STEP_INTERVAL_MS", 1000),
+    )
 
     def handle_led_command(payload):
         try:
@@ -120,6 +128,7 @@ def build_default_application(config=None, clock=None, machine_module=None,
         "node": node,
         "wifi": wifi,
         "led": led_task,
+        "engine": engine_task,
         "led_command_handle": led_command_handle,
         "mqtt": mqtt_transport,
     }
@@ -127,11 +136,16 @@ def build_default_application(config=None, clock=None, machine_module=None,
 
 
 def main(task_factories=None):
+    print("[HiLeS] Construyendo runtime cooperativo...")
     scheduler = (
         build_default_application()
         if task_factories is None
         else build_application(task_factories=task_factories)
     )
+    print("[HiLeS] Tareas activas: {}".format(
+        ", ".join(task.name for task in scheduler.tasks)
+    ))
+    print("[HiLeS] Esperando Wi-Fi y MQTT; el scheduler sigue atendiendo tareas.")
     scheduler.run_forever()
 
 

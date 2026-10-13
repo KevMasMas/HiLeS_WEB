@@ -1,33 +1,34 @@
 {
   "schemaVersion": 2,
   "metadata": {
-    "savedAt": "2026-10-09T19:00:00-05:00",
-    "description": "Cuatro instancias independientes de un semáforo inteligente."
+    "savedAt": "2026-10-12T18:45:00-05:00",
+    "description": "Cruce coordinado Norte–Sur / Este–Oeste con transiciones atómicas y estado inicial todo rojo."
   },
   "network": {
     "topology": null,
     "protocol": null,
     "nodes": [
-      "sem1-block",
-      "sem2-block",
-      "sem3-block",
-      "sem4-block"
+      "norte-block",
+      "sur-block",
+      "este-block",
+      "oeste-block",
+      "control-block"
     ]
   },
   "allElements": [
     {
-      "id": "sem1-block",
+      "id": "norte-block",
       "type": "STRUCTURAL_BLOCK",
-      "name": "Semáforo inteligente 1",
+      "name": "Semáforo Norte",
       "layout": {
         "x": 80,
         "y": 80,
-        "width": 760,
-        "height": 420
+        "width": 720,
+        "height": 360
       },
       "ports": [],
       "properties": {
-        "description": "Instancia 1: semáforo con sensor de cantidad de carros.",
+        "description": "Semáforo del sentido Norte, coordinado por una única red de Petri.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -44,1054 +45,17 @@
       }
     },
     {
-      "id": "sem1-sensor",
-      "type": "SERVICE",
-      "name": "Sensor carros S1",
-      "parentId": "sem1-block",
-      "layout": {
-        "x": 35,
-        "y": 185
-      },
-      "ports": [
-        {
-          "id": "sem1-sensor-out",
-          "name": "carros",
-          "direction": "output",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cantidad de carros detectados al frente.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem1-fb-verde",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Dar verde (≥ 6)",
-      "parentId": "sem1-block",
-      "layout": {
-        "x": 180,
-        "y": 50
-      },
-      "ports": [
-        {
-          "id": "sem1-verde-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem1-verde-out",
-          "name": "activar_verde",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a verde.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros >= 6",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem1-fb-amarillo",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Dar amarillo (< 6)",
-      "parentId": "sem1-block",
-      "layout": {
-        "x": 180,
-        "y": 175
-      },
-      "ports": [
-        {
-          "id": "sem1-amarillo-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem1-amarillo-out",
-          "name": "activar_amarillo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a amarillo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros < 6",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem1-fb-rojo",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Volver a rojo (= 0)",
-      "parentId": "sem1-block",
-      "layout": {
-        "x": 180,
-        "y": 300
-      },
-      "ports": [
-        {
-          "id": "sem1-rojo-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem1-rojo-out",
-          "name": "activar_rojo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a rojo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros === 0",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem1-rojo",
+      "id": "norte-rojo",
       "type": "PLACE",
       "name": "🔴 Rojo",
-      "parentId": "sem1-block",
-      "layout": {
-        "x": 390,
-        "y": 60
-      },
-      "ports": [],
-      "properties": {
-        "description": "Estado rojo del semáforo 1.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 1,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem1-verde",
-      "type": "PLACE",
-      "name": "🟢 Verde",
-      "parentId": "sem1-block",
-      "layout": {
-        "x": 620,
-        "y": 60
-      },
-      "ports": [],
-      "properties": {
-        "description": "Estado verde del semáforo 1.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem1-amarillo",
-      "type": "PLACE",
-      "name": "🟡 Amarillo",
-      "parentId": "sem1-block",
-      "layout": {
-        "x": 620,
-        "y": 300
-      },
-      "ports": [],
-      "properties": {
-        "description": "Estado amarillo del semáforo 1.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem1-t-verde",
-      "type": "TRANSITION",
-      "name": "T · Encender verde",
-      "parentId": "sem1-block",
-      "layout": {
-        "x": 505,
-        "y": 60
-      },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cambio al estado verde.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "carros >= 6",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem1-t-amarillo",
-      "type": "TRANSITION",
-      "name": "T · Encender amarillo",
-      "parentId": "sem1-block",
-      "layout": {
-        "x": 620,
-        "y": 185
-      },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cambio al estado amarillo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "carros < 6",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem1-t-rojo",
-      "type": "TRANSITION",
-      "name": "T · Encender rojo",
-      "parentId": "sem1-block",
-      "layout": {
-        "x": 505,
-        "y": 300
-      },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cambio al estado rojo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "carros === 0",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem2-block",
-      "type": "STRUCTURAL_BLOCK",
-      "name": "Semáforo inteligente 2",
-      "layout": {
-        "x": 920,
-        "y": 80,
-        "width": 760,
-        "height": 420
-      },
-      "ports": [],
-      "properties": {
-        "description": "Instancia 2: semáforo con sensor de cantidad de carros.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem2-sensor",
-      "type": "SERVICE",
-      "name": "Sensor carros S2",
-      "parentId": "sem2-block",
-      "layout": {
-        "x": 35,
-        "y": 185
-      },
-      "ports": [
-        {
-          "id": "sem2-sensor-out",
-          "name": "carros",
-          "direction": "output",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cantidad de carros detectados al frente.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem2-fb-verde",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Dar verde (≥ 6)",
-      "parentId": "sem2-block",
-      "layout": {
-        "x": 180,
-        "y": 50
-      },
-      "ports": [
-        {
-          "id": "sem2-verde-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem2-verde-out",
-          "name": "activar_verde",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a verde.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros >= 6",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem2-fb-amarillo",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Dar amarillo (< 6)",
-      "parentId": "sem2-block",
-      "layout": {
-        "x": 180,
-        "y": 175
-      },
-      "ports": [
-        {
-          "id": "sem2-amarillo-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem2-amarillo-out",
-          "name": "activar_amarillo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a amarillo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros < 6",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem2-fb-rojo",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Volver a rojo (= 0)",
-      "parentId": "sem2-block",
-      "layout": {
-        "x": 180,
-        "y": 300
-      },
-      "ports": [
-        {
-          "id": "sem2-rojo-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem2-rojo-out",
-          "name": "activar_rojo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a rojo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros === 0",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem2-rojo",
-      "type": "PLACE",
-      "name": "🔴 Rojo",
-      "parentId": "sem2-block",
-      "layout": {
-        "x": 390,
-        "y": 60
-      },
-      "ports": [],
-      "properties": {
-        "description": "Estado rojo del semáforo 2.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 1,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem2-verde",
-      "type": "PLACE",
-      "name": "🟢 Verde",
-      "parentId": "sem2-block",
-      "layout": {
-        "x": 620,
-        "y": 60
-      },
-      "ports": [],
-      "properties": {
-        "description": "Estado verde del semáforo 2.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem2-amarillo",
-      "type": "PLACE",
-      "name": "🟡 Amarillo",
-      "parentId": "sem2-block",
-      "layout": {
-        "x": 620,
-        "y": 300
-      },
-      "ports": [],
-      "properties": {
-        "description": "Estado amarillo del semáforo 2.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem2-t-verde",
-      "type": "TRANSITION",
-      "name": "T · Encender verde",
-      "parentId": "sem2-block",
-      "layout": {
-        "x": 505,
-        "y": 60
-      },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cambio al estado verde.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "carros >= 6",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem2-t-amarillo",
-      "type": "TRANSITION",
-      "name": "T · Encender amarillo",
-      "parentId": "sem2-block",
-      "layout": {
-        "x": 620,
-        "y": 185
-      },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cambio al estado amarillo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "carros < 6",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem2-t-rojo",
-      "type": "TRANSITION",
-      "name": "T · Encender rojo",
-      "parentId": "sem2-block",
-      "layout": {
-        "x": 505,
-        "y": 300
-      },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cambio al estado rojo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "carros === 0",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem3-block",
-      "type": "STRUCTURAL_BLOCK",
-      "name": "Semáforo inteligente 3",
+      "parentId": "norte-block",
       "layout": {
         "x": 80,
-        "y": 580,
-        "width": 760,
-        "height": 420
+        "y": 105
       },
       "ports": [],
       "properties": {
-        "description": "Instancia 3: semáforo con sensor de cantidad de carros.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem3-sensor",
-      "type": "SERVICE",
-      "name": "Sensor carros S3",
-      "parentId": "sem3-block",
-      "layout": {
-        "x": 35,
-        "y": 185
-      },
-      "ports": [
-        {
-          "id": "sem3-sensor-out",
-          "name": "carros",
-          "direction": "output",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cantidad de carros detectados al frente.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem3-fb-verde",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Dar verde (≥ 6)",
-      "parentId": "sem3-block",
-      "layout": {
-        "x": 180,
-        "y": 50
-      },
-      "ports": [
-        {
-          "id": "sem3-verde-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem3-verde-out",
-          "name": "activar_verde",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a verde.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros >= 6",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem3-fb-amarillo",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Dar amarillo (< 6)",
-      "parentId": "sem3-block",
-      "layout": {
-        "x": 180,
-        "y": 175
-      },
-      "ports": [
-        {
-          "id": "sem3-amarillo-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem3-amarillo-out",
-          "name": "activar_amarillo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a amarillo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros < 6",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem3-fb-rojo",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Volver a rojo (= 0)",
-      "parentId": "sem3-block",
-      "layout": {
-        "x": 180,
-        "y": 300
-      },
-      "ports": [
-        {
-          "id": "sem3-rojo-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem3-rojo-out",
-          "name": "activar_rojo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a rojo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros === 0",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem3-rojo",
-      "type": "PLACE",
-      "name": "🔴 Rojo",
-      "parentId": "sem3-block",
-      "layout": {
-        "x": 390,
-        "y": 60
-      },
-      "ports": [],
-      "properties": {
-        "description": "Estado rojo del semáforo 3.",
+        "description": "Estado rojo del sentido Norte.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -1108,44 +72,17 @@
       }
     },
     {
-      "id": "sem3-verde",
-      "type": "PLACE",
-      "name": "🟢 Verde",
-      "parentId": "sem3-block",
-      "layout": {
-        "x": 620,
-        "y": 60
-      },
-      "ports": [],
-      "properties": {
-        "description": "Estado verde del semáforo 3.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem3-amarillo",
+      "id": "norte-amarillo",
       "type": "PLACE",
       "name": "🟡 Amarillo",
-      "parentId": "sem3-block",
+      "parentId": "norte-block",
       "layout": {
-        "x": 620,
-        "y": 300
+        "x": 290,
+        "y": 105
       },
       "ports": [],
       "properties": {
-        "description": "Estado amarillo del semáforo 3.",
+        "description": "Estado amarillo del sentido Norte.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -1162,36 +99,17 @@
       }
     },
     {
-      "id": "sem3-t-verde",
-      "type": "TRANSITION",
-      "name": "T · Encender verde",
-      "parentId": "sem3-block",
+      "id": "norte-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "norte-block",
       "layout": {
-        "x": 505,
-        "y": 60
+        "x": 500,
+        "y": 105
       },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
+      "ports": [],
       "properties": {
-        "description": "Cambio al estado verde.",
+        "description": "Estado verde del sentido Norte.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -1201,117 +119,25 @@
         "tokens": 0,
         "maxTokens": 1,
         "delay": 0,
-        "condition": "carros >= 6",
+        "condition": "",
         "heldValue": "",
         "operatorDirection": "right",
         "rotation": 0
       }
     },
     {
-      "id": "sem3-t-amarillo",
-      "type": "TRANSITION",
-      "name": "T · Encender amarillo",
-      "parentId": "sem3-block",
-      "layout": {
-        "x": 620,
-        "y": 185
-      },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cambio al estado amarillo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "carros < 6",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem3-t-rojo",
-      "type": "TRANSITION",
-      "name": "T · Encender rojo",
-      "parentId": "sem3-block",
-      "layout": {
-        "x": 505,
-        "y": 300
-      },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cambio al estado rojo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "carros === 0",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem4-block",
+      "id": "sur-block",
       "type": "STRUCTURAL_BLOCK",
-      "name": "Semáforo inteligente 4",
+      "name": "Semáforo Sur",
       "layout": {
-        "x": 920,
-        "y": 580,
-        "width": 760,
-        "height": 420
+        "x": 900,
+        "y": 80,
+        "width": 720,
+        "height": 360
       },
       "ports": [],
       "properties": {
-        "description": "Instancia 4: semáforo con sensor de cantidad de carros.",
+        "description": "Semáforo del sentido Sur, coordinado por una única red de Petri.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -1328,198 +154,17 @@
       }
     },
     {
-      "id": "sem4-sensor",
-      "type": "SERVICE",
-      "name": "Sensor carros S4",
-      "parentId": "sem4-block",
-      "layout": {
-        "x": 35,
-        "y": 185
-      },
-      "ports": [
-        {
-          "id": "sem4-sensor-out",
-          "name": "carros",
-          "direction": "output",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Cantidad de carros detectados al frente.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem4-fb-verde",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Dar verde (≥ 6)",
-      "parentId": "sem4-block",
-      "layout": {
-        "x": 180,
-        "y": 50
-      },
-      "ports": [
-        {
-          "id": "sem4-verde-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem4-verde-out",
-          "name": "activar_verde",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a verde.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros >= 6",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem4-fb-amarillo",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Dar amarillo (< 6)",
-      "parentId": "sem4-block",
-      "layout": {
-        "x": 180,
-        "y": 175
-      },
-      "ports": [
-        {
-          "id": "sem4-amarillo-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem4-amarillo-out",
-          "name": "activar_amarillo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a amarillo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros < 6",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem4-fb-rojo",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Volver a rojo (= 0)",
-      "parentId": "sem4-block",
-      "layout": {
-        "x": 180,
-        "y": 300
-      },
-      "ports": [
-        {
-          "id": "sem4-rojo-in",
-          "name": "carros",
-          "direction": "input",
-          "dataType": "real",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.5
-        },
-        {
-          "id": "sem4-rojo-out",
-          "name": "activar_rojo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Condición del cambio a rojo.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "carros === 0",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0,
-        "code": "",
-        "codeLanguage": "javascript"
-      }
-    },
-    {
-      "id": "sem4-rojo",
+      "id": "sur-rojo",
       "type": "PLACE",
       "name": "🔴 Rojo",
-      "parentId": "sem4-block",
+      "parentId": "sur-block",
       "layout": {
-        "x": 390,
-        "y": 60
+        "x": 80,
+        "y": 105
       },
       "ports": [],
       "properties": {
-        "description": "Estado rojo del semáforo 4.",
+        "description": "Estado rojo del sentido Sur.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -1536,44 +181,17 @@
       }
     },
     {
-      "id": "sem4-verde",
-      "type": "PLACE",
-      "name": "🟢 Verde",
-      "parentId": "sem4-block",
-      "layout": {
-        "x": 620,
-        "y": 60
-      },
-      "ports": [],
-      "properties": {
-        "description": "Estado verde del semáforo 4.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "sem4-amarillo",
+      "id": "sur-amarillo",
       "type": "PLACE",
       "name": "🟡 Amarillo",
-      "parentId": "sem4-block",
+      "parentId": "sur-block",
       "layout": {
-        "x": 620,
-        "y": 300
+        "x": 290,
+        "y": 105
       },
       "ports": [],
       "properties": {
-        "description": "Estado amarillo del semáforo 4.",
+        "description": "Estado amarillo del sentido Sur.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -1590,36 +208,17 @@
       }
     },
     {
-      "id": "sem4-t-verde",
-      "type": "TRANSITION",
-      "name": "T · Encender verde",
-      "parentId": "sem4-block",
+      "id": "sur-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "sur-block",
       "layout": {
-        "x": 505,
-        "y": 60
+        "x": 500,
+        "y": 105
       },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
+      "ports": [],
       "properties": {
-        "description": "Cambio al estado verde.",
+        "description": "Estado verde del sentido Sur.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -1629,43 +228,25 @@
         "tokens": 0,
         "maxTokens": 1,
         "delay": 0,
-        "condition": "carros >= 6",
+        "condition": "",
         "heldValue": "",
         "operatorDirection": "right",
         "rotation": 0
       }
     },
     {
-      "id": "sem4-t-amarillo",
-      "type": "TRANSITION",
-      "name": "T · Encender amarillo",
-      "parentId": "sem4-block",
+      "id": "este-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo Este",
       "layout": {
-        "x": 620,
-        "y": 185
+        "x": 80,
+        "y": 560,
+        "width": 720,
+        "height": 360
       },
-      "ports": [
-        {
-          "id": "transition-condition-in",
-          "name": "Condición",
-          "direction": "input",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "top",
-          "offset": 0.5
-        },
-        {
-          "id": "transition-action-out",
-          "name": "Acción",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
+      "ports": [],
       "properties": {
-        "description": "Cambio al estado amarillo.",
+        "description": "Semáforo del sentido Este, coordinado por una única red de Petri.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -1675,20 +256,275 @@
         "tokens": 0,
         "maxTokens": 1,
         "delay": 0,
-        "condition": "carros < 6",
+        "condition": "",
         "heldValue": "",
         "operatorDirection": "right",
         "rotation": 0
       }
     },
     {
-      "id": "sem4-t-rojo",
-      "type": "TRANSITION",
-      "name": "T · Encender rojo",
-      "parentId": "sem4-block",
+      "id": "este-rojo",
+      "type": "PLACE",
+      "name": "🔴 Rojo",
+      "parentId": "este-block",
       "layout": {
-        "x": 505,
-        "y": 300
+        "x": 80,
+        "y": 105
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado rojo del sentido Este.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-amarillo",
+      "type": "PLACE",
+      "name": "🟡 Amarillo",
+      "parentId": "este-block",
+      "layout": {
+        "x": 290,
+        "y": 105
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado amarillo del sentido Este.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "este-block",
+      "layout": {
+        "x": 500,
+        "y": 105
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado verde del sentido Este.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo Oeste",
+      "layout": {
+        "x": 900,
+        "y": 560,
+        "width": 720,
+        "height": 360
+      },
+      "ports": [],
+      "properties": {
+        "description": "Semáforo del sentido Oeste, coordinado por una única red de Petri.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-rojo",
+      "type": "PLACE",
+      "name": "🔴 Rojo",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 80,
+        "y": 105
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado rojo del sentido Oeste.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-amarillo",
+      "type": "PLACE",
+      "name": "🟡 Amarillo",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 290,
+        "y": 105
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado amarillo del sentido Oeste.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 500,
+        "y": 105
+      },
+      "ports": [],
+      "properties": {
+        "description": "Estado verde del sentido Oeste.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "control-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Controlador coordinado",
+      "layout": {
+        "x": 400,
+        "y": 1020,
+        "width": 1120,
+        "height": 430
+      },
+      "ports": [],
+      "properties": {
+        "description": "Control común: nunca habilita verde Norte–Sur y Este–Oeste al mismo tiempo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "ciclo-habilitado",
+      "type": "SERVICE",
+      "name": "Habilitar ciclo",
+      "parentId": "control-block",
+      "layout": {
+        "x": 45,
+        "y": 155
+      },
+      "ports": [
+        {
+          "id": "ciclo-out",
+          "name": "habilitado",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Entrada controlada: true permite avanzar una fase por cada paso.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "fase-ns-verde",
+      "type": "TRANSITION",
+      "name": "NS verde / EO rojo",
+      "parentId": "control-block",
+      "layout": {
+        "x": 245,
+        "y": 145
       },
       "ports": [
         {
@@ -1711,7 +547,7 @@
         }
       ],
       "properties": {
-        "description": "Cambio al estado rojo.",
+        "description": "Cambio atómico a la fase NS verde / EO rojo.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -1721,7 +557,191 @@
         "tokens": 0,
         "maxTokens": 1,
         "delay": 0,
-        "condition": "carros === 0",
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "fase-ns-amarillo",
+      "type": "TRANSITION",
+      "name": "NS amarillo / EO rojo",
+      "parentId": "control-block",
+      "layout": {
+        "x": 410,
+        "y": 145
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio atómico a la fase NS amarillo / EO rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "fase-eo-verde",
+      "type": "TRANSITION",
+      "name": "NS rojo / EO verde",
+      "parentId": "control-block",
+      "layout": {
+        "x": 575,
+        "y": 145
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio atómico a la fase NS rojo / EO verde.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "fase-eo-amarillo",
+      "type": "TRANSITION",
+      "name": "NS rojo / EO amarillo",
+      "parentId": "control-block",
+      "layout": {
+        "x": 740,
+        "y": 145
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio atómico a la fase NS rojo / EO amarillo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "fase-todo-rojo",
+      "type": "TRANSITION",
+      "name": "Retorno seguro: todo rojo",
+      "parentId": "control-block",
+      "layout": {
+        "x": 905,
+        "y": 145
+      },
+      "ports": [
+        {
+          "id": "transition-condition-in",
+          "name": "Condición",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "transition-action-out",
+          "name": "Acción",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Cambio atómico a la fase Retorno seguro: todo rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
         "heldValue": "",
         "operatorDirection": "right",
         "rotation": 0
@@ -1730,92 +750,56 @@
   ],
   "relationNode": [
     {
-      "nodeId": "sem1-block",
+      "nodeId": "norte-block",
       "elementIds": [
-        "sem1-sensor",
-        "sem1-fb-verde",
-        "sem1-fb-amarillo",
-        "sem1-fb-rojo",
-        "sem1-rojo",
-        "sem1-t-verde",
-        "sem1-verde",
-        "sem1-t-amarillo",
-        "sem1-amarillo",
-        "sem1-t-rojo"
+        "norte-rojo",
+        "norte-amarillo",
+        "norte-verde"
       ]
     },
     {
-      "nodeId": "sem2-block",
+      "nodeId": "sur-block",
       "elementIds": [
-        "sem2-sensor",
-        "sem2-fb-verde",
-        "sem2-fb-amarillo",
-        "sem2-fb-rojo",
-        "sem2-rojo",
-        "sem2-t-verde",
-        "sem2-verde",
-        "sem2-t-amarillo",
-        "sem2-amarillo",
-        "sem2-t-rojo"
+        "sur-rojo",
+        "sur-amarillo",
+        "sur-verde"
       ]
     },
     {
-      "nodeId": "sem3-block",
+      "nodeId": "este-block",
       "elementIds": [
-        "sem3-sensor",
-        "sem3-fb-verde",
-        "sem3-fb-amarillo",
-        "sem3-fb-rojo",
-        "sem3-rojo",
-        "sem3-t-verde",
-        "sem3-verde",
-        "sem3-t-amarillo",
-        "sem3-amarillo",
-        "sem3-t-rojo"
+        "este-rojo",
+        "este-amarillo",
+        "este-verde"
       ]
     },
     {
-      "nodeId": "sem4-block",
+      "nodeId": "oeste-block",
       "elementIds": [
-        "sem4-sensor",
-        "sem4-fb-verde",
-        "sem4-fb-amarillo",
-        "sem4-fb-rojo",
-        "sem4-rojo",
-        "sem4-t-verde",
-        "sem4-verde",
-        "sem4-t-amarillo",
-        "sem4-amarillo",
-        "sem4-t-rojo"
+        "oeste-rojo",
+        "oeste-amarillo",
+        "oeste-verde"
+      ]
+    },
+    {
+      "nodeId": "control-block",
+      "elementIds": [
+        "ciclo-habilitado",
+        "fase-ns-verde",
+        "fase-ns-amarillo",
+        "fase-eo-verde",
+        "fase-eo-amarillo",
+        "fase-todo-rojo"
       ]
     }
   ],
   "connections": [
     {
-      "id": "sem1-cch-1",
-      "source": "sem1-sensor",
-      "sourceHandle": "sem1-sensor-out",
-      "target": "sem1-fb-verde",
-      "targetHandle": "sem1-verde-in",
-      "label": "CCH1",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem1-cch-2",
-      "source": "sem1-fb-verde",
-      "sourceHandle": "sem1-verde-out",
-      "target": "sem1-t-verde",
+      "id": "dato-fase-ns-verde",
+      "source": "ciclo-habilitado",
+      "sourceHandle": "ciclo-out",
+      "target": "fase-ns-verde",
       "targetHandle": "transition-condition-in",
-      "label": "CCH2",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
@@ -1823,35 +807,15 @@
         "dataType": "boolean",
         "delay": 0,
         "weight": 1,
-        "propagationMode": "push",
         "waypoints": []
       }
     },
     {
-      "id": "sem1-cch-3",
-      "source": "sem1-sensor",
-      "sourceHandle": "sem1-sensor-out",
-      "target": "sem1-fb-amarillo",
-      "targetHandle": "sem1-amarillo-in",
-      "label": "CCH3",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem1-cch-4",
-      "source": "sem1-fb-amarillo",
-      "sourceHandle": "sem1-amarillo-out",
-      "target": "sem1-t-amarillo",
+      "id": "dato-fase-ns-amarillo",
+      "source": "ciclo-habilitado",
+      "sourceHandle": "ciclo-out",
+      "target": "fase-ns-amarillo",
       "targetHandle": "transition-condition-in",
-      "label": "CCH4",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
@@ -1859,35 +823,15 @@
         "dataType": "boolean",
         "delay": 0,
         "weight": 1,
-        "propagationMode": "push",
         "waypoints": []
       }
     },
     {
-      "id": "sem1-cch-5",
-      "source": "sem1-sensor",
-      "sourceHandle": "sem1-sensor-out",
-      "target": "sem1-fb-rojo",
-      "targetHandle": "sem1-rojo-in",
-      "label": "CCH5",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem1-cch-6",
-      "source": "sem1-fb-rojo",
-      "sourceHandle": "sem1-rojo-out",
-      "target": "sem1-t-rojo",
+      "id": "dato-fase-eo-verde",
+      "source": "ciclo-habilitado",
+      "sourceHandle": "ciclo-out",
+      "target": "fase-eo-verde",
       "targetHandle": "transition-condition-in",
-      "label": "CCH6",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
@@ -1895,137 +839,15 @@
         "dataType": "boolean",
         "delay": 0,
         "weight": 1,
-        "propagationMode": "push",
         "waypoints": []
       }
     },
     {
-      "id": "sem1-lch-1",
-      "source": "sem1-rojo",
-      "sourceHandle": "petri-out",
-      "target": "sem1-t-verde",
-      "targetHandle": "petri-in",
-      "label": "LCH1",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "PETRI",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem1-lch-2",
-      "source": "sem1-t-verde",
-      "sourceHandle": "petri-out",
-      "target": "sem1-verde",
-      "targetHandle": "petri-in",
-      "label": "LCH2",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "PETRI",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem1-lch-3",
-      "source": "sem1-verde",
-      "sourceHandle": "petri-out",
-      "target": "sem1-t-amarillo",
-      "targetHandle": "petri-in",
-      "label": "LCH3",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "PETRI",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem1-lch-4",
-      "source": "sem1-t-amarillo",
-      "sourceHandle": "petri-out",
-      "target": "sem1-amarillo",
-      "targetHandle": "petri-in",
-      "label": "LCH4",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "PETRI",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem1-lch-5",
-      "source": "sem1-amarillo",
-      "sourceHandle": "petri-out",
-      "target": "sem1-t-rojo",
-      "targetHandle": "petri-in",
-      "label": "LCH5",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "PETRI",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem1-lch-6",
-      "source": "sem1-t-rojo",
-      "sourceHandle": "petri-out",
-      "target": "sem1-rojo",
-      "targetHandle": "petri-in",
-      "label": "LCH6",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "PETRI",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem2-cch-7",
-      "source": "sem2-sensor",
-      "sourceHandle": "sem2-sensor-out",
-      "target": "sem2-fb-verde",
-      "targetHandle": "sem2-verde-in",
-      "label": "CCH7",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem2-cch-8",
-      "source": "sem2-fb-verde",
-      "sourceHandle": "sem2-verde-out",
-      "target": "sem2-t-verde",
+      "id": "dato-fase-eo-amarillo",
+      "source": "ciclo-habilitado",
+      "sourceHandle": "ciclo-out",
+      "target": "fase-eo-amarillo",
       "targetHandle": "transition-condition-in",
-      "label": "CCH8",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
@@ -2033,35 +855,15 @@
         "dataType": "boolean",
         "delay": 0,
         "weight": 1,
-        "propagationMode": "push",
         "waypoints": []
       }
     },
     {
-      "id": "sem2-cch-9",
-      "source": "sem2-sensor",
-      "sourceHandle": "sem2-sensor-out",
-      "target": "sem2-fb-amarillo",
-      "targetHandle": "sem2-amarillo-in",
-      "label": "CCH9",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem2-cch-10",
-      "source": "sem2-fb-amarillo",
-      "sourceHandle": "sem2-amarillo-out",
-      "target": "sem2-t-amarillo",
+      "id": "dato-fase-todo-rojo",
+      "source": "ciclo-habilitado",
+      "sourceHandle": "ciclo-out",
+      "target": "fase-todo-rojo",
       "targetHandle": "transition-condition-in",
-      "label": "CCH10",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
@@ -2069,53 +871,15 @@
         "dataType": "boolean",
         "delay": 0,
         "weight": 1,
-        "propagationMode": "push",
         "waypoints": []
       }
     },
     {
-      "id": "sem2-cch-11",
-      "source": "sem2-sensor",
-      "sourceHandle": "sem2-sensor-out",
-      "target": "sem2-fb-rojo",
-      "targetHandle": "sem2-rojo-in",
-      "label": "CCH11",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem2-cch-12",
-      "source": "sem2-fb-rojo",
-      "sourceHandle": "sem2-rojo-out",
-      "target": "sem2-t-rojo",
-      "targetHandle": "transition-condition-in",
-      "label": "CCH12",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem2-lch-7",
-      "source": "sem2-rojo",
+      "id": "arco-fase-ns-verde-norte-in",
+      "source": "norte-rojo",
       "sourceHandle": "petri-out",
-      "target": "sem2-t-verde",
+      "target": "fase-ns-verde",
       "targetHandle": "petri-in",
-      "label": "LCH7",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2127,12 +891,11 @@
       }
     },
     {
-      "id": "sem2-lch-8",
-      "source": "sem2-t-verde",
+      "id": "arco-fase-ns-verde-norte-out",
+      "source": "fase-ns-verde",
       "sourceHandle": "petri-out",
-      "target": "sem2-verde",
+      "target": "norte-verde",
       "targetHandle": "petri-in",
-      "label": "LCH8",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2144,12 +907,11 @@
       }
     },
     {
-      "id": "sem2-lch-9",
-      "source": "sem2-verde",
+      "id": "arco-fase-ns-verde-sur-in",
+      "source": "sur-rojo",
       "sourceHandle": "petri-out",
-      "target": "sem2-t-amarillo",
+      "target": "fase-ns-verde",
       "targetHandle": "petri-in",
-      "label": "LCH9",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2161,12 +923,11 @@
       }
     },
     {
-      "id": "sem2-lch-10",
-      "source": "sem2-t-amarillo",
+      "id": "arco-fase-ns-verde-sur-out",
+      "source": "fase-ns-verde",
       "sourceHandle": "petri-out",
-      "target": "sem2-amarillo",
+      "target": "sur-verde",
       "targetHandle": "petri-in",
-      "label": "LCH10",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2178,12 +939,11 @@
       }
     },
     {
-      "id": "sem2-lch-11",
-      "source": "sem2-amarillo",
+      "id": "arco-fase-ns-verde-este-in",
+      "source": "este-rojo",
       "sourceHandle": "petri-out",
-      "target": "sem2-t-rojo",
+      "target": "fase-ns-verde",
       "targetHandle": "petri-in",
-      "label": "LCH11",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2195,12 +955,11 @@
       }
     },
     {
-      "id": "sem2-lch-12",
-      "source": "sem2-t-rojo",
+      "id": "arco-fase-ns-verde-este-out",
+      "source": "fase-ns-verde",
       "sourceHandle": "petri-out",
-      "target": "sem2-rojo",
+      "target": "este-rojo",
       "targetHandle": "petri-in",
-      "label": "LCH12",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2212,120 +971,11 @@
       }
     },
     {
-      "id": "sem3-cch-13",
-      "source": "sem3-sensor",
-      "sourceHandle": "sem3-sensor-out",
-      "target": "sem3-fb-verde",
-      "targetHandle": "sem3-verde-in",
-      "label": "CCH13",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem3-cch-14",
-      "source": "sem3-fb-verde",
-      "sourceHandle": "sem3-verde-out",
-      "target": "sem3-t-verde",
-      "targetHandle": "transition-condition-in",
-      "label": "CCH14",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem3-cch-15",
-      "source": "sem3-sensor",
-      "sourceHandle": "sem3-sensor-out",
-      "target": "sem3-fb-amarillo",
-      "targetHandle": "sem3-amarillo-in",
-      "label": "CCH15",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem3-cch-16",
-      "source": "sem3-fb-amarillo",
-      "sourceHandle": "sem3-amarillo-out",
-      "target": "sem3-t-amarillo",
-      "targetHandle": "transition-condition-in",
-      "label": "CCH16",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem3-cch-17",
-      "source": "sem3-sensor",
-      "sourceHandle": "sem3-sensor-out",
-      "target": "sem3-fb-rojo",
-      "targetHandle": "sem3-rojo-in",
-      "label": "CCH17",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem3-cch-18",
-      "source": "sem3-fb-rojo",
-      "sourceHandle": "sem3-rojo-out",
-      "target": "sem3-t-rojo",
-      "targetHandle": "transition-condition-in",
-      "label": "CCH18",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem3-lch-13",
-      "source": "sem3-rojo",
+      "id": "arco-fase-ns-verde-oeste-in",
+      "source": "oeste-rojo",
       "sourceHandle": "petri-out",
-      "target": "sem3-t-verde",
+      "target": "fase-ns-verde",
       "targetHandle": "petri-in",
-      "label": "LCH13",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2337,12 +987,11 @@
       }
     },
     {
-      "id": "sem3-lch-14",
-      "source": "sem3-t-verde",
+      "id": "arco-fase-ns-verde-oeste-out",
+      "source": "fase-ns-verde",
       "sourceHandle": "petri-out",
-      "target": "sem3-verde",
+      "target": "oeste-rojo",
       "targetHandle": "petri-in",
-      "label": "LCH14",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2354,12 +1003,11 @@
       }
     },
     {
-      "id": "sem3-lch-15",
-      "source": "sem3-verde",
+      "id": "arco-fase-ns-amarillo-norte-in",
+      "source": "norte-verde",
       "sourceHandle": "petri-out",
-      "target": "sem3-t-amarillo",
+      "target": "fase-ns-amarillo",
       "targetHandle": "petri-in",
-      "label": "LCH15",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2371,12 +1019,11 @@
       }
     },
     {
-      "id": "sem3-lch-16",
-      "source": "sem3-t-amarillo",
+      "id": "arco-fase-ns-amarillo-norte-out",
+      "source": "fase-ns-amarillo",
       "sourceHandle": "petri-out",
-      "target": "sem3-amarillo",
+      "target": "norte-amarillo",
       "targetHandle": "petri-in",
-      "label": "LCH16",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2388,12 +1035,11 @@
       }
     },
     {
-      "id": "sem3-lch-17",
-      "source": "sem3-amarillo",
+      "id": "arco-fase-ns-amarillo-sur-in",
+      "source": "sur-verde",
       "sourceHandle": "petri-out",
-      "target": "sem3-t-rojo",
+      "target": "fase-ns-amarillo",
       "targetHandle": "petri-in",
-      "label": "LCH17",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2405,12 +1051,11 @@
       }
     },
     {
-      "id": "sem3-lch-18",
-      "source": "sem3-t-rojo",
+      "id": "arco-fase-ns-amarillo-sur-out",
+      "source": "fase-ns-amarillo",
       "sourceHandle": "petri-out",
-      "target": "sem3-rojo",
+      "target": "sur-amarillo",
       "targetHandle": "petri-in",
-      "label": "LCH18",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2422,120 +1067,11 @@
       }
     },
     {
-      "id": "sem4-cch-19",
-      "source": "sem4-sensor",
-      "sourceHandle": "sem4-sensor-out",
-      "target": "sem4-fb-verde",
-      "targetHandle": "sem4-verde-in",
-      "label": "CCH19",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem4-cch-20",
-      "source": "sem4-fb-verde",
-      "sourceHandle": "sem4-verde-out",
-      "target": "sem4-t-verde",
-      "targetHandle": "transition-condition-in",
-      "label": "CCH20",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem4-cch-21",
-      "source": "sem4-sensor",
-      "sourceHandle": "sem4-sensor-out",
-      "target": "sem4-fb-amarillo",
-      "targetHandle": "sem4-amarillo-in",
-      "label": "CCH21",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem4-cch-22",
-      "source": "sem4-fb-amarillo",
-      "sourceHandle": "sem4-amarillo-out",
-      "target": "sem4-t-amarillo",
-      "targetHandle": "transition-condition-in",
-      "label": "CCH22",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem4-cch-23",
-      "source": "sem4-sensor",
-      "sourceHandle": "sem4-sensor-out",
-      "target": "sem4-fb-rojo",
-      "targetHandle": "sem4-rojo-in",
-      "label": "CCH23",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "real",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem4-cch-24",
-      "source": "sem4-fb-rojo",
-      "sourceHandle": "sem4-rojo-out",
-      "target": "sem4-t-rojo",
-      "targetHandle": "transition-condition-in",
-      "label": "CCH24",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "boolean",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "sem4-lch-19",
-      "source": "sem4-rojo",
+      "id": "arco-fase-ns-amarillo-este-in",
+      "source": "este-rojo",
       "sourceHandle": "petri-out",
-      "target": "sem4-t-verde",
+      "target": "fase-ns-amarillo",
       "targetHandle": "petri-in",
-      "label": "LCH19",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2547,12 +1083,11 @@
       }
     },
     {
-      "id": "sem4-lch-20",
-      "source": "sem4-t-verde",
+      "id": "arco-fase-ns-amarillo-este-out",
+      "source": "fase-ns-amarillo",
       "sourceHandle": "petri-out",
-      "target": "sem4-verde",
+      "target": "este-rojo",
       "targetHandle": "petri-in",
-      "label": "LCH20",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2564,12 +1099,11 @@
       }
     },
     {
-      "id": "sem4-lch-21",
-      "source": "sem4-verde",
+      "id": "arco-fase-ns-amarillo-oeste-in",
+      "source": "oeste-rojo",
       "sourceHandle": "petri-out",
-      "target": "sem4-t-amarillo",
+      "target": "fase-ns-amarillo",
       "targetHandle": "petri-in",
-      "label": "LCH21",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2581,12 +1115,11 @@
       }
     },
     {
-      "id": "sem4-lch-22",
-      "source": "sem4-t-amarillo",
+      "id": "arco-fase-ns-amarillo-oeste-out",
+      "source": "fase-ns-amarillo",
       "sourceHandle": "petri-out",
-      "target": "sem4-amarillo",
+      "target": "oeste-rojo",
       "targetHandle": "petri-in",
-      "label": "LCH22",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2598,12 +1131,11 @@
       }
     },
     {
-      "id": "sem4-lch-23",
-      "source": "sem4-amarillo",
+      "id": "arco-fase-eo-verde-norte-in",
+      "source": "norte-amarillo",
       "sourceHandle": "petri-out",
-      "target": "sem4-t-rojo",
+      "target": "fase-eo-verde",
       "targetHandle": "petri-in",
-      "label": "LCH23",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",
@@ -2615,12 +1147,363 @@
       }
     },
     {
-      "id": "sem4-lch-24",
-      "source": "sem4-t-rojo",
+      "id": "arco-fase-eo-verde-norte-out",
+      "source": "fase-eo-verde",
       "sourceHandle": "petri-out",
-      "target": "sem4-rojo",
+      "target": "norte-rojo",
       "targetHandle": "petri-in",
-      "label": "LCH24",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-verde-sur-in",
+      "source": "sur-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "fase-eo-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-verde-sur-out",
+      "source": "fase-eo-verde",
+      "sourceHandle": "petri-out",
+      "target": "sur-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-verde-este-in",
+      "source": "este-rojo",
+      "sourceHandle": "petri-out",
+      "target": "fase-eo-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-verde-este-out",
+      "source": "fase-eo-verde",
+      "sourceHandle": "petri-out",
+      "target": "este-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-verde-oeste-in",
+      "source": "oeste-rojo",
+      "sourceHandle": "petri-out",
+      "target": "fase-eo-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-verde-oeste-out",
+      "source": "fase-eo-verde",
+      "sourceHandle": "petri-out",
+      "target": "oeste-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-amarillo-norte-in",
+      "source": "norte-rojo",
+      "sourceHandle": "petri-out",
+      "target": "fase-eo-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-amarillo-norte-out",
+      "source": "fase-eo-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "norte-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-amarillo-sur-in",
+      "source": "sur-rojo",
+      "sourceHandle": "petri-out",
+      "target": "fase-eo-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-amarillo-sur-out",
+      "source": "fase-eo-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sur-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-amarillo-este-in",
+      "source": "este-verde",
+      "sourceHandle": "petri-out",
+      "target": "fase-eo-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-amarillo-este-out",
+      "source": "fase-eo-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "este-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-amarillo-oeste-in",
+      "source": "oeste-verde",
+      "sourceHandle": "petri-out",
+      "target": "fase-eo-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-eo-amarillo-oeste-out",
+      "source": "fase-eo-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "oeste-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-todo-rojo-norte-in",
+      "source": "norte-rojo",
+      "sourceHandle": "petri-out",
+      "target": "fase-todo-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-todo-rojo-norte-out",
+      "source": "fase-todo-rojo",
+      "sourceHandle": "petri-out",
+      "target": "norte-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-todo-rojo-sur-in",
+      "source": "sur-rojo",
+      "sourceHandle": "petri-out",
+      "target": "fase-todo-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-todo-rojo-sur-out",
+      "source": "fase-todo-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sur-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-todo-rojo-este-in",
+      "source": "este-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "fase-todo-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-todo-rojo-este-out",
+      "source": "fase-todo-rojo",
+      "sourceHandle": "petri-out",
+      "target": "este-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-todo-rojo-oeste-in",
+      "source": "oeste-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "fase-todo-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arco-fase-todo-rojo-oeste-out",
+      "source": "fase-todo-rojo",
+      "sourceHandle": "petri-out",
+      "target": "oeste-rojo",
+      "targetHandle": "petri-in",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "PETRI",

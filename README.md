@@ -20,9 +20,12 @@ Actualmente están implementados:
 - comunicación física web → Mosquitto → Pico W → web;
 - control y confirmación del LED integrado de la Pico W;
 - reconexión básica de la web, Wi-Fi y MQTT;
-- contrato inicial para trasladar progresivamente el motor a MicroPython.
+- contrato e IR v1 compartidos entre TypeScript y MicroPython;
+- motor HiLeS MicroPython con ejecución cooperativa y deduplicación QoS 1;
+- modo remoto web que aplica las instantáneas oficiales al canvas;
+- modelo de cruce coordinado Norte–Sur / Este–Oeste.
 
-La Pico **todavía no ejecuta el motor HiLeS completo**. Actualmente procesa comandos MQTT para el LED y publica su estado. La simulación general continúa ejecutándose en TypeScript dentro del navegador. El protocolo para cargar modelos y publicar estados remotos está definido, pero el intérprete MicroPython continúa pendiente.
+El runtime MicroPython ya ejecuta el subconjunto IR v1 formado por `Service`, `Functional Block`, `Place` y `Transition`. En modo remoto, la web no recalcula el circuito: publica el modelo y los comandos, y representa las instantáneas emitidas por `EngineTask`. Esta integración está validada con dobles de escritorio; aún falta medirla y ensayarla en una Pico W física.
 
 ## Arquitectura
 
@@ -239,9 +242,9 @@ Los ejemplos se importan desde el botón **Import JSON**:
 | `output/demo-2-humedad-token.json` | Control de humedad con umbrales y movimiento de tokens |
 | `output/demo-parqueadero-converters.json` | Ejemplo de parqueadero con `Sample` y `Hold` |
 | `output/figure-29-hiles-wsn.json` | Modelo HiLeS basado en una red de sensores |
-| `output/demo-4-semaforos-inteligentes.json` | Prototipo visual con cuatro bloques de semáforo independientes |
+| `output/demo-4-semaforos-inteligentes.json` | Cruce coordinado Norte–Sur / Este–Oeste con cuatro semáforos |
 
-El ejemplo de cuatro semáforos todavía **no representa un cruce coordinado ni cuatro procesos distribuidos**. El diseño previsto debe agrupar Norte–Sur y Este–Oeste, comparar las colas de vehículos y garantizar que las fases incompatibles nunca estén en verde simultáneamente.
+El ejemplo de cuatro semáforos representa un solo cruce coordinado. Agrupa las fases Norte–Sur y Este–Oeste y sus transiciones atómicas impiden que ambos ejes queden verdes simultáneamente. Los cuatro navegadores de la demostración son cuatro vistas de este mismo proyecto y estado oficial; no son cuatro procesos independientes.
 
 `output/Ejemplo_pico.json` está reservado y actualmente no contiene un modelo utilizable.
 
@@ -335,10 +338,10 @@ Topics principales:
 | MQTT → Service local | `entrada/establecer` | Implementado en la web |
 | Motor → MQTT | `salida` | API preparada en el puente |
 | Ambos | `error` | Implementado |
-| Web → Pico | `modelo/cargar` | Contrato preparado; motor remoto pendiente |
-| Pico → web | `modelo/confirmacion` | Contrato preparado; motor remoto pendiente |
-| Web → Pico | `simulacion/comando` | Contrato preparado; motor remoto pendiente |
-| Pico → web | `simulacion/estado` | Contrato preparado; motor remoto pendiente |
+| Web → Pico | `modelo/cargar` | Implementado en web y runtime Pico |
+| Pico → web | `modelo/confirmacion` | Implementado en web y runtime Pico |
+| Web → Pico | `simulacion/comando` | Implementado en web y runtime Pico |
+| Pico → web | `simulacion/estado` | Implementado en web y runtime Pico |
 
 El contrato completo, límites de tamaño, QoS, retención, secuencia y tratamiento de duplicados está documentado en [`CONTRATO_MENSAJES_MQTT.md`](docs/mqtt/CONTRATO_MENSAJES_MQTT.md).
 
@@ -352,7 +355,7 @@ npm run lint
 npm run build
 ```
 
-En la última revisión se aprobaron 48 pruebas, además de lint y build. La suite cubre el motor, elementos, red de Petri, grafo de datos, ejecución de código, editor y contrato MQTT.
+En la última revisión se aprobaron 70 pruebas de frontend y 82 de firmware, además de TypeScript, lint y build. La suite cubre el motor, elementos, red de Petri, grafo de datos, editor, contrato MQTT, ejecución remota, aplicación de instantáneas al canvas y composición completa del runtime Pico con dobles.
 
 Para ejecutar Vitest en modo interactivo:
 
@@ -381,21 +384,18 @@ Los mensajes MQTT tienen un límite inicial de 32 KiB. El contrato remoto admite
 - [Contrato de mensajes MQTT](docs/mqtt/CONTRATO_MENSAJES_MQTT.md)
 - [Ficha de conexión de la demostración](docs/mqtt/FICHA_CONEXION_MQTT.md)
 - [Guía de demostración](entregas/entrega-4-9-octubre/GUIA_DEMO_MQTT_HILES.md)
+- [Guía de ensayo remoto sin Pico](docs/mqtt/GUIA_ENSAYO_REMOTO_SIN_PICO.md)
+- [Guía para copiar y probar la Pico W](docs/mqtt/GUIA_PRUEBA_PICO_W.md)
 - [Plan del motor frontend](entregas/entrega-3-26-septiembre/PLAN_MOTOR_FRONTEND.md)
 
 ## Trabajo pendiente
 
 Las siguientes tareas forman parte de la evolución planificada, no del alcance ya completado:
 
-- compilar el documento visual a una representación intermedia ejecutable;
-- cargar y validar modelos en la Pico;
-- implementar `Service`, `Functional Block`, `Place` y `Transition` en MicroPython;
-- mover tokens y publicar instantáneas desde la Pico;
-- portar CCH, DCH, `Sample`, `Hold`, retardos y ejecución continua;
-- aplicar estados remotos al canvas sin recalcularlos localmente;
-- deduplicar comandos QoS 1 en la Pico mediante `id_mensaje`;
+- portar CCH, DCH, `Sample`, `Hold` y retardos al runtime MicroPython;
 - hacer dinámico el identificador MQTT para múltiples dispositivos;
-- convertir el prototipo de semáforos en un cruce Norte–Sur / Este–Oeste coordinado;
+- validar tiempos y memoria en una Pico física;
+- ejecutar el ensayo conjunto con cuatro navegadores y el broker;
 - ejecutar instancias distribuidas en varios computadores.
 
 ## Flujo de contribución

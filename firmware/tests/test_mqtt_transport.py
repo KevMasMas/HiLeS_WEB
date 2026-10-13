@@ -7,11 +7,14 @@ from firmware.pico.main import build_default_application
 from firmware.pico.platform.mqtt_client import create_mqtt_client
 from firmware.pico.platform.wifi import WifiConnection
 from firmware.pico.pubsub import (
+    MODELO_CARGAR,
+    MODELO_CONFIRMACION,
     ERROR,
     ESTADO_CONEXION,
     LED_COMANDO,
     LED_ESTADO,
     SIMULACION_COMANDO,
+    SIMULACION_ESTADO,
     Node,
 )
 from firmware.pico.pubsub.mqtt_transport import MqttTransport
@@ -326,6 +329,85 @@ class DefaultApplicationTests(unittest.TestCase):
             "accion_aplicada": "encender",
             "id_mensaje": "integracion-1",
         })
+
+    def test_main_composition_routes_model_through_engine_and_mqtt(self):
+        class Config:
+            WIFI_SSID = "red"
+            WIFI_PASSWORD = "clave"
+            MQTT_HOST = "broker"
+            MQTT_PORT = 1883
+            MQTT_USERNAME = "usuario"
+            MQTT_PASSWORD = "secreto"
+            MQTT_CLIENT_ID = "pico-prueba-motor"
+
+        class FakePin:
+            OUT = 1
+
+            def __init__(self, _name, _mode):
+                self.state = False
+
+            def on(self): self.state = True
+            def off(self): self.state = False
+
+        class FakeMachine:
+            Pin = FakePin
+
+        class FakeWlan:
+            def __init__(self): self.connected = False
+            def active(self, _enabled): return None
+            def isconnected(self): return self.connected
+            def connect(self, _ssid, _password): self.connected = True
+
+        class FakeNetwork:
+            STA_IF = 0
+            wlan = FakeWlan()
+
+            @classmethod
+            def WLAN(cls, _station): return cls.wlan
+
+        class FakeMqttModule:
+            clients = []
+
+            @classmethod
+            def MQTTClient(cls, *_args, **_kwargs):
+                client = FakeMqttClient()
+                cls.clients.append(client)
+                return client
+
+        from firmware.tests.hiles_vectors import load_vectors
+        _name, vector = load_vectors("ejecucion")[0]
+        clock = FakeClock()
+        scheduler = build_default_application(
+            config=Config,
+            clock=clock,
+            machine_module=FakeMachine,
+            network_module=FakeNetwork,
+            mqtt_module=FakeMqttModule,
+        )
+        scheduler.run_pending()
+        client = FakeMqttModule.clients[0]
+        client.incoming.append((
+            b"udfjc/hiles/v1/equipo1/pico01/modelo/cargar",
+            json.dumps({
+                "modelo_id": "integracion-motor",
+                "version": 1,
+                "ir_version": 1,
+                "modelo": vector["modelo"],
+                "id_mensaje": "carga-integrada-1",
+            }).encode("utf-8"),
+        ))
+
+        clock.advance_ms(20)
+        scheduler.run_pending()
+
+        published = [(topic, json.loads(payload)) for topic, payload, _qos, _retain in client.published]
+        confirmations = [payload for topic, payload in published if topic.endswith(b"/modelo/confirmacion")]
+        snapshots = [payload for topic, payload in published if topic.endswith(b"/simulacion/estado")]
+        self.assertEqual(confirmations[-1]["aceptado"], True)
+        self.assertEqual(confirmations[-1]["id_mensaje"], "carga-integrada-1")
+        self.assertEqual(snapshots[-1]["modelo_id"], "integracion-motor")
+        self.assertEqual(snapshots[-1]["secuencia"], 0)
+        self.assertIs(scheduler.components["engine"].engine is not None, True)
 
 
 if __name__ == "__main__":

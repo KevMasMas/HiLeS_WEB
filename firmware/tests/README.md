@@ -1,17 +1,20 @@
 # Pruebas del firmware
 
-Esta carpeta alojará pruebas ejecutables sin una Pico física. Los módulos de prueba sustituirán el reloj, GPIO y transporte MQTT por dobles deterministas.
+Esta carpeta contiene pruebas ejecutables sin una Pico física. Los módulos de prueba sustituyen el reloj, GPIO, Wi-Fi, cliente MQTT y transporte por dobles deterministas.
 
-Casos mínimos previstos:
+Casos cubiertos:
 
 - planificación por periodo y prioridad;
 - titilado sin esperas bloqueantes;
 - entrega de topics y callbacks internos;
 - validación y ejecución de la IR;
 - movimiento atómico de tokens;
-- serialización de instantáneas.
+- serialización de instantáneas;
+- reconexión Wi-Fi/MQTT y recuperación de suscripciones;
+- límite de mensajes, composición completa de `main.py` y enrutamiento del modelo;
+- deduplicación de comandos QoS 1 con ventana de 32 identificadores.
 
-Los archivos de prueba se agregarán junto con cada módulo implementado; no se crearán esqueletos vacíos que aparenten funcionalidad inexistente.
+Los archivos de prueba se agregan junto con cada módulo implementado; no se crean esqueletos vacíos que aparenten funcionalidad inexistente.
 
 Desde la raíz del repositorio se ejecutan con:
 
@@ -37,7 +40,8 @@ La validación física sigue pendiente. Cuando la placa esté disponible:
 4. Instalar `umqtt.simple` en la placa y confirmar que la dirección configurada en `MQTT_HOST` corresponde al PC que ejecuta Mosquitto.
 5. Ejecutar primero las pruebas de escritorio; después reiniciar la Pico y observar en la consola serie la conexión Wi-Fi, las suscripciones MQTT y cualquier reintento.
 6. Enviar órdenes `encender`, `apagar` y `titilar` desde un navegador o `mosquitto_pub`, y verificar `led/estado` con `mosquitto_sub`.
+7. Importar el demo coordinado en la web, cargarlo en modo Pico y recorrer sus fases siguiendo `docs/mqtt/GUIA_ENSAYO_REMOTO_SIN_PICO.md`, sustituyendo las publicaciones manuales por las respuestas reales de la placa.
 
-La copia no se ha ejecutado porque no hay una Pico conectada. El transporte modular y su composición desde `main.py` sí están cubiertos con dobles de escritorio.
+La copia no se ha ejecutado porque no hay una Pico conectada. El transporte modular y su composición desde `main.py` sí están cubiertos con dobles de escritorio. El procedimiento completo y el ZIP preparado están descritos en `docs/mqtt/GUIA_PRUEBA_PICO_W.md`.
 
 Si `python` no está publicado en el `PATH`, se debe utilizar el ejecutable Python disponible en el entorno de desarrollo conservando los mismos argumentos.

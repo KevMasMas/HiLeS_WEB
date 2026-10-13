@@ -4,7 +4,7 @@
 
 **Equipo:** cinco personas; responsables registrados para Personas 1, 2, 3 y 4; asignación de Persona 5 pendiente por el grupo
 
-**Estado actual:** núcleo cooperativo, LED no bloqueante, pub/sub interno, transporte MQTT modular, reconexión, contrato, IR, motor HiLeS MicroPython con `EngineTask` y cliente remoto web implementados y probados en escritorio; integración de `EngineTask` en `main.py`, prueba física y demostración real de cuatro navegadores todavía pendientes.
+**Estado actual:** núcleo cooperativo, LED no bloqueante, pub/sub interno, transporte MQTT modular, reconexión, contrato, IR, motor HiLeS MicroPython, `EngineTask`, composición en `main.py`, cliente remoto web y cruce coordinado implementados y probados en escritorio; la prueba física y la demostración manual de cuatro navegadores todavía están pendientes.
 
 ## Objetivo no negociable
 
@@ -129,9 +129,9 @@ Antes de esta entrega ya existen:
 - motor HiLeS local en TypeScript;
 - modelo visual con cuatro bloques de semáforo independientes.
 
-El scheduler ya integra LED y transporte MQTT, la web ya cuenta con compilador a IR y modo remoto integrado, y el motor HiLeS MicroPython ya está probado de forma aislada. Todavía faltan integrar `EngineTask` en `main.py` y coordinar el modelo visual de los cuatro semáforos.
+El scheduler integra LED, transporte MQTT y `EngineTask`; la web cuenta con compilador a IR y modo remoto integrado; y el modelo visual coordina los cuatro sentidos sin reglas de semáforo dentro del motor. Falta validar el conjunto en la Pico física y ejecutar el ensayo manual de cuatro navegadores.
 
-> Actualización del 12 de octubre: el compilador a IR (Persona 4) y el motor MicroPython con `EngineTask` (Persona 3) ya están implementados y probados en escritorio; su integración en `main.py` continúa pendiente.
+> Actualización del 12 de octubre: el compilador a IR (Persona 4), el motor MicroPython con `EngineTask` (Persona 3) y su integración en `main.py` están implementados y probados en escritorio.
 
 ## Alcance P0 obligatorio
 
@@ -142,7 +142,7 @@ El scheduler ya integra LED y transporte MQTT, la web ya cuenta con compilador a
 - [x] Cerrar la IR versión 1 antes de implementar el motor.
 - [x] Definir un identificador de sesión o ejecución compartido por los cuatro navegadores (`modelo_id` + `version`, compartidos también mediante la URL).
 - [x] Definir reglas de `modelo_id`, `version`, `secuencia` e `id_mensaje`.
-- [ ] Mantener credenciales reales fuera de Git.
+- [x] Mantener credenciales reales fuera de Git; `.env.local` y `config_local.py` están ignorados y no hay credenciales rastreadas.
 
 ### Multitarea y pub/sub
 
@@ -188,11 +188,11 @@ El scheduler ya integra LED y transporte MQTT, la web ya cuenta con compilador a
 
 ### Semáforo coordinado
 
-- [ ] Convertir los cuatro bloques independientes en sentidos Norte, Sur, Este y Oeste.
-- [ ] Agrupar fases compatibles Norte–Sur y Este–Oeste.
-- [ ] Garantizar que fases incompatibles nunca estén verdes simultáneamente.
-- [ ] Representar rojo, amarillo y verde mediante estado del modelo, no mediante reglas especiales del motor.
-- [ ] Preparar una entrada controlada, como presencia o cantidad de vehículos.
+- [x] Convertir los cuatro bloques independientes en sentidos Norte, Sur, Este y Oeste.
+- [x] Agrupar fases compatibles Norte–Sur y Este–Oeste.
+- [x] Garantizar mediante prueba automática que fases incompatibles nunca estén verdes simultáneamente.
+- [x] Representar rojo, amarillo y verde mediante Places del modelo, no mediante reglas especiales del motor.
+- [x] Preparar una entrada booleana controlada que habilita el ciclo.
 - [ ] Verificar que una acción iniciada en un navegador aparece en los otros tres después de la respuesta de la Pico.
 
 ### Pruebas sin la Pico
@@ -210,12 +210,12 @@ El scheduler ya integra LED y transporte MQTT, la web ya cuenta con compilador a
 
 ## Alcance P1 si P0 queda estable
 
-- [ ] Deduplicar en la Pico al menos los últimos 32 `id_mensaje` recibidos; la utilidad web está implementada y probada, pero falta integrarla en el receptor MicroPython.
+- [x] Deduplicar en la Pico los últimos 32 `id_mensaje` recibidos, sin repetir efectos y reenviando la respuesta asociada.
 - [x] Agregar reconexión de Wi-Fi y MQTT como estado no bloqueante con intervalo entre intentos.
 - [x] Recuperar suscripciones después de reconectar.
 - [ ] Añadir telemetría de memoria, tiempos de tareas y RSSI.
-- [ ] Comparar automáticamente una ejecución del motor web con la ejecución MicroPython.
-- [ ] Incorporar ejecución continua con iniciar, detener y pausar.
+- [x] Comparar automáticamente una ejecución del motor web con la ejecución MicroPython mediante los vectores compartidos.
+- [x] Incorporar ejecución continua con `iniciar` y `detener`; `paso` deja el motor en estado `pausada`.
 
 ## Fuera de alcance para el martes
 
@@ -237,7 +237,7 @@ Responsable de que los módulos encajen y de mantener el alcance general.
 - [x] Crear las clases base `Task`, `Scheduler` y reloj intercambiable.
 - [x] Definir normas de duración y manejo de errores para `update()`.
 - [x] Preparar `main.py` como composición de módulos, sin lógica de negocio extensa.
-- [ ] Integrar los aportes de las otras cuatro personas según el flujo acordado por el equipo.
+- [x] Integrar los aportes de las otras cuatro personas según el flujo acordado por el equipo.
 - [x] Revisar que no se introduzcan dependencias circulares.
 - [x] Mantener actualizados el plan y el registro de cambios.
 - [ ] Dirigir el ensayo de cuatro navegadores.
@@ -305,7 +305,7 @@ Responsable del modo Pico en la aplicación web y de la demostración multiusuar
 - [x] Aplicar instantáneas remotas a valores, tokens y estados visuales.
 - [x] Administrar sesión, versión y secuencia recibida.
 - [x] Preparar la apertura coordinada de cuatro navegadores mediante un enlace de sesión compartible.
-- [ ] Convertir el demo visual en un cruce Norte–Sur / Este–Oeste seguro.
+- [x] Convertir el demo visual en un cruce Norte–Sur / Este–Oeste seguro.
 
 **Criterio de terminación:** una acción enviada desde un navegador produce una instantánea de la Pico que se representa de igual manera en los cuatro canvas.
 
@@ -340,36 +340,36 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 - [x] Completar el subconjunto inicial del motor MicroPython.
 - [x] Completar compilador a IR.
 - [x] Completar recepción y aplicación de instantáneas en la web.
-- [ ] Convertir el modelo de semáforos en un cruce coordinado.
+- [x] Convertir el modelo de semáforos en un cruce coordinado.
 
 ### Lunes 12, tarde — integración
 
-- [ ] Integrar únicamente cambios con pruebas e informe.
-- [ ] Ejecutar el flujo completo con transporte y hardware falsos.
+- [x] Integrar únicamente cambios con pruebas y registro técnico.
+- [x] Ejecutar el flujo completo con transporte y hardware falsos.
 - [ ] Abrir cuatro navegadores y comprobar sincronización por broker.
-- [ ] Corregir errores del contrato sin ampliar el alcance.
+- [x] Corregir errores del contrato sin ampliar el alcance.
 - [x] Ejecutar todas las pruebas disponibles del firmware y frontend.
 
 ### Lunes 12, noche — congelación
 
 - [ ] Congelar funcionalidad y documentación.
-- [ ] Completar el registro de cambios y resultados de las pruebas.
+- [x] Completar el registro de cambios y resultados de las pruebas disponibles sin hardware.
 - Evidencia audiovisual opcional: preparar capturas, logs o video de respaldo solo si el equipo lo considera útil.
 - [ ] Ejecutar un ensayo cronometrado.
-- [ ] Dejar identificados los pasos que requieren la Pico física.
+- [x] Dejar identificados los pasos que requieren la Pico física.
 
 ### Martes 13, antes de las 9:00 a. m.
 
-- [ ] Repetir pruebas automáticas sin introducir funcionalidades nuevas.
+- [x] Repetir pruebas automáticas sin introducir funcionalidades nuevas.
 - [ ] Comprobar broker, red, cuatro navegadores y archivos del demo.
 - [ ] Validar físicamente con la Pico si está disponible.
-- [ ] Confirmar que no existen credenciales en Git.
+- [x] Confirmar que no existen credenciales en Git.
 - [ ] Preparar la versión final de entrega.
 
 ## Criterios de aceptación
 
 - [x] El proyecto compila y las pruebas anteriores continúan aprobando.
-- [x] Todas las tareas concretas actuales (`LedTask` y `MqttTransport`) heredan de `Task` e implementan `update()`.
+- [x] Todas las tareas concretas actuales (`LedTask`, `MqttTransport` y `EngineTask`) heredan de `Task` e implementan `update()`.
 - [x] Ninguna acción periódica del runtime modular actual usa una espera que bloquee las demás tareas.
 - [x] MQTT externo y pub/sub interno permanecen separados.
 - [x] El LED titila sin impedir que se procese otro mensaje MQTT.
@@ -378,10 +378,10 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 - [x] El motor no contiene reglas codificadas exclusivamente para el semáforo.
 - [ ] La Pico es la fuente oficial del estado remoto.
 - [ ] Cuatro navegadores muestran la misma secuencia y estado.
-- [ ] Norte–Sur y Este–Oeste nunca están verdes simultáneamente.
+- [x] Norte–Sur y Este–Oeste nunca están verdes simultáneamente en la prueba automática del modelo coordinado.
 - [x] Un JSON inválido produce un error y no detiene el scheduler.
-- [ ] Las credenciales permanecen fuera del repositorio.
-- [ ] El procedimiento de demostración puede ser repetido por otra persona.
+- [x] Las credenciales permanecen fuera del repositorio.
+- [x] El procedimiento de demostración sin Pico está documentado para que otra persona pueda repetirlo.
 
 ## Guion de demostración
 

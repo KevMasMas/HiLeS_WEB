@@ -187,3 +187,27 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 - **Evidencia adicional opcional:** no aplica.
 - **Commit:** sin commit por indicación de Kevin Rincón.
 - **Riesgos o pendientes:** integrar `EngineTask` en `main.py`, ejecutar la prueba física, comprobar cuatro navegadores contra el mismo estado oficial y completar el cruce visual seguro.
+
+### [2026-10-12 19:05] — Responsable: Kevin Rincón (revisión final sin Pico)
+
+- **Actividad del plan:** cierre de la integración que puede validarse sin placa física y corrección de los pendientes detectados en las revisiones de Personas 1, 3, 4 y 5.
+- **Qué se corrigió:** se registró `EngineTask` en `main.py`; se agregó deduplicación de 32 `id_mensaje` con repetición de respuestas; se corrigió el reinicio del filtro de secuencia cuando se recarga la misma sesión; se protegieron las suscripciones MQTT compartidas con conteo de referencias; el cliente remoto ahora recibe errores del topic `error` y conserva el estado remoto exacto; la activación del modo Pico evita perder estados retenidos; y se añadió una prueba que confirma que la instantánea modifica el store y el canvas sin ejecutar el motor local. La interfaz muestra explícitamente si la sesión está activa, coloca el mensaje de unión junto a los controles y permite reintentar la conexión sin duplicar suscripciones.
+- **Demo y documentación:** `output/demo-4-semaforos-inteligentes.json` se convirtió en un cruce Norte–Sur / Este–Oeste con fases atómicas seguras y entrada booleana general. Se agregó `scripts/generate-coordinated-traffic-demo.mjs` para regenerarlo y `docs/mqtt/GUIA_ENSAYO_REMOTO_SIN_PICO.md` para explicar que los cuatro navegadores deben importar el mismo JSON y compartir la sesión. El enlace comparte la sesión, no el diagrama.
+- **Archivos principales modificados:** `firmware/pico/main.py`, `firmware/pico/hiles/engine_task.py`, `firmware/pico/config_local.example.py`, pruebas de firmware, cliente/estado/panel remoto del frontend, pruebas del compilador y store, modelo de `output/`, contrato, README y plan.
+- **Cómo se probó:** suite completa de Vitest; `tsc -b`; ESLint; build de producción con Vite; suite completa de `unittest`; prueba de composición que recorre `main.py → MqttTransport → Node → EngineTask → respuesta MQTT`; prueba de 15 pasos del cruce; y comprobación de exclusión Git para `.env.local` y `config_local.py`.
+- **Resultado esperado:** que todo el flujo sin hardware sea reproducible, que no se repitan efectos con QoS 1, que una recarga admita nuevamente la secuencia `0`, que el canvas refleje el estado remoto y que el modelo nunca deje verdes ambos ejes.
+- **Resultado obtenido:** 70 pruebas de frontend y 82 pruebas de firmware aprobadas; TypeScript y ESLint sin errores; build de producción exitoso. La prueba focal posterior del botón de unión aprobó 6 pruebas y se comprobó una conexión WebSocket real al Mosquitto local. La prueba del cruce mantiene un solo color por sentido y nunca activa verde Norte–Sur junto con verde Este–Oeste. No hay credenciales locales rastreadas por Git.
+- **Evidencia adicional opcional:** salida de las suites en consola; no se requieren fotos, logs ni video para cerrar estas casillas.
+- **Commit:** sin commit por indicación de Kevin Rincón.
+- **Riesgos o pendientes reales:** validar memoria, temporización y adaptadores en una Pico W; comprobar el broker y la red del lugar; abrir cuatro navegadores y ejecutar el ensayo completo; y confirmar físicamente que la Pico es la fuente oficial. Los pendientes históricos sobre integración, deduplicación y cruce quedaron resueltos por esta entrada.
+
+### [2026-10-12 19:25] — Responsable: Kevin Rincón (preparación para la Pico W)
+
+- **Actividad del plan:** preparar el despliegue físico y comprobar todo el alcance disponible antes de conectar la placa.
+- **Qué se preparó:** guía completa de MicroPython, `umqtt.simple`, red, Firewall, estructura de archivos, configuración local, prueba del LED, carga del modelo y ensayo de cuatro navegadores; script reproducible de empaquetado; mensajes iniciales en la consola serie; y prueba real de reparto MQTT entre cuatro clientes WebSocket.
+- **Archivos creados:** `docs/mqtt/GUIA_PRUEBA_PICO_W.md`, `scripts/prepare-pico-deployment.ps1`, `scripts/test-mqtt-four-clients.mjs`, `output/hiles-pico-w-deploy.zip` y su checksum SHA-256.
+- **Cómo se probó:** validación de los 22 archivos Python del ZIP mediante análisis sintáctico; inspección automática del contenido del paquete; conexión real de cuatro clientes al Mosquitto local; suite completa de firmware y frontend; TypeScript, ESLint y build de producción.
+- **Resultado obtenido:** ZIP de 23 entradas sin credenciales, ejemplos, `__pycache__` ni `.pyc`; cuatro de cuatro clientes recibieron el mismo estado JSON; 82 pruebas de firmware y 70 de frontend aprobadas; tipos, lint y build correctos.
+- **Evidencia adicional opcional:** `output/hiles-pico-w-deploy.sha256` permite verificar que el archivo utilizado mañana sea el paquete preparado.
+- **Commit:** sin commit por indicación de Kevin Rincón.
+- **Riesgos o pendientes:** no hay intérprete MicroPython ni Pico W conectada hoy. Mañana deben verificarse `machine`, `network`, `umqtt.simple`, memoria, tiempos, acceso al PC desde la red elegida y el ensayo visual de cuatro navegadores.

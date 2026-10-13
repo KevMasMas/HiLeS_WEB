@@ -55,6 +55,7 @@ class EngineTask(Task):
         step_interval_ms=1000,
         max_commands_per_update=1,
         queue_size=8,
+        dedup_size=32,
         priority=2,
         name="motor",
         max_update_ms=None,
@@ -69,11 +70,14 @@ class EngineTask(Task):
             raise ValueError("max_commands_per_update debe ser un entero mayor que cero")
         if not isinstance(queue_size, int) or isinstance(queue_size, bool) or queue_size <= 0:
             raise ValueError("queue_size debe ser un entero mayor que cero")
+        if not isinstance(dedup_size, int) or isinstance(dedup_size, bool) or dedup_size < 32:
+            raise ValueError("dedup_size debe ser un entero mayor o igual que 32")
 
         self.node = node
         self.step_interval_ms = step_interval_ms
         self.max_commands_per_update = max_commands_per_update
         self.queue_size = queue_size
+        self.dedup_size = dedup_size
 
         self.engine = None
         self.modelo_id = None
@@ -83,6 +87,10 @@ class EngineTask(Task):
         self.dropped_count = 0
         self._cola = []
         self._next_auto_step = None
+        self._dedup_order = []
+        self._dedup_responses = {}
+        self._capturing_id = None
+        self._captured_responses = []
 
         super().__init__(
             scheduler,
@@ -148,6 +156,14 @@ class EngineTask(Task):
         self._publish_snapshot()
 
     def _dispatch(self, topic, payload):
+        message_id = payload.get("id_mensaje") if isinstance(payload, dict) else None
+        if es_texto(message_id) and message_id in self._dedup_responses:
+            for response_topic, response_payload in self._dedup_responses[message_id]:
+                self.node.publish(response_topic, response_payload)
+            return
+
+        self._capturing_id = message_id if es_texto(message_id) else None
+        self._captured_responses = []
         try:
             if topic == MODELO_CARGAR:
                 self._handle_load(payload)
@@ -162,6 +178,11 @@ class EngineTask(Task):
                 payload,
             )
             raise
+        finally:
+            if self._capturing_id is not None:
+                self._remember_response(self._capturing_id, self._captured_responses)
+            self._capturing_id = None
+            self._captured_responses = []
 
     # ------------------------------------------------------------------
     # Manejo de mensajes.
@@ -181,7 +202,11 @@ class EngineTask(Task):
         self.secuencia = 0
         self.estado = LISTA
         self._next_auto_step = None
-        self.node.publish(
+        # Una carga aceptada abre una ejecución nueva. Los identificadores de
+        # la versión anterior ya no deben consumir la ventana de deduplicación.
+        self._dedup_order = []
+        self._dedup_responses = {}
+        self._emit(
             MODELO_CONFIRMACION,
             {
                 "modelo_id": modelo_id,
@@ -206,7 +231,7 @@ class EngineTask(Task):
             # confirmación válida según el contrato: se informa por ``error``.
             self._publish_error(codigo, mensaje, payload)
             return
-        self.node.publish(
+        self._emit(
             MODELO_CONFIRMACION,
             {
                 "modelo_id": payload["modelo_id"],
@@ -307,13 +332,27 @@ class EngineTask(Task):
     def _publish_snapshot(self, id_mensaje=None, increment=True):
         if increment:
             self.secuencia += 1
-        self.node.publish(SIMULACION_ESTADO, self.snapshot_message(id_mensaje))
+        self._emit(SIMULACION_ESTADO, self.snapshot_message(id_mensaje))
 
     def _publish_error(self, codigo, mensaje, payload=None):
         error = {"codigo": codigo, "mensaje": mensaje}
         if isinstance(payload, dict) and es_texto(payload.get("id_mensaje")):
             error["id_mensaje"] = payload["id_mensaje"]
-        self.node.publish(ERROR, error)
+        self._emit(ERROR, error)
+
+    def _emit(self, topic, payload):
+        if self._capturing_id is not None:
+            self._captured_responses.append((topic, payload))
+        self.node.publish(topic, payload)
+
+    def _remember_response(self, message_id, responses):
+        if message_id in self._dedup_responses:
+            self._dedup_order.remove(message_id)
+        elif len(self._dedup_order) >= self.dedup_size:
+            oldest = self._dedup_order.pop(0)
+            self._dedup_responses.pop(oldest, None)
+        self._dedup_order.append(message_id)
+        self._dedup_responses[message_id] = list(responses)
 
     def stats(self):
         datos = super().stats()
@@ -321,4 +360,5 @@ class EngineTask(Task):
         datos["secuencia"] = self.secuencia
         datos["pendientes"] = len(self._cola)
         datos["descartados"] = self.dropped_count
+        datos["deduplicados"] = len(self._dedup_order)
         return datos
