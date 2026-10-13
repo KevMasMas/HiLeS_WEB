@@ -3,6 +3,7 @@ import { MQTT_TOPICS } from '../../services/mqtt/config';
 import { mqttClient } from '../../services/mqtt/MqttClient';
 import { mqttHilesBridge } from '../../services/mqtt/setupMqttHilesBridge';
 import type { AccionLed } from '../../services/mqtt/messages';
+import { useSimulationStore } from '../../stores/useSimulationStore';
 import './mqtt.css';
 
 type MessageEntry = {
@@ -55,6 +56,7 @@ export const MqttPanel: React.FC = () => {
   const [messages, setMessages] = useState<MessageEntry[]>([]);
   const [notices, setNotices] = useState<IntegrationNotice[]>([]);
   const [connectionFeedback, setConnectionFeedback] = useState<ConnectionFeedback | null>(null);
+  const modoEjecucion = useSimulationStore((state) => state.modoEjecucion);
 
   useEffect(() => {
     const addNotice = (level: IntegrationNotice['level'], message: string) => {
@@ -92,7 +94,6 @@ export const MqttPanel: React.FC = () => {
     const unsubscribeValidation = mqttClient.onValidationError(({ error }) => addNotice('error', error));
     const unsubscribeBridge = mqttHilesBridge.onEvent(({ nivel, mensaje }) => addNotice(nivel, mensaje));
 
-    mqttHilesBridge.start();
     mqttClient.subscribe(MQTT_TOPICS.LED_ESTADO);
     mqttClient.subscribe(MQTT_TOPICS.ESTADO_CONEXION);
     mqttClient.subscribe(MQTT_TOPICS.TELEMETRIA);
@@ -110,6 +111,12 @@ export const MqttPanel: React.FC = () => {
       mqttClient.unsubscribe(MQTT_TOPICS.ERROR);
     };
   }, []);
+
+  useEffect(() => {
+    if (modoEjecucion === 'local') mqttHilesBridge.start();
+    else mqttHilesBridge.stop();
+    return () => mqttHilesBridge.stop();
+  }, [modoEjecucion]);
 
   const handleConnect = () => {
     setConnectionFeedback({ level: 'pending', message: 'Intentando conectar con el broker MQTT…' });

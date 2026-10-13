@@ -4,7 +4,7 @@
 
 **Equipo:** cinco personas; responsables registrados para Personas 1, 2, 3 y 4; asignación de Persona 5 pendiente por el grupo
 
-**Estado actual:** núcleo cooperativo, LED no bloqueante, pub/sub interno, transporte MQTT modular, reconexión, contrato, IR y motor HiLeS MicroPython con `EngineTask` implementados y probados en escritorio; registro de `EngineTask` en `main.py`, cliente remoto, prueba física y demostración de cuatro navegadores todavía pendientes.
+**Estado actual:** núcleo cooperativo, LED no bloqueante, pub/sub interno, transporte MQTT modular, reconexión, contrato, IR, motor HiLeS MicroPython con `EngineTask` y cliente remoto web implementados y probados en escritorio; integración de `EngineTask` en `main.py`, prueba física y demostración real de cuatro navegadores todavía pendientes.
 
 ## Objetivo no negociable
 
@@ -129,7 +129,7 @@ Antes de esta entrega ya existen:
 - motor HiLeS local en TypeScript;
 - modelo visual con cuatro bloques de semáforo independientes.
 
-El scheduler ya integra LED y transporte MQTT, y la web ya cuenta con compilador a IR. Todavía no existen el motor HiLeS MicroPython, el modo remoto integrado de la web ni la coordinación real de los cuatro semáforos.
+El scheduler ya integra LED y transporte MQTT, la web ya cuenta con compilador a IR y modo remoto integrado, y el motor HiLeS MicroPython ya está probado de forma aislada. Todavía faltan integrar `EngineTask` en `main.py` y coordinar el modelo visual de los cuatro semáforos.
 
 > Actualización del 12 de octubre: el compilador a IR (Persona 4) y el motor MicroPython con `EngineTask` (Persona 3) ya están implementados y probados en escritorio; su integración en `main.py` continúa pendiente.
 
@@ -140,7 +140,7 @@ El scheduler ya integra LED y transporte MQTT, y la web ya cuenta con compilador
 - [x] Crear la estructura modular mínima de `firmware/pico/`.
 - [x] Actualizar todas las rutas documentales después de la reorganización.
 - [x] Cerrar la IR versión 1 antes de implementar el motor.
-- [ ] Definir un identificador de sesión o ejecución compartido por los cuatro navegadores.
+- [x] Definir un identificador de sesión o ejecución compartido por los cuatro navegadores (`modelo_id` + `version`, compartidos también mediante la URL).
 - [x] Definir reglas de `modelo_id`, `version`, `secuencia` e `id_mensaje`.
 - [ ] Mantener credenciales reales fuera de Git.
 
@@ -177,14 +177,14 @@ El scheduler ya integra LED y transporte MQTT, y la web ya cuenta con compilador
 ### Web y cuatro navegadores
 
 - [x] Implementar el compilador `HilesModelDocument → IR v1`.
-- [ ] Agregar selección entre ejecución local y ejecución en Pico.
-- [ ] Publicar el modelo y esperar `modelo/confirmacion`.
-- [ ] Enviar entradas y comandos con `id_mensaje` único.
-- [ ] Aplicar `simulacion/estado` al canvas sin ejecutar el motor local.
-- [ ] Integrar en el cliente remoto el descarte de instantáneas de otra sesión, versión o secuencia anterior; `ControlSecuenciaRemota` ya está implementado y probado, pero todavía no está conectado al canvas.
+- [x] Agregar selección entre ejecución local y ejecución en Pico.
+- [x] Publicar el modelo y esperar `modelo/confirmacion`.
+- [x] Enviar entradas y comandos con `id_mensaje` único.
+- [x] Aplicar `simulacion/estado` al canvas sin ejecutar el motor local.
+- [x] Integrar en el cliente remoto el descarte de instantáneas de otra sesión, versión o secuencia anterior.
 - [ ] Confirmar que cuatro navegadores reciben el mismo estado oficial.
-- [ ] Definir qué navegador carga el modelo y cómo los demás se incorporan a la sesión.
-- [ ] Mostrar conexión, carga, error y última secuencia recibida.
+- [x] Definir qué navegador carga el modelo y cómo los demás se incorporan a la sesión: uno pulsa «Compilar y cargar» y los demás abren el enlace y pulsan «Unirse».
+- [x] Mostrar conexión, carga, error y última secuencia recibida.
 
 ### Semáforo coordinado
 
@@ -299,12 +299,12 @@ Responsable de que web y Pico interpreten exactamente el mismo modelo y mensajes
 
 Responsable del modo Pico en la aplicación web y de la demostración multiusuario.
 
-- [ ] Implementar el cliente de ejecución remota.
-- [ ] Agregar controles para cargar, iniciar, avanzar, detener y reiniciar.
-- [ ] Bloquear el motor local cuando el modo Pico esté activo.
-- [ ] Aplicar instantáneas remotas a valores, tokens y estados visuales.
-- [ ] Administrar sesión, versión y secuencia recibida.
-- [ ] Preparar la apertura coordinada de cuatro navegadores.
+- [x] Implementar el cliente de ejecución remota.
+- [x] Agregar controles para cargar, iniciar, avanzar, detener y reiniciar.
+- [x] Bloquear el motor local cuando el modo Pico esté activo.
+- [x] Aplicar instantáneas remotas a valores, tokens y estados visuales.
+- [x] Administrar sesión, versión y secuencia recibida.
+- [x] Preparar la apertura coordinada de cuatro navegadores mediante un enlace de sesión compartible.
 - [ ] Convertir el demo visual en un cruce Norte–Sur / Este–Oeste seguro.
 
 **Criterio de terminación:** una acción enviada desde un navegador produce una instantánea de la Pico que se representa de igual manera en los cuatro canvas.
@@ -331,7 +331,7 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 
 - [ ] Aprobar alcance P0 y reparto.
 - [x] Congelar IR, topics, mensajes y estado remoto.
-- [ ] Crear esqueletos mínimos de scheduler, pub/sub y cliente remoto.
+- [x] Crear esqueletos mínimos de scheduler, pub/sub y cliente remoto.
 - [x] Preparar fixtures y dobles para trabajar sin hardware.
 
 ### Lunes 12, mañana — implementación paralela
@@ -339,7 +339,7 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 - [x] Completar scheduler, pub/sub interno y LED no bloqueante.
 - [x] Completar el subconjunto inicial del motor MicroPython.
 - [x] Completar compilador a IR.
-- [ ] Completar recepción y aplicación de instantáneas en la web.
+- [x] Completar recepción y aplicación de instantáneas en la web.
 - [ ] Convertir el modelo de semáforos en un cruce coordinado.
 
 ### Lunes 12, tarde — integración

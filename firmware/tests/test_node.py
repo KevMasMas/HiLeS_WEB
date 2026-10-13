@@ -80,6 +80,30 @@ class NodeTests(unittest.TestCase):
         self.assertEqual(delivered_second, 2)
         self.assertEqual(len(healthy_received), 3)
 
+    def test_faulty_error_handler_does_not_block_other_subscribers(self):
+        healthy_received = []
+
+        def faulty_error_handler(_topic, _callback, _error):
+            raise RuntimeError("falló el manejador")
+
+        node = Node(error_handler=faulty_error_handler)
+
+        def faulty_subscriber(_payload):
+            raise ValueError("falló callback")
+
+        node.subscribe(MODELO_CARGAR, faulty_subscriber)
+        node.subscribe(MODELO_CARGAR, healthy_received.append)
+
+        delivered = node.publish(MODELO_CARGAR, {"version": 1})
+
+        self.assertEqual(delivered, 1)
+        self.assertEqual(healthy_received, [{"version": 1}])
+        self.assertEqual(node.error_count, 1)
+        self.assertEqual(node.error_handler_error_count, 1)
+        self.assertEqual(str(node.last_error), "falló callback")
+        self.assertEqual(str(node.last_error_handler_error), "falló el manejador")
+        self.assertEqual(node.subscriber_count(MODELO_CARGAR), 2)
+
     def test_reentrant_publish_stops_at_max_depth(self):
         errors = []
         node = Node(

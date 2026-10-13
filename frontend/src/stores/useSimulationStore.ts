@@ -11,6 +11,7 @@ import type {
   ValorRuntime,
 } from '../engine/tipos';
 import type { HilesNodeData } from '../types/hiles';
+import type { MensajeSimulacionEstado } from '../services/mqtt/messages';
 import { useEditorStore } from './useEditorStore';
 
 type RuntimeNodo = NonNullable<HilesNodeData['runtime']>;
@@ -22,6 +23,8 @@ type RuntimeNodo = NonNullable<HilesNodeData['runtime']>;
 const motor = new MotorSimulacion();
 
 interface SimulationState {
+  /** Decide si el estado oficial lo calcula este navegador o llega desde la Pico. */
+  modoEjecucion: 'local' | 'pico';
   /** Fase actual del motor (inactiva, lista, ejecutando, estabilizada, error). */
   estado: EstadoSimulacion;
   /** Cola de auditoría en orden cronológico. */
@@ -46,6 +49,8 @@ interface SimulationState {
   paso: () => Promise<void>;
   ejecutar: () => Promise<void>;
   reiniciar: () => void;
+  setModoEjecucion: (modo: 'local' | 'pico') => void;
+  aplicarInstantaneaRemota: (instantanea: MensajeSimulacionEstado) => void;
 }
 
 /** Traduce el estado lógico de un elemento al runtime que pinta el canvas. */
@@ -69,12 +74,18 @@ const mismoRuntime = (anterior: RuntimeNodo | undefined, siguiente: RuntimeNodo)
  * Solo se reemplazan los nodos cuyo runtime cambió: mantener las mismas
  * referencias evita repintados y no ensucia el historial del documento.
  */
-const publicarRuntimeEnCanvas = (estados: Map<string, EstadoElemento>): void => {
+const publicarRuntimeEnCanvas = (estados: Map<string, EstadoElemento>, limpiarAusentes = false): void => {
   useEditorStore.setState((state) => {
     let cambio = false;
     const nodes = state.nodes.map((nodo) => {
       const estado = estados.get(nodo.id);
-      if (!estado) return nodo;
+      if (!estado) {
+        if (!limpiarAusentes || nodo.data.runtime === undefined) return nodo;
+        const data = { ...nodo.data };
+        delete data.runtime;
+        cambio = true;
+        return { ...nodo, data };
+      }
       const runtime = runtimeDesdeEstado(estado);
       if (mismoRuntime(nodo.data.runtime, runtime)) return nodo;
       cambio = true;
@@ -99,10 +110,34 @@ const publicarEstadoDelMotor = (mensaje: string | null = null): Partial<Simulati
   };
 };
 
+const estadoMotorDesdeRemoto = (estado: MensajeSimulacionEstado['estado']): EstadoSimulacion => {
+  switch (estado) {
+    case 'lista': return EstadoSimulacion.LISTA;
+    case 'ejecutando': return EstadoSimulacion.EJECUTANDO;
+    case 'pausada':
+    case 'detenida': return EstadoSimulacion.ESTABILIZADA;
+    case 'error': return EstadoSimulacion.ERROR;
+    default: return EstadoSimulacion.INACTIVA;
+  }
+};
+
+const estadosDesdeInstantanea = (instantanea: MensajeSimulacionEstado): Map<string, EstadoElemento> => new Map(
+  Object.entries(instantanea.elementos).map(([id, remoto]) => [id, {
+    ...(remoto.valor !== undefined || remoto.salida !== undefined
+      ? { valor: remoto.valor ?? remoto.salida }
+      : {}),
+    ...(remoto.tokens !== undefined ? { tokens: remoto.tokens } : {}),
+    ...(remoto.disparada !== undefined || remoto.habilitada !== undefined
+      ? { activo: remoto.disparada ?? remoto.habilitada }
+      : {}),
+  }]),
+);
+
 /** Cede un frame para que React alcance a pintar el indicador antes del trabajo. */
 const permitirPintado = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0));
 
 export const useSimulationStore = create<SimulationState>((set, get) => ({
+  modoEjecucion: 'local',
   estado: EstadoSimulacion.INACTIVA,
   eventos: [],
   valoresRuntime: {},
@@ -116,17 +151,26 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   sincronizar: () => {
     const { nodes, edges } = useEditorStore.getState();
     motor.construirGrafo(nodes as NodoHiLeS[], edges as AristaHiLeS[]);
+    if (get().modoEjecucion === 'pico') {
+      set({ servicios: motor.obtenerServiciosInyectables() });
+      return;
+    }
     set(publicarEstadoDelMotor());
   },
 
   inyectarEntrada: (servicioId, valor) => {
+    if (get().modoEjecucion === 'pico') {
+      const resultado = { exito: false, mensaje: 'El motor local está bloqueado mientras el modo Pico está activo.' };
+      set({ mensaje: resultado.mensaje });
+      return resultado;
+    }
     const resultado = motor.inyectarEntrada(servicioId, valor);
     set(publicarEstadoDelMotor(resultado.mensaje));
     return resultado;
   },
 
   paso: async () => {
-    if (get().ocupado) return;
+    if (get().ocupado || get().modoEjecucion === 'pico') return;
     set({ ocupado: true, operacion: 'paso', mensaje: 'Procesando un paso del circuito…' });
     await permitirPintado();
     try {
@@ -146,7 +190,7 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   ejecutar: async () => {
-    if (get().ocupado) return;
+    if (get().ocupado || get().modoEjecucion === 'pico') return;
     set({ ocupado: true, operacion: 'ejecucion', mensaje: 'Ejecutando el circuito hasta estabilizarlo…' });
     await permitirPintado();
     try {
@@ -168,8 +212,55 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   reiniciar: () => {
+    if (get().modoEjecucion === 'pico') {
+      set({ mensaje: 'El motor local está bloqueado mientras el modo Pico está activo.' });
+      return;
+    }
     motor.reiniciar();
     set(publicarEstadoDelMotor('Simulación reiniciada.'));
+  },
+
+  setModoEjecucion: (modo) => {
+    if (modo === get().modoEjecucion) return;
+    if (modo === 'local') {
+      set({
+        modoEjecucion: modo,
+        ...publicarEstadoDelMotor('Modo local activo. El navegador vuelve a calcular la simulación.'),
+      });
+      return;
+    }
+    set({
+      modoEjecucion: modo,
+      estado: EstadoSimulacion.INACTIVA,
+      eventos: [],
+      valoresRuntime: {},
+      estadosElementos: {},
+      contadorPasos: 0,
+      ocupado: false,
+      operacion: null,
+      mensaje: 'Modo Pico activo. El motor local está bloqueado hasta volver al modo local.',
+    });
+    publicarRuntimeEnCanvas(new Map(), true);
+  },
+
+  aplicarInstantaneaRemota: (instantanea) => {
+    if (get().modoEjecucion !== 'pico') return;
+    const estados = estadosDesdeInstantanea(instantanea);
+    publicarRuntimeEnCanvas(estados, true);
+    const valores = Object.fromEntries(
+      [...estados.entries()]
+        .filter(([, estado]) => estado.valor !== undefined)
+        .map(([id, estado]) => [id, estado.valor as ValorRuntime]),
+    );
+    set({
+      estado: estadoMotorDesdeRemoto(instantanea.estado),
+      valoresRuntime: valores,
+      estadosElementos: Object.fromEntries(estados),
+      contadorPasos: instantanea.secuencia,
+      ocupado: false,
+      operacion: null,
+      mensaje: `Estado oficial de la Pico aplicado (secuencia ${instantanea.secuencia}).`,
+    });
   },
 }));
 

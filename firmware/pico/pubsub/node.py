@@ -19,6 +19,8 @@ class Node:
         self.max_depth = max_depth
         self.error_count = 0
         self.last_error = None
+        self.error_handler_error_count = 0
+        self.last_error_handler_error = None
 
         self._next_handle = 1
         self._subscriptions_by_topic = {}
@@ -117,4 +119,10 @@ class Node:
         self.error_count += 1
         self.last_error = exc
         if self.error_handler is not None:
-            self.error_handler(topic, callback, exc)
+            try:
+                self.error_handler(topic, callback, exc)
+            except Exception as handler_error:
+                # El mecanismo de diagnóstico nunca debe interrumpir la
+                # entrega a los demás suscriptores.
+                self.error_handler_error_count += 1
+                self.last_error_handler_error = handler_error

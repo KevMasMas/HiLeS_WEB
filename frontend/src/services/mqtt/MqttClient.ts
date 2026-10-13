@@ -24,7 +24,8 @@ class MqttBrowserClient {
   private readonly statusListeners = new Set<MqttStatusHandler>();
   private readonly messageListeners = new Set<MqttMessageHandler>();
   private readonly validationErrorListeners = new Set<MqttValidationErrorHandler>();
-  private readonly subscriptions = new Set<string>();
+  /** Número de consumidores por topic; evita que un panel desuscriba a otro. */
+  private readonly subscriptions = new Map<string, number>();
 
   public getStatus(): MqttConnectionStatus {
     return this.status;
@@ -84,7 +85,7 @@ class MqttBrowserClient {
     client.on('connect', () => {
       if (this.client !== client) return;
       this.notifyStatus('CONNECTED');
-      this.subscriptions.forEach((topic) => {
+      this.subscriptions.forEach((_count, topic) => {
         client.subscribe(topic, (error) => {
           if (error) {
             console.error(`MQTT subscribe failed: ${topic}`, error);
@@ -144,7 +145,9 @@ class MqttBrowserClient {
   }
 
   public subscribe(topic: string): void {
-    this.subscriptions.add(topic);
+    const consumers = this.subscriptions.get(topic) ?? 0;
+    this.subscriptions.set(topic, consumers + 1);
+    if (consumers > 0) return;
     if (this.client?.connected) {
       this.client.subscribe(topic, (error) => {
         if (error) {
@@ -156,6 +159,11 @@ class MqttBrowserClient {
   }
 
   public unsubscribe(topic: string): void {
+    const consumers = this.subscriptions.get(topic) ?? 0;
+    if (consumers > 1) {
+      this.subscriptions.set(topic, consumers - 1);
+      return;
+    }
     this.subscriptions.delete(topic);
     this.client?.unsubscribe(topic);
   }

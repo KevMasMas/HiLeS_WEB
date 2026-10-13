@@ -86,15 +86,15 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
   - Frontend lint y build: `eslint .` sin errores y `tsc -b && vite build` completado en 1,02 s.
 - **Evidencia adicional opcional:** salida de consola de `unittest`, `vitest`, `eslint` y `vite build`.
 - **Commit:** `723a7d6`
-- **Riesgos o pendientes:** cuando Persona 3 implemente el motor MicroPython (`firmware/pico/hiles/`), deberá ejecutar los mismos vectores de `docs/mqtt/vectores_ir_v1/` para cerrar la comparación cruzada. `DeduplicadorMensajes` está probado como utilidad web, pero la deduplicación de comandos QoS 1 continúa pendiente en el receptor de la Pico.
+- **Riesgos o pendientes al momento de esta entrada:** Persona 3 debía implementar el motor MicroPython y ejecutar los mismos vectores de `docs/mqtt/vectores_ir_v1/`. Ese punto fue cerrado posteriormente por Persona 3 y está documentado en su entrada. La deduplicación de comandos QoS 1 continúa pendiente en el receptor de la Pico.
 
 #### Revisión de alcance y solapamientos de Persona 4
 
 - **Trabajo propio de Persona 4:** cerró la IR v1 y el contrato MQTT, implementó el compilador y validador web, definió límites, preparó los vectores de conformidad y probó mensajes, secuencias y deduplicación como utilidades web.
 - **Trabajo asumido de Persona 1 (arquitectura e integración):** creó el bus interno `Node`, el catálogo de topics y amplió las pruebas de arquitectura para comprobar que `pubsub` no dependa de `devices`, `hiles` ni `platform`. Este aporte queda integrado, pero no significa que esté terminada la integración general de las cinco personas.
 - **Trabajo relacionado con Persona 2:** creó `FakeTransport` y lo exportó desde los dobles de prueba. Esto habilita las futuras pruebas de `MqttTransport`, pero no implementa Wi-Fi, el transporte MQTT real ni modifica la lógica de `LedTask` de Persona 2.
-- **Trabajo adelantado de Persona 5:** agregó `ControlSecuenciaRemota` y `DeduplicadorMensajes` en la web. Son piezas de apoyo probadas, pero todavía no existe el cliente remoto que las conecte al canvas; por ello las casillas de aplicación visual, sesión multiusuario y deduplicación en la Pico permanecen abiertas.
-- **Trabajo relacionado con Persona 3:** dejó vectores de ejecución que deberá consumir el futuro motor MicroPython. No implementó ni modificó el motor asignado a Persona 3.
+- **Trabajo adelantado de Persona 5:** agregó `ControlSecuenciaRemota` y `DeduplicadorMensajes` en la web. En ese momento eran piezas de apoyo sin cliente conectado al canvas; Persona 5 completó posteriormente el cliente remoto, mientras la deduplicación en la Pico continúa abierta.
+- **Trabajo relacionado con Persona 3:** dejó vectores de ejecución para el entonces futuro motor MicroPython. Persona 3 implementó posteriormente el motor y cerró la reproducción de esos vectores, según su entrada del 12 de octubre.
 - **Cambio fuera de alcance corregido:** el commit de Persona 4 había limitado a tres los reintentos del cliente MQTT web y había agregado archivos `__pycache__/*.pyc`. La revisión posterior restauró la reconexión continua y eliminó esos artefactos generados en el commit `f7a8ebf`.
 - **Conclusión de la revisión:** no se marcaron como terminadas las tareas de Personas 2, 3 o 5 que solo recibieron infraestructura preparatoria. Las casillas cerradas cuentan con código y pruebas; las integraciones reales con Pico, MQTT externo y cuatro navegadores continúan pendientes.
 
@@ -138,7 +138,7 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 - [x] Persona 2 registra sus entregas.
 - [x] Persona 3 registra sus entregas.
 - [x] Persona 4 registra sus entregas.
-- [ ] Persona 5 registra sus entregas.
+- [x] Persona 5 registra sus entregas.
 
 ### [2026-10-12 17:45] — Responsable: Julian Romero (Persona 2)
 
@@ -155,11 +155,35 @@ Este archivo reúne el registro de implementación y pruebas. No se marca una ac
 ### [2026-10-12 17:58] — Responsable: Kevin Rincón (revisión y correcciones de Persona 2)
 
 - **Actividad del plan:** revisión de integración del transporte MQTT, reconexión cooperativa, composición del firmware y corrección de evidencia/casillas.
-- **Qué se corrigió:** `main.py` ahora compone `Node`, `WifiConnection`, salida GPIO, `LedTask` y `MqttTransport`; los comandos LED publican automáticamente su estado o un error; Wi‑Fi y MQTT reintentan con intervalos no bloqueantes; una caída de `check_msg()` limpia el cliente y recupera las cuatro suscripciones; las publicaciones salientes mayores de 32768 bytes se rechazan antes de llegar al broker; el adaptador `umqtt` convierte identificador y credenciales a bytes como requiere la Pico.
-- **Archivos modificados:** `firmware/pico/main.py`, `firmware/pico/platform/wifi.py`, `firmware/pico/platform/mqtt_client.py`, `firmware/pico/pubsub/mqtt_transport.py`, `firmware/tests/test_mqtt_transport.py`, `firmware/tests/README.md`, `entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md`, `entregas/entrega-5-13-octubre/REGISTRO_CAMBIOS.md`.
+- **Qué se corrigió:** `main.py` ahora compone `Node`, `WifiConnection`, salida GPIO, `LedTask` y `MqttTransport`; los comandos LED publican automáticamente su estado o un error; Wi‑Fi y MQTT reintentan con intervalos no bloqueantes; una caída de `check_msg()` limpia el cliente y recupera las cuatro suscripciones; las publicaciones salientes mayores de 32768 bytes se rechazan antes de llegar al broker; el adaptador `umqtt` convierte identificador y credenciales a bytes como requiere la Pico. Además, un fallo del `error_handler` de `Node` queda registrado sin interrumpir a los demás suscriptores.
+- **Archivos modificados:** `firmware/pico/main.py`, `firmware/pico/platform/wifi.py`, `firmware/pico/platform/mqtt_client.py`, `firmware/pico/pubsub/node.py`, `firmware/pico/pubsub/mqtt_transport.py`, `firmware/tests/test_mqtt_transport.py`, `firmware/tests/test_node.py`, `firmware/tests/README.md`, `entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md`, `entregas/entrega-5-13-octubre/REGISTRO_CAMBIOS.md`.
 - **Cómo se probó:** prueba focal `python -m unittest firmware.tests.test_mqtt_transport -v`, seguida de la suite completa de firmware; además se repiten pruebas, lint y build del frontend.
 - **Resultado esperado:** iniciar el runtime modular desde `main.py`, procesar otro comando MQTT durante el titilado, publicar el estado LED, rechazar una salida sobredimensionada y reconectar sin un ciclo cerrado ni `sleep` dentro de las tareas.
-- **Resultado obtenido:** las pruebas focales aprobaron, incluyendo composición completa, publicación automática del estado, segundo mensaje durante el titilado, caída y reconexión MQTT, espera entre reintentos, recuperación de suscripciones, reconexión Wi‑Fi, límite de salida y codificación compatible con `umqtt`. La suite completa aprobó 33 pruebas de firmware y 63 de frontend; `eslint` finalizó sin errores y el build de producción se completó correctamente.
+- **Resultado obtenido:** las pruebas focales aprobaron, incluyendo composición completa, publicación automática del estado, segundo mensaje durante el titilado, caída y reconexión MQTT, espera entre reintentos, recuperación de suscripciones, reconexión Wi‑Fi, límite de salida, codificación compatible con `umqtt` y aislamiento de un `error_handler` defectuoso. La suite completa aprobó 34 pruebas de firmware y conserva las 63 pruebas de frontend, lint y build aprobados en la misma revisión.
 - **Evidencia adicional opcional:** salida de las suites en consola.
 - **Commit:** [PENDIENTE]
 - **Riesgos o pendientes:** falta validar los adaptadores `machine`, `network` y `umqtt` en la Pico física y ejecutar una integración contra Mosquitto con las credenciales locales. El motor MicroPython y el cliente remoto pertenecen a Personas 3 y 5.
+
+### [2026-10-12 18:15] — Responsable: Persona 5
+
+- **Actividad del plan:** Persona 5 — ejecución remota web, bloqueo del motor local y preparación multiusuario.
+- **Qué se implementó:** cliente remoto desacoplado de React con sesión `modelo_id` + `version`; publicación del IR, comandos e inyección de Services con identificadores únicos; recepción de confirmaciones e instantáneas; descarte por sesión, versión y secuencia; selector Local/Pico; controles de cargar, iniciar, avanzar, detener y reiniciar; aplicación de valores, tokens y actividad al canvas; e incorporación de otros navegadores mediante un enlace que conserva la sesión en la URL. En modo Pico las operaciones del motor TypeScript y el puente MQTT hacia ese motor quedan bloqueados, y el canvas solo aplica el estado oficial aceptado por el cliente remoto.
+- **Archivos modificados:** `frontend/src/services/mqtt/RemoteExecutionClient.ts`, `frontend/src/services/mqtt/RemoteExecutionClient.test.ts`, `frontend/src/stores/useRemoteExecutionStore.ts`, `frontend/src/stores/useSimulationStore.ts`, `frontend/src/features/simulation/SimulationPanel.tsx`, `frontend/src/features/simulation/simulation.css`, `frontend/src/features/mqtt/MqttPanel.tsx`, `entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md`, `entregas/entrega-5-13-octubre/REGISTRO_CAMBIOS.md`.
+- **Cómo se probó:** `node node_modules/vitest/vitest.mjs run`, `node node_modules/typescript/bin/tsc -b`, `node node_modules/eslint/bin/eslint.js .` y `node node_modules/vite/bin/vite.js build` desde `frontend/`. El doble MQTT verifica suscripciones, sesión compartida en todos los mensajes, rechazo de acciones sin sesión y descarte de instantáneas antiguas o de otro modelo.
+- **Resultado esperado:** la web debe alternar entre motor local y Pico sin ejecutar ambos; debe publicar mensajes asociados a una sesión, aceptar únicamente estados nuevos de esa sesión y reflejarlos en los nodos del canvas.
+- **Resultado obtenido:** 11 archivos y 67 pruebas de frontend aprobadas; TypeScript y ESLint sin errores; build de producción exitoso. Las cuatro pruebas nuevas del cliente remoto aprobaron. La compilación conserva las advertencias ya existentes de Vite sobre Pyodide y tamaño de chunks, sin impedir el build.
+- **Evidencia adicional opcional:** no aplica.
+- **Commit:** sin commit por indicación de Kevin Rincón.
+- **Riesgos o pendientes:** no se confirmó aún la sincronización real en cuatro navegadores porque falta integrar el `EngineTask` de Persona 3 en `main.py`, ejecutar el flujo contra broker/Pico y realizar el ensayo conjunto. También continúa pendiente convertir el modelo visual en el cruce Norte–Sur / Este–Oeste seguro.
+
+### [2026-10-12 18:36] — Responsable: Kevin Rincón (integración de Personas 3 y 5)
+
+- **Actividad del plan:** actualización de la rama compartida, resolución del conflicto documental e integración de las implementaciones de Personas 3 y 5.
+- **Qué se corrigió:** se conservaron el motor HiLeS MicroPython y sus registros de Persona 3, el cliente remoto web y sus registros de Persona 5, y las correcciones previas de `Node`. Se unificó el estado actual del plan para no presentar como inexistentes componentes que ya están implementados, y se aclararon los pendientes históricos del registro.
+- **Archivos modificados por la resolución:** `entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md` y `entregas/entrega-5-13-octubre/REGISTRO_CAMBIOS.md`. El resto de los archivos conserva el contenido aportado por cada responsable.
+- **Cómo se probó:** suite completa de firmware con `unittest`; suite completa de frontend con Vitest; compilación TypeScript; ESLint; y build de producción con Vite.
+- **Resultado esperado:** conservar ambos trabajos sin marcadores de conflicto ni regresiones y mantener explícitos únicamente los pendientes reales.
+- **Resultado obtenido:** 79 pruebas de firmware y 67 pruebas de frontend aprobadas; TypeScript y ESLint sin errores; build exitoso; ningún archivo permanece en conflicto.
+- **Evidencia adicional opcional:** no aplica.
+- **Commit:** sin commit por indicación de Kevin Rincón.
+- **Riesgos o pendientes:** integrar `EngineTask` en `main.py`, ejecutar la prueba física, comprobar cuatro navegadores contra el mismo estado oficial y completar el cruce visual seguro.

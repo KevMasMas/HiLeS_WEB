@@ -276,12 +276,12 @@ describe('Compilador HilesModelDocument → IR v1', () => {
     expect(resultado.ok).toBe(true);
     if (!resultado.ok) return;
 
-    // 4 Services + 12 Functional Blocks + 12 Places + 12 Transitions = 40 elementos ejecutables
-    expect(resultado.ir.elementos).toHaveLength(40);
-    // 24 conexiones de datos + 24 arcos Petri = 48 conexiones
-    expect(resultado.ir.conexiones).toHaveLength(48);
-    expect(resultado.ir.elementos.some((el) => el.id === 'sem1-block')).toBe(false);
-    expect(resultado.ir.conexiones.filter((c) => c.tipo === 'dato' && c.destino.startsWith('sem1-t-'))
+    // 1 Service + 12 Places + 5 Transitions = 18 elementos ejecutables.
+    expect(resultado.ir.elementos).toHaveLength(18);
+    // 5 condiciones de datos + 40 arcos Petri = 45 conexiones.
+    expect(resultado.ir.conexiones).toHaveLength(45);
+    expect(resultado.ir.elementos.some((el) => el.id === 'norte-block')).toBe(false);
+    expect(resultado.ir.conexiones.filter((c) => c.tipo === 'dato' && c.destino.startsWith('fase-'))
       .every((c) => c.tipo === 'dato' && c.puerto_destino === IR_PUERTO_CONDICION)).toBe(true);
   });
 
@@ -396,8 +396,35 @@ describe('Vectores compartidos docs/mqtt/vectores_ir_v1', () => {
     motor.construirGrafo(nodes, edges);
 
     const instantanea = extraerElementosEstadoIr(compilado.ir, motor);
-    expect(instantanea['sem1-rojo']).toEqual({ tokens: 1 });
-    expect(instantanea['sem1-verde']).toEqual({ tokens: 0 });
-    expect(instantanea['sem1-t-verde']).toEqual({ habilitada: false, disparada: false });
+    expect(instantanea['norte-rojo']).toEqual({ tokens: 1 });
+    expect(instantanea['norte-verde']).toEqual({ tokens: 0 });
+    expect(instantanea['fase-ns-verde']).toEqual({ habilitada: false, disparada: false });
+  });
+
+  it('mantiene la exclusión mutua del cruce coordinado durante varios ciclos', async () => {
+    const documento = cargarDocumento('demo-4-semaforos-inteligentes.json');
+    const compilado = compilarDocumentoAIr(documento);
+    expect(compilado.ok).toBe(true);
+    if (!compilado.ok) return;
+
+    const { nodes, edges } = documentoAGrafoMotor(documento);
+    const motor = new MotorSimulacion();
+    motor.construirGrafo(nodes, edges);
+    expect(motor.inyectarEntrada('ciclo-habilitado', true).exito).toBe(true);
+
+    for (let paso = 0; paso < 15; paso += 1) {
+      await motor.paso();
+      const estado = extraerElementosEstadoIr(compilado.ir, motor);
+      const token = (direccion: string, color: string) => estado[`${direccion}-${color}`]?.tokens ?? 0;
+      const norteSurVerde = token('norte', 'verde') === 1 || token('sur', 'verde') === 1;
+      const esteOesteVerde = token('este', 'verde') === 1 || token('oeste', 'verde') === 1;
+
+      expect(token('norte', 'verde'), `paso ${paso + 1}`).toBe(token('sur', 'verde'));
+      expect(token('este', 'verde'), `paso ${paso + 1}`).toBe(token('oeste', 'verde'));
+      expect(norteSurVerde && esteOesteVerde, `paso ${paso + 1}`).toBe(false);
+      for (const direccion of ['norte', 'sur', 'este', 'oeste']) {
+        expect(['rojo', 'amarillo', 'verde'].reduce((total, color) => total + token(direccion, color), 0)).toBe(1);
+      }
+    }
   });
 });
