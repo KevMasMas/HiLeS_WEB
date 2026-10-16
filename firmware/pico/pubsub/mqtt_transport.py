@@ -19,11 +19,13 @@ class MqttTransport(Task):
     def __init__(self, scheduler, node, wifi, client_factory, client_id="pico01", host=None,
                  port=1883, username=None, password=None, prefix=TOPIC_PREFIX,
                  period_ms=10, priority=0, keepalive=30, max_payload_bytes=MAX_PAYLOAD_BYTES,
-                 reconnect_interval_ms=5000):
+                 reconnect_interval_ms=5000, connect_timeout_seconds=2):
         if not callable(client_factory):
             raise ValueError("client_factory debe ser invocable")
         if not isinstance(reconnect_interval_ms, int) or isinstance(reconnect_interval_ms, bool) or reconnect_interval_ms <= 0:
             raise ValueError("reconnect_interval_ms debe ser un entero mayor que cero")
+        if not isinstance(connect_timeout_seconds, int) or isinstance(connect_timeout_seconds, bool) or connect_timeout_seconds <= 0:
+            raise ValueError("connect_timeout_seconds debe ser un entero mayor que cero")
         self.node = node
         self.wifi = wifi
         self.client_factory = client_factory
@@ -36,6 +38,7 @@ class MqttTransport(Task):
         self.keepalive = keepalive
         self.max_payload_bytes = max_payload_bytes
         self.reconnect_interval_ms = reconnect_interval_ms
+        self.connect_timeout_seconds = connect_timeout_seconds
         self.client = None
         self.connected = False
         self.last_error = None
@@ -43,7 +46,13 @@ class MqttTransport(Task):
         self._handles = []
         for suffix, policy in SALIENTES.items():
             self._handles.append(node.subscribe(suffix, self._make_publisher(suffix, policy)))
-        super().__init__(scheduler, period_ms=period_ms, priority=priority, name="mqtt", max_update_ms=period_ms)
+        super().__init__(
+            scheduler,
+            period_ms=period_ms,
+            priority=priority,
+            name="mqtt",
+            max_update_ms=connect_timeout_seconds * 1000 + 100,
+        )
 
     def _make_publisher(self, suffix, policy):
         def publish(payload):
@@ -92,12 +101,15 @@ class MqttTransport(Task):
         self.client = self.client_factory(self.client_id, self.host, self.port, self.username,
                                           self.password, self.keepalive)
         self.client.set_callback(self._on_message)
-        self.client.connect()
+        # ``umqtt.simple`` es síncrono. Limitar el socket evita que un broker
+        # inaccesible congele todas las tareas cooperativas durante 30 s.
+        self.client.connect(timeout=self.connect_timeout_seconds)
         for suffix in ENTRANTES:
             self.client.subscribe(full_topic(suffix, self.prefix).encode(), qos=1)
         self.connected = True
         self.last_error = None
         self._next_connect_at = None
+        print("[MQTT] Conectado a {}:{}".format(self.host, self.port))
         self.node.publish(ESTADO_CONEXION, {"conectado": True, "dispositivo": self.client_id})
 
     def _reconnect_due(self):
@@ -124,6 +136,9 @@ class MqttTransport(Task):
                     pass
         self.node.publish(ESTADO_CONEXION, {"conectado": False, "dispositivo": self.client_id})
         self._publish_error("MQTT_DESCONECTADO", str(error))
+        print("[MQTT] Conexión fallida: {}; reintento en {} ms".format(
+            repr(error), self.reconnect_interval_ms
+        ))
 
     def _on_message(self, topic, raw_payload):
         suffix = relative_topic(self._as_text(topic), self.prefix)

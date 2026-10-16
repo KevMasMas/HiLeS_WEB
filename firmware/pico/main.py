@@ -123,6 +123,7 @@ def build_default_application(config=None, clock=None, machine_module=None,
         port=config.MQTT_PORT,
         username=config.MQTT_USERNAME,
         password=config.MQTT_PASSWORD,
+        connect_timeout_seconds=getattr(config, "MQTT_CONNECT_TIMEOUT_SECONDS", 2),
     )
     scheduler.components = {
         "node": node,

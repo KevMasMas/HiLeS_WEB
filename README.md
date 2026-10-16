@@ -379,6 +379,7 @@ Los mensajes MQTT tienen un límite inicial de 32 KiB. El contrato remoto admite
 
 ## Documentación relevante
 
+- [Guía completa para replicar el proyecto en otro PC](docs/GUIA_REPLICACION_COMPLETA_WINDOWS.md)
 - [Plan general MQTT y Pico W](entregas/entrega-4-9-octubre/PLAN_MQTT_PICO.md)
 - [Plan de implementación de la ejecución en Pico](entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md)
 - [Contrato de mensajes MQTT](docs/mqtt/CONTRATO_MENSAJES_MQTT.md)

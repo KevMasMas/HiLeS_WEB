@@ -40,11 +40,13 @@ class FakeMqttClient:
         self.incoming = []
         self.check_msg_count = 0
         self.raise_on_check = False
+        self.connect_timeout = None
 
     def set_callback(self, callback):
         self.callback = callback
 
-    def connect(self):
+    def connect(self, timeout=None):
+        self.connect_timeout = timeout
         self.connected = True
 
     def subscribe(self, topic, qos=0):
@@ -86,6 +88,7 @@ class MqttTransportTests(unittest.TestCase):
         scheduler.run_pending()
         client = clients[0]
         self.assertTrue(client.connected)
+        self.assertEqual(client.connect_timeout, 2)
         self.assertEqual(len(client.subscriptions), 4)
         self.assertEqual(node.subscriber_count(LED_ESTADO), 1)
 

@@ -69,6 +69,7 @@ retenida y no reemplaza el estado oficial guardado en Mosquitto.
    MQTT_USERNAME = "USUARIO_MQTT"
    MQTT_PASSWORD = "CLAVE_MQTT"
    MQTT_CLIENT_ID = "pico01"
+   MQTT_CONNECT_TIMEOUT_SECONDS = 2
    ENGINE_PERIOD_MS = 20
    ENGINE_STEP_INTERVAL_MS = 1000
    ```
@@ -142,6 +143,8 @@ Si no aparece en aproximadamente 15 segundos:
 - errores Wi-Fi: revisar SSID, contraseña y que sea una Pico **W**;
 - `MQTT_DESCONECTADO`: revisar `MQTT_HOST`, usuario, contraseña, puerto y
   Firewall;
+- los intentos fallidos están limitados a dos segundos y se reintentan cada
+  cinco segundos, para que el scheduler no quede bloqueado durante 30 segundos;
 - usar la IPv4 del PC, nunca `localhost`;
 - comprobar que PC y Pico estén en la misma red y que la red no aísle clientes.
 
