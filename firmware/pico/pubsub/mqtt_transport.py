@@ -43,6 +43,8 @@ class MqttTransport(Task):
         self.connected = False
         self.last_error = None
         self._next_connect_at = None
+        self._socket_poller = None
+        self._next_ping_at = None
         self._handles = []
         for suffix, policy in SALIENTES.items():
             self._handles.append(node.subscribe(suffix, self._make_publisher(suffix, policy)))
@@ -88,14 +90,65 @@ class MqttTransport(Task):
             except Exception as exc:
                 self._schedule_reconnect(exc)
             return
-        check_msg = getattr(self.client, "check_msg", None)
-        if not callable(check_msg):
-            self._schedule_reconnect(RuntimeError("cliente MQTT debe implementar check_msg()"))
-            return
+        used_poller = self._socket_poller is not None
         try:
-            check_msg()
+            if self._ping_due():
+                ping = getattr(self.client, "ping", None)
+                if callable(ping):
+                    ping()
+                self._schedule_next_ping()
+            if used_poller:
+                if not self._socket_poller.poll(0):
+                    return
+                self.client.wait_msg()
+            else:
+                check_msg = getattr(self.client, "check_msg", None)
+                if not callable(check_msg):
+                    raise RuntimeError("cliente MQTT debe implementar check_msg()")
+                check_msg()
+        except OSError as exc:
+            # En algunas versiones de MicroPython, ``umqtt.simple`` devuelve
+            # ``b\"\"`` cuando el socket no bloqueante todavía no tiene datos y
+            # lo convierte en ``OSError(-1)``. No es una desconexión: simplemente
+            # hay que dejar que el scheduler vuelva a consultar en el siguiente
+            # ciclo.
+            if not used_poller and self._is_idle_check_error(exc):
+                return
+            self._schedule_reconnect(exc)
         except Exception as exc:
             self._schedule_reconnect(exc)
+
+    @staticmethod
+    def _is_idle_check_error(error):
+        return bool(getattr(error, "args", ())) and error.args[0] == -1
+
+    @staticmethod
+    def _build_socket_poller(client):
+        """Usa ``poll`` para no leer el socket de la Pico cuando está vacío."""
+        sock = getattr(client, "sock", None)
+        if sock is None or not callable(getattr(client, "wait_msg", None)):
+            return None
+        try:
+            import select
+            poller = select.poll()
+            poller.register(sock, select.POLLIN)
+            return poller
+        except (ImportError, AttributeError, OSError):
+            return None
+
+    def _schedule_next_ping(self):
+        if self.keepalive > 0:
+            interval_ms = max(1000, self.keepalive * 500)
+            self._next_ping_at = self.scheduler.clock.add_ms(
+                self.scheduler.clock.now_ms(), interval_ms
+            )
+        else:
+            self._next_ping_at = None
+
+    def _ping_due(self):
+        return self._next_ping_at is not None and self.scheduler.clock.diff_ms(
+            self.scheduler.clock.now_ms(), self._next_ping_at
+        ) >= 0
 
     def _connect(self):
         self.client = self.client_factory(self.client_id, self.host, self.port, self.username,
@@ -104,6 +157,8 @@ class MqttTransport(Task):
         # ``umqtt.simple`` es síncrono. Limitar el socket evita que un broker
         # inaccesible congele todas las tareas cooperativas durante 30 s.
         self.client.connect(timeout=self.connect_timeout_seconds)
+        self._socket_poller = self._build_socket_poller(self.client)
+        self._schedule_next_ping()
         for suffix in ENTRANTES:
             self.client.subscribe(full_topic(suffix, self.prefix).encode(), qos=1)
         self.connected = True
@@ -123,6 +178,8 @@ class MqttTransport(Task):
         self.last_error = error
         client = self.client
         self.client = None
+        self._socket_poller = None
+        self._next_ping_at = None
         self.connected = False
         self._next_connect_at = self.scheduler.clock.add_ms(
             self.scheduler.clock.now_ms(), self.reconnect_interval_ms
@@ -182,6 +239,8 @@ class MqttTransport(Task):
             if callable(disconnect):
                 disconnect()
         self.client = None
+        self._socket_poller = None
+        self._next_ping_at = None
         self.connected = False
         self._next_connect_at = None
 

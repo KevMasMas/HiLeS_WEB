@@ -39,7 +39,10 @@ class FakeMqttClient:
         self.published = []
         self.incoming = []
         self.check_msg_count = 0
+        self.wait_msg_count = 0
+        self.ping_count = 0
         self.raise_on_check = False
+        self.idle_on_check = False
         self.connect_timeout = None
 
     def set_callback(self, callback):
@@ -57,11 +60,22 @@ class FakeMqttClient:
 
     def check_msg(self):
         self.check_msg_count += 1
+        if self.idle_on_check:
+            raise OSError(-1)
         if self.raise_on_check:
             raise OSError("broker desconectado")
         if self.incoming:
             topic, payload = self.incoming.pop(0)
             self.callback(topic, payload)
+
+    def wait_msg(self):
+        self.wait_msg_count += 1
+        if self.incoming:
+            topic, payload = self.incoming.pop(0)
+            self.callback(topic, payload)
+
+    def ping(self):
+        self.ping_count += 1
 
     def disconnect(self):
         self.connected = False
@@ -145,6 +159,60 @@ class MqttTransportTests(unittest.TestCase):
         clock.advance_ms(1)
         scheduler.run_pending()
         self.assertEqual(len(clients), 2)
+        self.assertTrue(transport.connected)
+
+    def test_keeps_connection_when_nonblocking_socket_has_no_message(self):
+        clock, scheduler, _node, _wifi, clients, transport = self.create()
+        scheduler.run_pending()
+        client = clients[0]
+        client.idle_on_check = True
+
+        clock.advance_ms(1)
+        scheduler.run_pending()
+
+        self.assertTrue(transport.connected)
+        self.assertIs(transport.client, client)
+        self.assertEqual(len(clients), 1)
+
+    def test_socket_poller_avoids_empty_nonblocking_reads(self):
+        class FakePoller:
+            def __init__(self):
+                self.ready = False
+
+            def poll(self, _timeout):
+                return [(1, 1)] if self.ready else []
+
+        clock, scheduler, node, _wifi, clients, transport = self.create()
+        received = []
+        node.subscribe(LED_COMANDO, received.append)
+        scheduler.run_pending()
+        client = clients[0]
+        poller = FakePoller()
+        transport._socket_poller = poller
+
+        clock.advance_ms(1)
+        scheduler.run_pending()
+        self.assertEqual(client.wait_msg_count, 0)
+
+        client.incoming.append((b"udfjc/hiles/v1/equipo1/pico01/led/comando", b'{"accion":"encender"}'))
+        poller.ready = True
+        clock.advance_ms(1)
+        scheduler.run_pending()
+        self.assertEqual(client.wait_msg_count, 1)
+        self.assertEqual(received, [{"accion": "encender"}])
+
+    def test_sends_keepalive_ping_before_broker_timeout(self):
+        clock, scheduler, _node, _wifi, clients, transport = self.create()
+        scheduler.run_pending()
+        client = clients[0]
+
+        clock.advance_ms(14999)
+        scheduler.run_pending()
+        self.assertEqual(client.ping_count, 0)
+        clock.advance_ms(1)
+        scheduler.run_pending()
+
+        self.assertEqual(client.ping_count, 1)
         self.assertTrue(transport.connected)
 
     def test_rejects_oversized_internal_publication(self):
