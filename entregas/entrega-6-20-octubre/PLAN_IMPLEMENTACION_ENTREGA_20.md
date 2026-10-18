@@ -1,770 +1,573 @@
-# Plan de implementación — Python en Pico, proyectos compartidos y semáforos distribuidos
+# Plan de implementación — entrega del 20 de octubre
 
-**Entrega:** martes 20 de octubre de 2026, hora por confirmar (Colombia)
+**Fecha límite:** martes 20 de octubre de 2026
 
-**Equipo:** cinco personas. Los nombres definitivos deben escribirse en la sección de responsables antes de iniciar el desarrollo.
+**Equipo:** cinco personas
 
-**Estado del documento:** plan aprobado para iniciar implementación. Todas las actividades nuevas permanecen pendientes hasta que exista código, prueba y evidencia registrada.
+**Estado:** planeación corregida después de auditar entregas anteriores, código actual y pruebas
+**Regla de avance:** una casilla se marca `[x]` únicamente cuando hay código terminado y prueba reproducible. Durante esta revisión no se agrega ninguna entrada al registro de cambios.
 
-## 1. Objetivo de la entrega
+## 1. Objetivo real de esta entrega
 
-Extender la base funcional actual sin reemplazar su arquitectura para demostrar cinco capacidades:
+Completar las capacidades que todavía no existen sobre la arquitectura actual, sin rehacer `Task`, `Scheduler`, MQTT, el editor ni el motor ya entregado:
 
-1. El código Python escrito por el usuario en un `Functional Block` se envía a la Raspberry Pi Pico W y se ejecuta con MicroPython dentro de la placa.
-2. El runtime remoto alcanza paridad con los elementos ejecutables actuales del editor: `Service`, `Functional Block`, `Sample`, `Hold`, `Place`, `Transition`, CCH, DCH, Petri/LCH y retardos.
-3. Un proyecto puede abrirse mediante un enlace `?project=<id>` y reconstruir su documento compartido.
-4. Varios navegadores pueden ver presencia, cursores y cambios del canvas en tiempo real.
-5. El caso de demostración contiene cuatro semáforos lógicos independientes, cada uno con sensor y FSM propia, coordinados para impedir estados inseguros.
+1. Ejecutar en la Raspberry Pi Pico W el código **Python** escrito dentro de un `Functional Block`.
+2. Ampliar el perfil remoto para ejecutar `Sample`, `Hold`, CCH, DCH, LCH/Petri y retardos sin bloquear el scheduler.
+3. Abrir y reconstruir el documento visual mediante `?project=<id>`.
+4. Sincronizar edición, presencia y cursores entre navegadores del mismo proyecto.
+5. Reorganizar la interfaz para liberar espacio del canvas mediante una topbar y paneles compactos.
+6. Reemplazar el semáforo coordinado anterior por cuatro controladores lógicos independientes, con sensores, FSM `Rojo → Verde → Amarillo → Rojo` y exclusión segura de movimientos incompatibles.
+7. Validar el flujo completo en la Pico física y dejar una demostración repetible.
 
-La meta de compatibilidad completa significa que cualquier circuito construido con los elementos y tipos definidos en el perfil remoto debe ejecutar en la Pico con la misma semántica observable que en el motor TypeScript. No significa permitir imports, ciclos infinitos o acceso irrestricto al hardware desde código recibido.
+La Pico ejecuta el motor HiLeS y el Python de los Functional Blocks. Vite, React, Pyodide, Mosquitto y la sincronización visual permanecen en el PC y los navegadores.
 
-## 2. Aclaración de arquitectura
+## 2. Auditoría de las entregas anteriores
 
-No se pretende ejecutar Vite, React, Pyodide ni Mosquitto dentro de la Pico.
+### 2.1 Capacidades terminadas que se reutilizan
 
-```text
-PC
-├── Vite + React + React Flow
-├── Pyodide para simulación local
-├── Mosquitto
-└── Navegadores colaboradores
-        │ MQTT sobre WebSockets
-        ▼
-Raspberry Pi Pico W
-├── MicroPython
-├── motor HiLeS
-├── código Python de Functional Blocks
-├── lógica de sensores y semáforos
-└── publicación del estado oficial
-```
+Estas actividades ya fueron implementadas y probadas. **No se vuelven a repartir como trabajo nuevo.**
 
-En modo local, Pyodide continúa disponible. En modo remoto, el navegador no ejecuta el Functional Block: envía el modelo y espera la instantánea producida por la Pico.
+- [x] Editor React/React Flow, importación, exportación, autosave, undo y redo.
+- [x] Motor local TypeScript con `Service`, `Functional Block`, `Sample`, `Hold`, `Place`, `Transition` y Structural Block visual.
+- [x] Ejecución local de JavaScript y Python mediante Workers/Pyodide.
+- [x] Mosquitto local con MQTT TCP para la Pico y WebSockets para los navegadores.
+- [x] `Node` pub/sub, `MqttTransport`, reconexión, recuperación de suscripciones, keepalive y recepción cooperativa.
+- [x] `Task`, `Scheduler` y `Clock` con prioridad, medición, aislamiento de errores, presupuesto, habilitación y pruebas deterministas.
+- [x] `EngineTask` con cola acotada, un número limitado de comandos por actualización y deduplicación de 32 mensajes.
+- [x] IR v1 y validadores compartidos para `Service`, Functional Block por árbol de expresión, `Place`, `Transition`, conexiones de dato y arcos Petri.
+- [x] Motor MicroPython IR v1 con propagación topológica, tokens atómicos, reset, snapshots y ejecución continua.
+- [x] Modo Local/Pico, carga de modelo, comandos, entradas y aplicación de snapshots oficiales al canvas.
+- [x] Sesión remota por `?modelo=<id>&version=<n>` y descarte de estados de otra sesión o secuencia anterior.
+- [x] Demostrador anterior de cuatro sentidos coordinados por una única red Petri Norte–Sur / Este–Oeste.
+- [x] Difusión MQTT comprobada con cuatro clientes WebSocket usando un estado simulado.
 
-## 3. Línea base confirmada
+### 2.2 Línea base verificada el 18 de octubre
 
-Antes de esta entrega ya existen:
+- [x] Firmware: **85 pruebas aprobadas**.
+- [x] Frontend: **70 pruebas aprobadas en 12 archivos**.
+- [x] TypeScript y build de producción aprobados.
+- [x] El `Task`/`Scheduler` local fue comparado con la rama `upy_min/pico_ros` del profesor; no necesita ser reimplementado.
+- [ ] El flujo completo navegador → broker → Pico física → snapshot → cuatro navegadores debe repetirse y documentarse para esta entrega.
 
-- editor React/React Flow y almacenamiento local;
-- motor local TypeScript;
-- ejecución Python local mediante Pyodide;
-- cliente MQTT web sobre WebSockets;
-- transporte MQTT/TCP en MicroPython;
-- IR v1 y validación compartida;
-- motor MicroPython para `Service`, `Functional Block`, `Place` y `Transition`;
-- comandos remotos, entradas e instantáneas oficiales;
-- control de versión, secuencia y deduplicación;
-- scheduler cooperativo;
-- demo coordinado Norte–Sur / Este–Oeste;
-- 70 pruebas frontend aprobadas y build de producción aprobado el 18 de octubre.
+### 2.3 Capacidades parciales que no deben confundirse con la meta nueva
 
-La ejecución de pruebas de firmware queda pendiente en la máquina actual porque Python no está disponible en `PATH`; esto no se registra como fallo funcional.
+| Capacidad actual | Qué sí existe | Qué falta realmente |
+|---|---|---|
+| Enlace de sesión | `?modelo` y `version` filtran snapshots de ejecución | `?project=<id>` no carga ni sincroniza el documento del canvas |
+| Functional Block remoto | La Pico ejecuta un árbol de expresión IR v1 | El código Python del editor se rechaza y no viaja a la Pico |
+| Sample/Hold | Existen en el motor local | No existen en la IR ni en el motor MicroPython |
+| CCH/DCH | El editor conserva el tipo visual | IR v1 los convierte al mismo tipo `dato`; no hay semántica DCH de evento/cola |
+| LCH/Petri | Existen arcos Place–Transition | Las señales lógicas de control entre otros elementos no son compatibles remotamente |
+| Retardos | El documento guarda `executionDelay` y `delay` | Los motores local y remoto no aplican esos tiempos |
+| Structural Block | Se dibuja y sus hijos pueden aparecer planos | No se resuelven conexiones que atraviesan puertos de frontera del bloque |
+| Tipos | El editor ofrece `vector` y `custom` | El runtime actual solo transporta boolean, integer, real y string |
+| Cuatro navegadores | Pueden recibir un mismo snapshot MQTT | No comparten creación, movimiento o edición de nodos ni muestran presencia/cursor |
+| Semáforos | Hay cuatro bloques visuales con una red común | No hay cuatro FSM independientes, sensores ni temporización realista |
+| UI | Hay header, paleta izquierda y rail derecho | Los paneles todavía reducen de forma permanente el canvas |
 
-## 4. Diferencias frente a la entrega anterior
+## 3. Alcance exacto y límites
 
-La entrega anterior sincroniza la ejecución de un modelo, pero:
+### 3.1 Perfil remoto que debe quedar terminado
 
-- el código Python de un Functional Block se rechaza al compilar la IR remota;
-- la Pico no implementa todavía `Sample`, `Hold`, CCH/DCH diferenciados ni retardos por elemento o conexión;
-- los tipos `vector` y `custom` no forman parte del contrato remoto actual;
-- `Structural Block` debe aplanarse de forma verificable antes de llegar al motor;
-- los cuatro navegadores no comparten todavía la edición del documento;
-- no hay presencia ni cursores remotos;
-- el demo usa un controlador coordinado único;
-- los sensores vehiculares y FSM independientes no forman parte del demo principal;
-- la interfaz todavía reserva demasiado espacio para paneles laterales.
+Un modelo es compatible con la Pico cuando usa:
 
-## 5. Alcance P0 obligatorio
+- `Service`, `Functional Block` con Python, `Sample`, `Hold`, `Place` y `Transition`;
+- Structural Blocks aplanables y puertos de frontera resolubles;
+- CCH continuo, DCH de evento, LCH de control y arcos Petri;
+- retardos de elemento, transición o conexión implementados mediante fechas límite no bloqueantes;
+- valores `boolean`, `integer`, `real`, `string`, `vector` acotado y `custom` JSON acotado;
+- límites de elementos, conexiones, código, cola, profundidad y payload definidos en el contrato.
 
-### 5.1 Python de Functional Blocks ejecutado en la Pico
+### 3.2 Qué significa “Python en la Pico”
 
-- [ ] Crear una evolución compatible de la IR que transporte `lenguaje`, `codigo`, entradas y salidas.
-- [ ] Mantener lectura de modelos IR v1 existentes.
-- [ ] Admitir código Python en forma de expresión o función `calcular(...)`.
-- [ ] Compilar el código una sola vez durante la carga del modelo.
-- [ ] Ejecutar la función con los valores actuales de los puertos.
-- [ ] Admitir un valor simple para una salida y un diccionario para múltiples salidas.
-- [ ] Validar tipos de entrada y salida.
-- [ ] Publicar errores de carga y ejecución con elemento, código y mensaje.
-- [ ] Evitar que un error de un bloque detenga el scheduler completo.
-- [ ] Medir duración y memoria en la Pico física.
+El código se compila y ejecuta con MicroPython en la placa, pero no se acepta Python irrestricto. Permitir ciclos infinitos o acceso directo a red, archivos y hardware bloquearía el scheduler cooperativo.
 
-Perfil Python inicial permitido:
+Perfil obligatorio:
 
-- aritmética, comparaciones y booleanos;
-- `if`/`else` acotado;
-- literales numéricos, booleanos y de texto;
-- `min`, `max`, `abs` y `round`;
-- variables correspondientes a los puertos;
-- una función pública llamada `calcular`.
+- función `calcular(...)` o expresión compatible;
+- aritmética, comparaciones, booleanos, `if/else`, variables locales y retorno;
+- funciones seguras explícitas como `min`, `max`, `abs` y `round`;
+- salida escalar o diccionario `{puerto: valor}` para múltiples salidas;
+- sin `import`, ciclos, recursión, `eval`, `exec`, archivos, red, `machine` ni nombres `__dunder__`;
+- validación antes de sustituir el modelo activo;
+- error de carga o ejecución asociado al bloque, sin detener otras tareas.
 
-Se rechazan en P0:
+JavaScript continúa disponible en la simulación local, pero no forma parte del perfil MicroPython de esta entrega.
 
-- `import`;
-- `while` y `for`;
-- recursión;
-- `eval`, `exec`, `open`, `globals` y `locals`;
-- nombres `__dunder__`;
-- acceso a `machine`, red o archivos;
-- código por encima del límite definido en el contrato;
-- llamadas a funciones no autorizadas.
+### 3.3 Sincronización de proyecto
 
-Ejemplo esperado:
-
-```python
-def calcular(carros, emergencia):
-    if emergencia:
-        return False
-    return carros >= 6
-```
-
-### 5.2 Paridad completa del motor remoto
-
-#### Elementos
-
-- [ ] Ejecutar `Service` como entrada, salida y valor inicial tipado.
-- [ ] Ejecutar `Functional Block` Python con una o varias entradas y salidas.
-- [ ] Ejecutar `Sample` con entrada CCH, activación LCH/control y emisión DCH de un solo evento.
-- [ ] Ejecutar `Hold` consumiendo DCH, reteniendo el último valor y publicándolo por CCH.
-- [ ] Ejecutar `Place` con tokens iniciales, capacidad y pesos.
-- [ ] Ejecutar `Transition` con guarda, retardo, habilitación y disparo atómico.
-- [ ] Aplanar `Structural Block` conservando hijos, IDs y conexiones externas e internas.
-- [ ] Normalizar `TOKEN` y `TOKEN_FLOW` legados a Petri o rechazarlos con migración explícita.
-- [ ] Tratar `PORT` como metadato/conector, no como tarea ejecutable independiente.
-
-#### Canales y eventos
-
-- [ ] Diferenciar explícitamente CCH, DCH y PETRI/LCH en la IR.
-- [ ] Implementar CCH continuo con valor actual y propagación determinista.
-- [ ] Implementar DCH como evento consumible que no se repite en pasos posteriores.
-- [ ] Implementar cola DCH acotada, orden FIFO y política documentada ante desbordamiento.
-- [ ] Implementar activación LCH/control para `Sample`, `Hold` y transiciones.
-- [ ] Mantener arcos Petri con peso, capacidad, conflicto y movimiento atómico.
-- [ ] Mantener orden topológico determinista para el flujo de datos.
-- [ ] Detectar ciclos de datos y reportarlos igual que el motor local.
-- [ ] Implementar los modos CCH expuestos por el editor (`push`, `pull` y `flag`) o bloquear antes de cargar cualquier modo no ejecutable.
-
-#### Retardos y planificación
-
-- [ ] Transportar `executionDelay` de elementos.
-- [ ] Transportar `delay` de conexiones y transiciones.
-- [ ] Representar todo retardo mediante tiempo objetivo y estado persistente.
-- [ ] Prohibir `sleep` dentro de elementos y callbacks.
-- [ ] Procesar una cantidad máxima de eventos y elementos por `update()`.
-- [ ] Continuar atendiendo MQTT, LED y colaboración mientras un modelo espera un timer.
-- [ ] Definir orden para eventos que vencen en el mismo instante.
-- [ ] Cancelar timers pendientes al reiniciar o sustituir el modelo.
-
-#### Tipos y estado
-
-- [ ] Conservar `boolean`, `integer`, `real` y `string`.
-- [ ] Agregar `vector` como lista JSON acotada y homogénea.
-- [ ] Agregar `custom` como valor JSON acotado en tamaño, profundidad y cantidad de claves.
-- [ ] Validar tipos en Services, puertos, bloques, Sample y Hold.
-- [ ] Publicar en snapshots valores, salida, valor retenido, evento pendiente, tokens, timers y errores observables.
-- [ ] Reiniciar valores, colas, tokens, estados retenidos, timers y errores al estado inicial exacto.
-
-#### Equivalencia web/Pico
-
-- [ ] Crear vectores compartidos para cada elemento y canal.
-- [ ] Comparar paso a paso el motor TypeScript y el motor MicroPython.
-- [ ] Verificar el mismo estado inicial, eventos, salidas, marcado y errores.
-- [ ] Ejecutar automáticamente todos los modelos de `output/` que pertenezcan al perfil remoto.
-- [ ] No cerrar la entrega con un elemento ejecutable actual sin una decisión y prueba explícitas.
-
-### 5.3 Proyecto compartido por URL
-
-- [ ] Leer y validar `?project=<id>` al iniciar la aplicación.
-- [ ] Crear un ID compartible cuando no exista uno.
-- [ ] Incorporar una acción visible para copiar el enlace.
-- [ ] Separar el autoguardado local por proyecto.
-- [ ] Publicar un snapshot retenido del documento.
-- [ ] Reconstruir el proyecto al abrir el enlace desde otro navegador.
-- [ ] Aislar estrictamente proyectos con IDs distintos.
-- [ ] No incluir credenciales ni datos sensibles en la URL.
-
-Formato inicial de ID:
+El proyecto compartido usa MQTT del PC, no la Pico:
 
 ```text
-[A-Za-z0-9_-]{1,48}
+udfjc/hiles/v2/projects/<projectId>/document/snapshot   retained
+udfjc/hiles/v2/projects/<projectId>/document/ops        no retained
+udfjc/hiles/v2/projects/<projectId>/presence            retained/offline
+udfjc/hiles/v2/projects/<projectId>/cursor              no retained
 ```
 
-### 5.4 Edición y presencia en tiempo real
+- El snapshot reconstruye el documento al abrir `?project=<id>`.
+- Las operaciones actualizan nodos, conexiones y propiedades sin publicar el documento completo por cada movimiento.
+- Cada mensaje incluye `projectId`, `clientId`, `operationId` y reloj lógico.
+- Las operaciones repetidas son idempotentes.
+- Para esta entrega se usa resolución determinista por entidad/campo con reloj lógico y `clientId`; no se implementa un CRDT de producción ni autenticación.
+- `?modelo`/`version` se conserva temporalmente para retrocompatibilidad, pero `projectId` será la identidad del documento compartido y podrá usarse como `modelo_id` al cargarlo en la Pico.
 
-- [ ] Generar un `clientId` único por pestaña.
-- [ ] Publicar presencia con heartbeat y expiración.
-- [ ] Mostrar nombre y color de cada participante.
-- [ ] Publicar cursores del canvas con limitación de frecuencia.
-- [ ] Sincronizar creación, movimiento, actualización y eliminación de nodos.
-- [ ] Sincronizar creación, actualización y eliminación de conexiones.
-- [ ] Incluir `operationId`, `clientId`, versión y reloj lógico.
-- [ ] Evitar el eco de operaciones propias.
-- [ ] Usar tombstones para eliminaciones.
-- [ ] Resolver conflictos por última operación válida por elemento.
-- [ ] Mostrar edición activa o bloqueo temporal en propiedades/código.
-- [ ] Reconstruir estado después de una reconexión.
+## 4. Reglas de dependencias y propiedad
 
-La entrega no promete un CRDT de texto completo. Si dos personas intentan modificar simultáneamente el mismo código, se usa bloqueo temporal o última escritura válida y se informa visualmente.
+- Persona 1 no depende de nadie.
+- Persona 2 depende únicamente del contrato de Persona 1.
+- Persona 3 depende de Personas 1 y 2.
+- Persona 4 depende de las interfaces congeladas por Personas 1, 2 y 3.
+- Persona 5 integra todo lo anterior y realiza las pruebas completas.
+- Un archivo tiene un solo dueño durante la entrega.
+- Los archivos marcados “solo lectura” no se modifican salvo que una prueba demuestre un defecto y se acuerde el cambio.
+- No se crea otro scheduler. Los retardos se representan como estado pendiente y fecha límite usando el reloj existente.
 
-### 5.5 Cuatro semáforos inteligentes independientes
+## 5. Distribución estricta entre cinco personas
 
-- [ ] Sustituir el controlador visual único por cuatro controladores lógicos.
-- [ ] Crear nodos Norte, Sur, Este y Oeste con estado local.
-- [ ] Asociar un sensor de presencia a cada nodo.
-- [ ] Implementar la FSM `ROJO → VERDE → AMARILLO → ROJO`.
-- [ ] Impedir cualquier transición directa `VERDE → ROJO` durante operación normal.
-- [ ] Agregar tiempo mínimo y máximo de verde.
-- [ ] Agregar tiempo fijo de amarillo.
-- [ ] Incorporar intervalo seguro de todo rojo entre direcciones conflictivas.
-- [ ] Definir matriz de conflictos.
-- [ ] Implementar solicitud, permiso y liberación de paso.
-- [ ] Resolver empates de manera determinista.
-- [ ] Evitar inanición de una dirección con demanda continua.
-- [ ] Volver a rojo ante entrada inválida, error o pérdida de coordinación.
-- [ ] Mantener el modelo dentro de los límites de elementos, conexiones y payload.
+### Persona 1 — Ejecutor Python y observabilidad en la Pico
 
-Los cuatro controladores son independientes en estado, sensor y FSM, pero se comunican para conservar la seguridad del cruce. No se afirma que existan cuatro placas físicas.
+**Responsable:** Kevin Rincón
 
-### 5.6 Rediseño UI/UX
+**Dependencias:** ninguna.
 
-- [ ] Crear una TopBar compacta.
-- [ ] Agrupar archivo, edición, simulación, conexión y compartir.
-- [ ] Convertir paleta, inspector y simulación en docks colapsables.
-- [ ] Convertir MQTT en popover o panel compacto.
-- [ ] Mostrar proyecto, conexión, ejecución y participantes.
-- [ ] Reservar la mayor parte de la ventana para el canvas.
-- [ ] Mantener importación, exportación, undo/redo y nuevo proyecto.
-- [ ] Validar layout en 1366 × 768.
+#### Lo existente que reutiliza
 
-### 5.7 Pruebas y documentación
+- [x] `Task`, `Scheduler`, `Clock`, `Node`, `MqttTransport` y `EngineTask` base.
+- [x] Límites de payload, cola y deduplicación.
+- [x] Transporte MQTT entrante corregido con polling/keepalive y pruebas de escritorio.
 
-- [ ] Ejecutar pruebas frontend, TypeScript, lint y build.
-- [ ] Ejecutar pruebas de firmware en escritorio.
-- [ ] Ejecutar vectores compartidos web/MicroPython.
-- [ ] Ejecutar matriz de paridad de `Service`, `Functional Block`, `Sample`, `Hold`, `Place` y `Transition`.
-- [ ] Ejecutar matriz de CCH, DCH, PETRI/LCH, timers, reset y errores.
-- [ ] Probar `boolean`, `integer`, `real`, `string`, `vector` y `custom` dentro de sus límites.
-- [ ] Probar cola DCH, orden FIFO y desbordamiento.
-- [ ] Probar que los retardos no bloquean MQTT ni las demás tareas del scheduler.
-- [ ] Probar el flujo con cuatro navegadores.
-- [ ] Probar el flujo en la Pico W física.
-- [ ] Medir memoria libre antes y después de cargar el demo.
-- [ ] Medir tiempo máximo de ejecución de un Functional Block.
-- [ ] Probar código Python inválido y bloqueante.
-- [ ] Probar reconexión de un navegador.
-- [ ] Probar aislamiento entre dos `projectId`.
-- [ ] Registrar por integrante los cambios, pruebas y pendientes en `REGISTRO_CAMBIOS.md`.
-- [ ] Realizar ensayo cronometrado de la presentación.
+#### Control de avance nuevo
 
-## 6. Fuera de alcance
+- [ ] Definir y congelar la extensión IR para Python: lenguaje, código, entradas, salidas, límites y errores.
+- [ ] Definir el perfil Python permitido y los casos explícitamente rechazados.
+- [ ] Implementar validación estática sin ejecutar el código recibido.
+- [ ] Implementar compilación única al cargar el modelo, no en cada paso.
+- [ ] Implementar entorno de ejecución con globals/builtins mínimos.
+- [ ] Resolver argumentos desde los puertos de entrada y resultados escalares o por nombre de puerto.
+- [ ] Validar tipos escalares, vector y custom acotados antes y después de ejecutar.
+- [ ] Aislar errores por Functional Block y conservar activo el modelo anterior cuando falle la carga.
+- [ ] Agregar límites de tamaño de código, variables y resultado.
+- [ ] Crear `WatchdogTask` que publique memoria, RSSI, temperatura disponible y estadísticas de tareas.
+- [ ] Probar que un error del bloque no detiene MQTT, LED, Watchdog ni las demás tareas.
+- [ ] Probar en la Pico física un modelo mínimo `Service → Functional Block Python → Service`.
+- [ ] Entregar a Persona 2 los fixtures IR válidos/inválidos y los códigos de error congelados.
+- [ ] Entregar a Persona 3 la API estable de `PythonExecutor` y ejemplos de una y varias salidas.
 
-- Ejecutar Vite, React, Pyodide o Mosquitto en la Pico.
-- Ejecutar JavaScript dentro de la Pico.
-- Permitir Python arbitrario sin restricciones.
-- Permitir ciclos infinitos o tareas bloqueantes.
-- Acceso directo desde Functional Blocks recibidos a `machine`, Wi-Fi, MQTT o archivos.
-- CRDT completo para edición carácter por carácter.
-- Persistencia histórica en una base de datos.
-- Autenticación y permisos de usuarios finales.
-- Acceso por Internet sin infraestructura adicional.
-- Cuatro Picos físicas, salvo que el equipo consiga y configure las placas.
-
-## 7. Contrato propuesto para Functional Block remoto
-
-Ejemplo conceptual de IR:
-
-```json
-{
-  "id": "fb-decision",
-  "tipo": "functional_block",
-  "nombre": "Decidir paso",
-  "habilitado": true,
-  "lenguaje": "python",
-  "codigo": "def calcular(carros):\n    return carros >= 6",
-  "entradas": [
-    { "puerto": "carros-in", "variable": "carros", "tipo_dato": "integer" }
-  ],
-  "salidas": [
-    { "puerto": "decision-out", "variable": "decision", "tipo_dato": "boolean" }
-  ]
-}
-```
-
-El contrato final debe definir:
-
-- versión de IR;
-- tamaño máximo de código por bloque;
-- cantidad máxima de bloques con código;
-- nombres válidos de variables;
-- forma de retorno para una o varias salidas;
-- códigos de error;
-- comportamiento ante resultado `None`;
-- momento de compilación y ejecución;
-- límites de tiempo y memoria;
-- compatibilidad con expresiones simples antiguas.
-- representación de `Sample`, `Hold`, CCH, DCH y Petri/LCH;
-- semántica de `executionDelay` y `delay`;
-- límites de cola DCH;
-- serialización acotada de `vector` y `custom`;
-- campos observables de snapshot y reglas exactas de reinicio.
-
-## 8. Topics conceptuales por proyecto
+#### Archivos propios
 
 ```text
-udfjc/hiles/v2/projects/<projectId>/document/snapshot
-udfjc/hiles/v2/projects/<projectId>/document/ops
-udfjc/hiles/v2/projects/<projectId>/presence/<clientId>
-udfjc/hiles/v2/projects/<projectId>/runtime/model/load
-udfjc/hiles/v2/projects/<projectId>/runtime/model/confirmation
-udfjc/hiles/v2/projects/<projectId>/runtime/command
-udfjc/hiles/v2/projects/<projectId>/runtime/input
-udfjc/hiles/v2/projects/<projectId>/runtime/state
-udfjc/hiles/v2/projects/<projectId>/runtime/error
-```
-
-Política:
-
-- snapshot y estado oficial: retenidos;
-- operaciones, cursores y comandos: no retenidos;
-- presencia: retained con mensaje vacío o estado offline al salir, más expiración local;
-- todos los mensajes mutables incluyen proyecto y emisor;
-- los comandos mantienen deduplicación mediante `id_mensaje`.
-
-## 9. División estricta entre cinco personas
-
-### Persona 1 — Core Pico, Scheduler/Task y ejecución Python
-
-**Responsable nominal:** por confirmar.
-
-**No depende de ninguna persona.**
-
-Responsabilidades:
-
-- cerrar el contrato IR para código Python;
-- reforzar `Task` y `Scheduler` para cargas del motor, timers y presupuestos;
-- definir colas acotadas, métricas, watchdog lógico y política de sobrepasos;
-- implementar validador del perfil Python;
-- compilar/cargar funciones durante `modelo/cargar`;
-- ejecutar `calcular` en MicroPython;
-- validar resultados y manejar errores;
-- entregar una API de timers no bloqueantes para Persona 3;
-- parametrizar topics en el firmware;
-- mantener compatibilidad con la IR anterior.
-
-Archivos propios que puede modificar:
-
-```text
-docs/mqtt/IR_V2.md
-docs/mqtt/CONTRATO_MENSAJES_MQTT.md
-docs/mqtt/vectores_ir_v2/**
+docs/mqtt/IR_V2_PYTHON.md
+docs/mqtt/vectores_ir_v2/python/**
 firmware/pico/hiles/python_executor.py
-firmware/pico/hiles/engine_task.py
+firmware/pico/hiles/runtime_values.py
+firmware/pico/devices/watchdog_task.py
+firmware/tests/test_python_executor.py
+firmware/tests/test_runtime_values.py
+firmware/tests/test_watchdog_task.py
+```
+
+#### Archivos de solo lectura
+
+```text
 firmware/pico/core/task.py
 firmware/pico/core/scheduler.py
 firmware/pico/core/clock.py
-firmware/pico/pubsub/topics.py
-firmware/tests/test_python_executor.py
-firmware/tests/test_task_runtime_budget.py
-firmware/tests/test_scheduler_timers.py
-firmware/tests/test_engine_task_v2.py
+firmware/pico/pubsub/mqtt_transport.py
 ```
 
-Entregables:
+#### Entregable y criterio de cierre
 
-- IR v2 congelada;
-- ejecutor Python real en MicroPython;
-- scheduler preparado para timers, colas y presupuestos del motor completo;
-- códigos de error documentados;
-- vectores válidos e inválidos;
-- pruebas de compatibilidad y restricciones;
-- entrada completa de Persona 1 en `REGISTRO_CAMBIOS.md`.
+- [ ] Código Python válido produce una salida medida en la Pico física.
+- [ ] Código prohibido se rechaza antes de activarse.
+- [ ] Error de ejecución se publica con `elemento_id` y no detiene el scheduler.
+- [ ] Persona 2 y Persona 3 recibieron contrato, fixtures y API sin depender de cambios posteriores.
 
-Criterio de terminación:
+---
 
-Un modelo enviado por MQTT con código Python válido cambia su salida únicamente después de ser ejecutado por la Pico. Código prohibido se rechaza sin reemplazar el modelo activo ni detener el scheduler, y una tarea lenta no impide que las demás tareas sigan siendo atendidas.
+### Persona 2 — IR v2, compilador, canales y protocolo de proyecto
 
-### Persona 2 — Protocolo web, URL y estado unificado
+**Responsable:** por confirmar
 
-**Responsable nominal:** por confirmar.
+**Dependencias:** solo Persona 1.
 
-**Solo depende de Persona 1.**
+#### Lo existente que reutiliza
 
-Responsabilidades:
+- [x] IR v1, compilador, validadores y vectores de conformidad.
+- [x] Cliente MQTT web y cliente de ejecución remota.
+- [x] Motor local básico de Sample/Hold y Pyodide.
+- [x] Sesión de ejecución por `modelo_id`, versión y secuencia.
 
-- reflejar la IR v2 en TypeScript;
-- dejar de descartar código Python remoto;
-- compilar `Sample`, `Hold`, Services, Petri y Structural Blocks a la IR completa;
-- conservar la naturaleza CCH, DCH y PETRI/LCH de cada conexión;
-- transportar retardos de elementos, transiciones y conexiones;
-- validar y serializar `vector` y `custom` con los límites acordados;
-- ampliar el validador web y los mensajes MQTT para el estado completo;
-- actualizar el motor TypeScript de referencia para tipos, colas DCH y retardos que todavía no estén materializados;
-- conservar una única semántica local documentada contra la cual comparar MicroPython;
-- crear topics parametrizados por proyecto;
-- implementar lectura y creación de `projectId`;
-- implementar snapshot y operaciones de documento;
-- separar autoguardado por proyecto;
-- administrar versión, reloj lógico y reconexión.
+#### Control de avance nuevo
 
-Archivos propios que puede modificar:
+- [ ] Extender los tipos TypeScript a IR v2 conservando lectura de IR v1.
+- [ ] Transportar código Python, firma de puertos y límites definidos por Persona 1.
+- [ ] Compilar `Sample` y `Hold` en lugar de rechazarlos.
+- [ ] Mantener separados CCH, DCH, LCH y arco Petri en la IR.
+- [ ] Definir semántica exacta de DCH: evento de un solo consumo, orden FIFO y desbordamiento visible.
+- [ ] Definir y transportar `executionDelay`, retardo de transición y `connection.delay`.
+- [ ] Resolver Structural Blocks y puertos de frontera a conexiones planas verificables.
+- [ ] Normalizar elementos/conexiones legados `TOKEN` y `TOKEN_FLOW` cuando sea posible.
+- [ ] Validar valores `vector` y `custom` con límites de profundidad, longitud y bytes.
+- [ ] Actualizar el motor TypeScript de referencia para que CCH, DCH, LCH y retardos tengan la misma semántica acordada.
+- [ ] Implementar lectura y creación de `?project=<id>` sin romper `?modelo`/`version`.
+- [ ] Definir topics dinámicos y esquemas de snapshot, operación, presencia y cursor.
+- [ ] Implementar un cliente de proyecto desacoplado de React con deduplicación y reloj lógico.
+- [ ] Preparar fixtures de carga inicial, operación repetida, reconexión y aislamiento entre dos proyectos.
+- [ ] Entregar a Persona 3 vectores completos de conformidad web/MicroPython.
+- [ ] Entregar a Persona 5 la API estable de `ProjectSyncClient`.
+
+#### Archivos propios
 
 ```text
-frontend/src/services/ir/tiposIr.ts
-frontend/src/services/ir/compiladorIr.ts
-frontend/src/services/ir/validadorIr.ts
-frontend/src/services/ir/expresiones.ts
-frontend/src/services/ir/ir.test.ts
+docs/mqtt/IR_V2.md
+docs/mqtt/PROTOCOLO_PROYECTOS_V2.md
+docs/mqtt/vectores_ir_v2/modelos/**
+docs/mqtt/vectores_ir_v2/ejecucion/**
+frontend/src/services/ir/tiposIrV2.ts
+frontend/src/services/ir/compiladorIrV2.ts
+frontend/src/services/ir/validadorIrV2.ts
+frontend/src/services/ir/irV2.test.ts
+frontend/src/services/ir/index.ts
+frontend/src/services/projects/projectUrl.ts
+frontend/src/services/projects/projectMessages.ts
+frontend/src/services/projects/projectTopics.ts
+frontend/src/services/projects/ProjectSyncClient.ts
+frontend/src/services/projects/*.test.ts
 frontend/src/services/mqtt/config.ts
 frontend/src/services/mqtt/messages.ts
 frontend/src/services/mqtt/MqttClient.ts
 frontend/src/services/mqtt/RemoteExecutionClient.ts
-frontend/src/services/mqtt/*.test.ts
-frontend/src/services/projects/projectUrl.ts
-frontend/src/services/projects/projectTopics.ts
-frontend/src/services/projects/ProjectSyncClient.ts
-frontend/src/services/projects/*.test.ts
-frontend/src/stores/useProjectStore.ts
-frontend/src/stores/useEditorStore.ts
-frontend/src/stores/useEditorStore.test.ts
-frontend/src/engine/tipos.ts
-frontend/src/engine/MotorSimulacion.ts
 frontend/src/engine/GrafoDatos.ts
 frontend/src/engine/BusObserver.ts
-frontend/src/engine/elementos/interfaces.ts
-frontend/src/engine/elementos/ElementoService.ts
-frontend/src/engine/elementos/ElementoBloqueFuncional.ts
-frontend/src/engine/elementos/ElementoMuestreo.ts
-frontend/src/engine/elementos/ElementoRetencion.ts
-frontend/src/engine/elementos/ElementoLugar.ts
-frontend/src/engine/elementos/ElementoTransicion.ts
+frontend/src/engine/MotorSimulacion.ts
 frontend/src/engine/__tests__/**
 ```
 
-Inputs recibidos de Persona 1:
+#### Inputs recibidos de Persona 1
 
-- IR v2 y vectores;
-- lista de operaciones Python autorizadas;
-- códigos de error;
-- límites de payload;
-- convención de topics.
+- [ ] Perfil Python y límites congelados.
+- [ ] Forma de entradas/salidas del ejecutor.
+- [ ] Códigos de error y fixtures válidos/inválidos.
 
-Entregables:
+#### Entregable y criterio de cierre
 
-- compilador web compatible con MicroPython;
-- IR completa para todos los elementos ejecutables actuales;
-- validación de canales, retardos y tipos antes de publicar;
-- motor TypeScript de referencia con la semántica completa usada por los vectores;
-- enlace compartible;
-- carga inicial por snapshot;
-- transporte de operaciones;
-- aislamiento entre proyectos;
-- entrada completa de Persona 2 en `REGISTRO_CAMBIOS.md`.
+- [ ] Un documento con Python, Sample, Hold, CCH, DCH, LCH, Petri y retardos compila a IR v2 sin edición manual.
+- [ ] El motor local reproduce los vectores v2 esperados.
+- [ ] Abrir `?project=demo` solicita el snapshot de `demo` y nunca aplica mensajes de otro proyecto.
+- [ ] Persona 3 y Persona 5 recibieron contratos y fixtures aprobados.
 
-Criterio de terminación:
+---
 
-Dos navegadores con el mismo enlace cargan el mismo documento y pueden enviar a la Pico un modelo completo con Python, conversores, canales, Petri y retardos. Proyectos diferentes no reciben datos cruzados.
+### Persona 3 — Motor MicroPython completo y cuatro semáforos independientes
 
-### Persona 3 — Motor remoto completo y dominio de semáforos
+**Responsable:** por confirmar
 
-**Responsable nominal:** por confirmar.
+**Dependencias:** Personas 1 y 2.
 
-**Solo puede depender de Personas 1 y 2.**
+#### Lo existente que reutiliza
 
-Responsabilidades:
+- [x] Motor IR v1 de `Service`, Functional Block por expresión, Place y Transition.
+- [x] Propagación topológica, movimiento atómico de tokens, snapshots y reset.
+- [x] `EngineTask` cooperativo con comandos, cola y ejecución continua.
+- [x] Generador del semáforo coordinado anterior, usado solo como referencia y regresión.
 
-- implementar en MicroPython todos los elementos de la IR v2;
-- diferenciar CCH, DCH y PETRI/LCH durante la ejecución;
-- implementar `Sample` y `Hold` con estado y eventos correctos;
-- implementar retardos mediante la API no bloqueante de Persona 1;
-- implementar colas DCH, reset completo y snapshots observables;
-- integrar el ejecutor Python de Persona 1 dentro del Functional Block;
-- soportar valores escalares, `vector` y `custom` acotados;
-- reproducir los vectores de conformidad entregados por Personas 1 y 2;
-- crear cuatro FSM independientes;
-- modelar sensores, solicitudes y permisos;
-- definir tiempos y matriz de conflictos;
-- generar el nuevo JSON de demostración;
-- integrar sensores simulados y adaptadores GPIO opcionales;
-- probar seguridad, equidad y fail-safe.
+#### Control de avance nuevo
 
-Archivos propios que puede modificar:
+- [ ] Cargar IR v2 y mantener compatibilidad de lectura con IR v1.
+- [ ] Integrar `PythonExecutor` de Persona 1 en Functional Block.
+- [ ] Implementar `Sample` con dato continuo, evento de captura y salida DCH.
+- [ ] Implementar `Hold` con entrada DCH, valor retenido CCH y evento LCH de actualización.
+- [ ] Implementar canales CCH, cola DCH y evento LCH diferenciados.
+- [ ] Implementar vector/custom acotados sin copiar estructuras indefinidamente.
+- [ ] Implementar retardos como fechas límite en el motor usando `scheduler.clock`, sin `sleep`.
+- [ ] Cancelar eventos y retardos pendientes al reiniciar o cargar otro modelo.
+- [ ] Ampliar snapshots con valor retenido, evento/cola pendiente, timer y error observable.
+- [ ] Reproducir todos los vectores de conformidad de Persona 2.
+- [ ] Diseñar cuatro FSM separadas: Norte, Sur, Este y Oeste.
+- [ ] Crear un sensor de presencia independiente por sentido.
+- [ ] Crear solicitudes y permisos de paso para que cada FSM decida con su sensor sin compartir un único estado interno.
+- [ ] Garantizar la secuencia `Rojo → Verde → Amarillo → Rojo`, con todo-rojo de seguridad antes de un movimiento conflictivo.
+- [ ] Definir matriz de conflictos, tiempo mínimo verde, amarillo, todo-rojo y espera máxima para evitar inanición.
+- [ ] Crear simulador de sensores y adaptador GPIO opcional.
+- [ ] Generar el nuevo JSON desde script; no editar manualmente el archivo de demo.
+- [ ] Probar ausencia de verdes incompatibles, transición por amarillo, equidad y fail-safe ante sensor inválido.
+
+#### Archivos propios
 
 ```text
-scripts/generate-distributed-traffic-demo.mjs
-output/demo-4-semaforos-inteligentes.json
-firmware/pico/hiles/model.py
-firmware/pico/hiles/elements.py
-firmware/pico/hiles/engine.py
+firmware/pico/hiles/model_v2.py
+firmware/pico/hiles/elements_v2.py
 firmware/pico/hiles/channels.py
-firmware/pico/hiles/converters.py
-firmware/pico/hiles/timers.py
+firmware/pico/hiles/engine_v2.py
+firmware/pico/hiles/engine_task_v2.py
 firmware/pico/devices/traffic_controller.py
 firmware/pico/devices/vehicle_sensor_task.py
-firmware/pico/platform/hardware.py
-firmware/pico/config_local.example.py
-firmware/pico/main.py
-firmware/tests/test_traffic_controller.py
+firmware/pico/platform/traffic_io.py
 firmware/tests/test_hiles_model_v2.py
 firmware/tests/test_hiles_engine_v2.py
 firmware/tests/test_hiles_channels.py
-firmware/tests/test_hiles_converters.py
 firmware/tests/test_hiles_delays.py
+firmware/tests/test_traffic_controller.py
+scripts/generate-distributed-traffic-demo.mjs
+output/demo-4-semaforos-distribuidos.json
 docs/traffic/PROTOCOLO_SEMAFOROS.md
 docs/traffic/MATRIZ_CONFLICTOS.md
 ```
 
-Inputs recibidos:
+#### Inputs recibidos
 
-- executor Python, timers, Task y Scheduler de Persona 1;
-- IR y topics de Personas 1 y 2;
-- API de inyección y estado de Persona 2.
+- [ ] Persona 1: `PythonExecutor`, valores, límites y errores.
+- [ ] Persona 2: IR v2 congelada, semántica de canales/retardos y vectores.
 
-Entregables:
+#### Entregable y criterio de cierre
 
-- motor MicroPython con paridad funcional del perfil remoto;
-- `Sample`, `Hold`, CCH, DCH, Petri/LCH y retardos ejecutables;
-- tipos y snapshots completos;
-- demo generado, no editado manualmente;
-- cuatro FSM;
-- simulador de sensores;
-- pruebas de invariantes;
-- tabla de GPIO si se usa hardware;
-- entrada completa de Persona 3 en `REGISTRO_CAMBIOS.md`.
+- [ ] Los mismos vectores v2 producen el mismo estado observable en TypeScript y MicroPython.
+- [ ] MQTT y Watchdog continúan ejecutándose mientras hay retardos pendientes.
+- [ ] Cada semáforo conserva su propio estado y sensor.
+- [ ] Ningún sentido pasa de verde directamente a rojo.
+- [ ] Nunca hay verdes simultáneos en movimientos incompatibles.
 
-Criterio de terminación:
+---
 
-Todos los vectores de paridad web/Pico aprueban y todos los modelos compatibles del editor ejecutan sin reglas específicas del ejemplo. Además, cada dirección responde a su propio sensor, siempre recorre verde, amarillo y rojo, y nunca comparte verde con una dirección conflictiva.
+### Persona 4 — Topbar y aprovechamiento del canvas
 
-### Persona 4 — UI/UX y shell del editor
+**Responsable:** por confirmar
 
-**Responsable nominal:** por confirmar.
+**Dependencias:** Personas 1, 2 y 3 únicamente mediante contratos ya congelados.
 
-**Solo puede depender de Personas 1, 2 y 3.**
+#### Lo existente que reutiliza
 
-Responsabilidades:
+- [x] Canvas React Flow, paleta plegable, propiedades, simulación y panel MQTT.
+- [x] CodeMirror para JavaScript/Python.
+- [x] Estados visuales remotos aplicados a los nodos.
 
-- crear TopBar y docks colapsables;
-- liberar espacio del canvas;
-- mostrar estado de proyecto, conexión y ejecución;
-- exponer y validar propiedades remotas de `Sample`, `Hold`, retardos, tipos y canales;
-- indicar antes de cargar si una propiedad no cumple el perfil remoto;
-- preparar slots visuales para presencia;
-- conservar todas las acciones actuales.
+#### Control de avance nuevo
 
-Archivos propios que puede modificar:
+- [ ] Crear una topbar compacta para proyecto, archivo, undo/redo, conexión y ejecución.
+- [ ] Mover controles dispersos del header y paneles a grupos claros sin duplicarlos.
+- [ ] Convertir paleta, propiedades, simulación y MQTT en paneles flotantes, desplegables o tabs.
+- [ ] Permitir cerrar paneles y recuperar el ancho completo del canvas.
+- [ ] Mantener visibles el modo Local/Pico, proyecto actual, conexión y estado de ejecución.
+- [ ] Añadir un contenedor visual reservado para presencia y colaboración que Persona 5 pueda montar sin editar estos archivos.
+- [ ] Mantener importación/exportación, autosave, undo/redo y edición de código.
+- [ ] Comprobar resoluciones de escritorio usadas en la demo sin superposición crítica.
+- [ ] Agregar estados de foco, tooltip y disabled para los controles principales.
+- [ ] Crear pruebas de interacción de apertura/cierre y regresión de acciones existentes.
+
+#### Archivos propios
 
 ```text
 frontend/src/features/editor/Editor.tsx
-frontend/src/features/editor/editor.css
+frontend/src/features/editor/TopBar.tsx
+frontend/src/features/editor/PanelDock.tsx
 frontend/src/features/editor/Palette.tsx
 frontend/src/features/editor/PropertiesPanel.tsx
+frontend/src/features/editor/editor.css
 frontend/src/features/simulation/SimulationPanel.tsx
 frontend/src/features/simulation/simulation.css
 frontend/src/features/mqtt/MqttPanel.tsx
 frontend/src/features/mqtt/mqtt.css
-frontend/src/features/shell/TopBar.tsx
-frontend/src/features/shell/ToolDock.tsx
-frontend/src/features/shell/InspectorDock.tsx
-frontend/src/features/shell/StatusBar.tsx
-frontend/src/features/shell/shell.css
+frontend/src/features/editor/*.test.tsx
 ```
 
-Inputs recibidos:
+#### Inputs recibidos
 
-- estados del runtime de Persona 1;
-- API de proyecto de Persona 2;
-- nombres y estados del demo de Persona 3.
+- [ ] Persona 2: identidad y estado del proyecto.
+- [ ] Persona 3: estados observables que deben mostrarse.
 
-Entregables:
+#### Entregable y criterio de cierre
 
-- shell moderno y responsivo;
-- paneles colapsables;
-- acción de compartir visible;
-- estados visuales de conexión y ejecución;
-- edición completa de las propiedades requeridas por la IR v2;
-- entrada completa de Persona 4 en `REGISTRO_CAMBIOS.md`.
+- [ ] Con paneles cerrados, el canvas ocupa prácticamente toda el área debajo de la topbar.
+- [ ] Ninguna función ya entregada desaparece.
+- [ ] La UI reserva un punto estable para que Persona 5 muestre usuarios y cursores.
 
-Criterio de terminación:
+---
 
-En 1366 × 768 el canvas ocupa la mayor parte de la ventana y todas las acciones existentes siguen accesibles.
+### Persona 5 — Colaboración, integración física, pruebas y demo
 
-### Persona 5 — Colaboración, integración y cierre
+**Responsable:** por confirmar
 
-**Responsable nominal:** por confirmar.
+**Dependencias:** Personas 1, 2, 3 y 4.
 
-**Solo puede depender de Personas 1, 2, 3 y 4.**
+#### Lo existente que reutiliza
 
-Responsabilidades:
+- [x] Cliente remoto de ejecución y aplicación de snapshots de la Pico.
+- [x] Script de cuatro clientes MQTT, guía física y empaquetado del firmware.
+- [x] Archivo de demostración coordinada anterior para prueba de regresión.
 
-- integrar la sesión de proyecto con la aplicación;
-- implementar presencia y cursores;
-- aplicar operaciones remotas al canvas sin eco;
-- integrar componentes visuales de Persona 4;
-- probar cuatro navegadores y Pico física;
-- ejecutar la matriz E2E de todos los elementos, canales, tipos y retardos;
-- comprobar que en modo remoto no se produce cálculo paralelo en TypeScript/Pyodide;
-- completar la integración, las pruebas y el registro final.
+#### Control de avance nuevo
 
-Archivos propios que puede modificar:
+- [ ] Crear identidad efímera `clientId`, nombre y color por navegador.
+- [ ] Cargar el snapshot retenido al abrir `?project=<id>` antes de habilitar edición compartida.
+- [ ] Publicar operaciones locales de crear, borrar, mover y editar nodos/conexiones.
+- [ ] Aplicar operaciones remotas sin volver a publicarlas ni contaminar undo/redo local.
+- [ ] Implementar deduplicación por `operationId` y resolución determinista por reloj lógico.
+- [ ] Publicar presencia online/offline y expirar clientes desconectados.
+- [ ] Publicar cursores con limitación de frecuencia y dibujar cursores remotos sobre el canvas.
+- [ ] Mostrar lista compacta de participantes en el contenedor preparado por Persona 4.
+- [ ] Evitar ecos, bucles de publicación y mensajes cruzados entre proyectos.
+- [ ] Integrar IR v2, motor v2, Watchdog, sensores y firmware desde `main.py`.
+- [ ] Actualizar el paquete de despliegue de la Pico sin credenciales ni archivos generados innecesarios.
+- [ ] Ejecutar pruebas de dos proyectos simultáneos para demostrar aislamiento.
+- [ ] Ejecutar prueba E2E con cuatro navegadores editando el mismo proyecto.
+- [ ] Ejecutar prueba física completa: navegador → broker → Pico → snapshot → cuatro navegadores.
+- [ ] Ejecutar el demo de sensores y comprobar las cuatro FSM y la matriz de conflictos.
+- [ ] Actualizar la guía de demo únicamente con pasos realmente comprobados.
+- [ ] Ejecutar firmware, frontend, tipos, lint y build finales.
+
+#### Archivos propios
 
 ```text
-frontend/src/App.tsx
-frontend/src/features/editor/Canvas.tsx
-frontend/src/features/collaboration/CollaborationController.tsx
-frontend/src/features/collaboration/PresenceList.tsx
+frontend/src/stores/useEditorStore.ts
+frontend/src/stores/useEditorStore.test.ts
+frontend/src/stores/useProjectStore.ts
+frontend/src/stores/useCollaborationStore.ts
+frontend/src/stores/useRemoteExecutionStore.ts
+frontend/src/features/collaboration/CollaborationOverlay.tsx
 frontend/src/features/collaboration/RemoteCursors.tsx
+frontend/src/features/collaboration/Participants.tsx
 frontend/src/features/collaboration/collaboration.css
-frontend/src/features/collaboration/*.test.tsx
+frontend/src/App.tsx
+firmware/pico/main.py
+firmware/pico/config_local.example.py
 scripts/test-project-collaboration.mjs
 scripts/test-mqtt-four-clients.mjs
-scripts/test-remote-engine-parity.mjs
+scripts/prepare-pico-deployment.ps1
+output/hiles-pico-w-deploy.zip
 entregas/entrega-6-20-octubre/GUIA_DEMO.md
 ```
 
-Inputs recibidos:
+#### Inputs recibidos
 
-- runtime Pico validado;
-- ProjectSyncClient y contrato web;
-- demo distribuido;
-- shell visual terminado;
-- entradas verificables de las cuatro personas anteriores en el registro de cambios.
+- [ ] Persona 1: ejecutor y Watchdog aprobados.
+- [ ] Persona 2: `ProjectSyncClient`, IR v2, topics y fixtures aprobados.
+- [ ] Persona 3: motor remoto y demo distribuido aprobados.
+- [ ] Persona 4: shell visual y contenedor de colaboración aprobados.
 
-Entregables:
+#### Entregable y criterio de cierre
 
-- colaboración integrada;
-- evidencia multiinstancia;
-- prueba E2E;
-- matriz final de paridad local/remota;
-- guía de demostración actualizada;
-- resultados finales y evidencias registrados en `REGISTRO_CAMBIOS.md`.
+- [ ] Un enlace `?project=<id>` reconstruye el mismo documento en un navegador nuevo.
+- [ ] Cuatro navegadores muestran operaciones, presencia, cursores y estado oficial de la Pico.
+- [ ] El Python del Functional Block se ejecuta realmente en la Pico, no en Pyodide.
+- [ ] Los cuatro semáforos responden a sensores independientes y respetan amarillo y exclusión.
+- [ ] La entrega puede repetirse desde la guía sin pasos implícitos.
 
-Criterio de terminación:
-
-Cuatro navegadores con el mismo enlace muestran presencia, cambios del documento y el mismo estado oficial calculado por la Pico.
-
-## 10. Regla de archivos y merges
-
-- Cada archivo tiene un único dueño durante la implementación.
-- Nadie modifica archivos de una persona posterior para “adelantar integración”.
-- Si un contrato debe cambiar, se registra primero en `REGISTRO_CAMBIOS.md`.
-- Cada persona agrega su propia entrada al registro después de terminar y probar su unidad.
-- Persona 5 agrega el cierre de integración sin reescribir las entradas ajenas.
-- Cada merge debe contener una unidad comprobable.
-- No se marcan casillas por código parcial o infraestructura preparatoria.
-
-Orden de integración:
+## 6. Flujo de entregas entre personas
 
 ```text
-Persona 1: contrato y runtime Pico
+Persona 1
+  contrato Python + PythonExecutor + Watchdog + fixtures
         ↓
-Persona 2: espejo web, URL y transporte de documento
+Persona 2
+  IR v2 + compilador + semántica de canales + ProjectSyncClient
         ↓
-Persona 3: dominio de semáforos
+Persona 3
+  motor MicroPython v2 + Sample/Hold + retardos + semáforos
         ↓
-Persona 4: shell visual
+Persona 4
+  shell visual sobre contratos congelados
         ↓
-Persona 5: colaboración, E2E y cierre
+Persona 5
+  colaboración + composición final + hardware + E2E + demo
 ```
 
-## 11. Cronograma
+Handoff obligatorio de cada persona:
 
-### Domingo 18 de octubre — contrato y esqueletos
+- [ ] Código integrado sin modificar archivos de otro dueño.
+- [ ] Pruebas unitarias focales aprobadas.
+- [ ] Contrato o API consumible documentada.
+- [ ] Fixtures o ejemplo mínimo para la siguiente persona.
+- [ ] Limitaciones reales comunicadas antes de la integración.
 
-- [ ] Confirmar nombres de responsables.
-- [ ] Congelar IR v2, perfil Python y topics.
-- [ ] Crear esqueletos sin lógica duplicada.
-- [ ] Definir casos de aceptación y fixtures.
+## 7. Orden de trabajo hasta el día 20
+
+### Domingo 18 — auditoría y contratos
+
+- [x] Auditar entregas 3, 4 y 5 contra el código actual.
+- [x] Confirmar que scheduler, MQTT, IR v1 y cliente remoto no se reimplementan.
+- [ ] Confirmar nombres de Personas 2 a 5.
+- [ ] Congelar perfil Python, IR v2, errores y límites.
+- [ ] Congelar protocolo de proyecto y semántica de CCH/DCH/LCH/retardos.
 - [ ] Congelar propiedad de archivos.
 
-### Lunes 19, mañana — implementación base
+### Lunes 19, mañana — unidades independientes
 
-- [ ] Persona 1 completa ejecución Python y pruebas.
-- [ ] Persona 2 completa compilador, URL y snapshot.
-- [ ] Persona 3 prepara modelo y pruebas a partir del contrato congelado.
-- [ ] Persona 4 desarrolla shell usando las interfaces congeladas.
+- [ ] Persona 1 termina PythonExecutor, valores y Watchdog.
+- [ ] Persona 2 termina tipos/compilador IR v2 y protocolo de proyecto.
+- [ ] Persona 3 inicia desde los fixtures congelados, sin modificar contratos.
+- [ ] Persona 4 construye topbar y paneles sobre las APIs existentes.
 
-### Lunes 19, tarde — integración funcional
+### Lunes 19, tarde — motores e integración web
 
-- [ ] Integrar Personas 1 y 2.
-- [ ] Ejecutar Functional Block Python en runtime MicroPython de escritorio.
-- [ ] Integrar demo de Persona 3.
-- [ ] Integrar shell de Persona 4.
-- [ ] Persona 5 conecta presencia, cursores y operaciones.
-- [ ] Ejecutar suites completas.
+- [ ] Persona 2 termina motor TypeScript de referencia y `ProjectSyncClient`.
+- [ ] Persona 3 termina motor MicroPython v2 y pruebas de paridad.
+- [ ] Persona 3 genera y prueba semáforos distribuidos.
+- [ ] Persona 5 conecta store, snapshot, operaciones, presencia y cursores.
 
-### Lunes 19, noche — validación física y congelación
+### Lunes 19, noche — integración y regresión
 
-- [ ] Copiar firmware a la Pico.
-- [ ] Probar código Python real en la placa.
-- [ ] Probar cuatro navegadores.
-- [ ] Medir memoria, latencia y tiempos.
-- [ ] Corregir únicamente defectos P0.
-- [ ] Congelar funcionalidad.
+- [ ] Persona 5 compone firmware y frontend.
+- [ ] Ejecutar suites completas y corregir únicamente defectos de alcance P0.
+- [ ] Probar dos proyectos aislados y cuatro navegadores en uno.
+- [ ] Regenerar paquete de despliegue.
 
-### Martes 20 — entrega
+### Martes 20 — hardware y congelación
 
-- [ ] Repetir pruebas sin agregar funcionalidades.
-- [ ] Verificar red, broker, IP, credenciales locales y Pico.
-- [ ] Abrir enlace desde cuatro navegadores.
-- [ ] Ejecutar guion completo.
-- [ ] Completar el registro de cambios y resultados.
-- [ ] Crear tag o commit final de entrega.
+- [ ] Copiar firmware limpio a la Pico.
+- [ ] Ejecutar FB Python y observar salida publicada por la placa.
+- [ ] Ejecutar Sample/Hold, DCH y retardos sin bloquear MQTT.
+- [ ] Ejecutar semáforos con sensores y matriz de conflictos.
+- [ ] Ejecutar flujo de cuatro navegadores.
+- [ ] Completar la guía demo con resultados reales.
+- [ ] Registrar cambios y evidencias solo después de obtener resultados.
+- [ ] Congelar entrega; no agregar funciones durante el ensayo final.
 
-## 12. Criterios globales de aceptación
+## 8. Criterios globales de aceptación
 
-- [ ] El frontend compila y sus pruebas aprueban.
-- [ ] Las pruebas del firmware aprueban.
-- [ ] El código escrito en un Functional Block se ejecuta en la Pico, no en Pyodide, cuando el modo remoto está activo.
-- [ ] `Service`, `Functional Block`, `Sample`, `Hold`, `Place` y `Transition` ejecutan en la Pico.
-- [ ] CCH, DCH y PETRI/LCH conservan semánticas distintas y verificadas.
-- [ ] `executionDelay` y `delay` se cumplen sin bloquear el scheduler.
-- [ ] `Structural Block` se aplana sin perder conexiones ni IDs.
-- [ ] Los eventos DCH se consumen una vez y mantienen orden FIFO.
-- [ ] `boolean`, `integer`, `real`, `string`, `vector` y `custom` se validan según el contrato.
-- [ ] Reiniciar limpia valores, colas, timers, estados retenidos, tokens y errores.
-- [ ] Los vectores compartidos producen el mismo resultado en TypeScript y MicroPython.
-- [ ] MQTT, LED y colaboración continúan funcionando mientras existen timers pendientes.
-- [ ] Un código Python inválido se rechaza sin bloquear la placa.
-- [ ] El navegador muestra el error remoto de manera legible.
-- [ ] Un enlace de proyecto reconstruye el documento en otro navegador.
-- [ ] Cuatro navegadores muestran participantes y cursores.
-- [ ] Una edición válida aparece en los otros navegadores.
-- [ ] La Pico continúa siendo la única fuente del estado de ejecución remota.
-- [ ] Los cuatro semáforos tienen FSM y sensores independientes.
-- [ ] No existe verde simultáneo en direcciones conflictivas.
-- [ ] Toda transición normal cumple verde → amarillo → rojo.
-- [ ] Un fallo lleva el sistema a rojo.
-- [ ] No hay credenciales reales en Git.
-- [ ] Cada integrante completó su entrada verificable en el registro.
-- [ ] El cierre del registro contiene comandos, resultados y pendientes reales.
+### Runtime Pico
 
-## 13. Riesgos y contingencias sin recortar P0
+- [ ] El código Python del Functional Block se compila y ejecuta en MicroPython.
+- [ ] Código inválido no sustituye el modelo activo.
+- [ ] `Service`, Functional Block, Sample, Hold, Place y Transition funcionan remotamente.
+- [ ] CCH, DCH, LCH y Petri mantienen semánticas diferenciadas.
+- [ ] Los retardos no contienen `sleep` ni bloquean MQTT/Watchdog.
+- [ ] Reset limpia entradas, salidas, colas, eventos, timers, valores retenidos y tokens.
+- [ ] Vectores web y Pico producen estados equivalentes.
 
-| Riesgo | Señal | Prevención | Acción de contingencia |
-|---|---|---|---|
-| Código Python bloqueante | Pico deja de publicar | Validación estricta, sin ciclos ni recursión | Rechazar el modelo y conservar el último modelo válido |
-| Falta de RAM | reinicio o `MemoryError` | límites medidos por modelo, bloque y cola | Rechazar antes de activar y publicar memoria requerida/disponible |
-| Cola DCH saturada | eventos descartados | capacidad y consumo acotados por `update()` | entrar en error seguro y reportar elemento/conexión responsable |
-| Colisiones de edición | nodos saltan o reaparecen | operation ID, reloj lógico y tombstones | bloquear temporalmente el elemento en conflicto |
-| Payload demasiado grande | carga rechazada | medir JSON antes de publicar | rechazar con diagnóstico; no truncar silenciosamente |
-| Latencia de cursores | saturación MQTT | throttling y QoS 0 | bajar frecuencia conservando edición y presencia |
-| FSM insegura | verdes conflictivos | matriz y pruebas de invariantes | detener ejecución y llevar los cuatro nodos a rojo |
-| Integración tardía | conflictos de archivos | propiedad exclusiva y contratos congelados | posponer adornos visuales, nunca semántica del motor ni seguridad |
-| Pico física no disponible | no hay evidencia hardware | reservar placa y ventana de ensayo desde el día 18 | registrar bloqueo; no afirmar validación física |
+### Proyecto y colaboración
 
-## 14. Guion resumido de la demostración
+- [ ] `?project=<id>` carga el documento compartido.
+- [ ] Dos proyectos no reciben operaciones cruzadas.
+- [ ] Cuatro navegadores convergen al mismo documento.
+- [ ] Presencia y cursores aparecen y desaparecen correctamente.
+- [ ] Una reconexión recupera snapshot y continúa sin duplicar operaciones.
 
-1. Mostrar el enlace con `projectId`.
-2. Abrir el mismo enlace en cuatro navegadores.
-3. Mostrar participantes y cursores.
-4. Crear o mover un elemento y comprobar sincronización.
-5. Abrir un Functional Block y mostrar su código Python.
-6. Activar modo remoto y cargar el modelo.
-7. Inyectar una entrada y demostrar que la respuesta llega desde la Pico.
-8. Cambiar el código, recargar y observar un resultado diferente.
-9. Ejecutar un ejemplo prohibido y mostrar el rechazo seguro.
-10. Activar sensores de los cuatro semáforos.
-11. Recorrer verde, amarillo y rojo.
-12. Mostrar que direcciones conflictivas nunca quedan verdes simultáneamente.
-13. Cerrar un navegador y comprobar expiración de presencia.
-14. Mostrar pruebas y mediciones de memoria/latencia registradas.
+### Semáforos
 
+- [ ] Existen cuatro FSM y cuatro sensores independientes.
+- [ ] Toda salida de verde pasa por amarillo.
+- [ ] Existe intervalo seguro de todo-rojo antes de conceder un conflicto.
+- [ ] Nunca se observan verdes incompatibles.
+- [ ] Una demanda sostenida no causa inanición permanente de otro sentido.
+
+### UI, calidad y entrega
+
+- [ ] La topbar y paneles liberan el canvas sin eliminar funciones.
+- [ ] La Pico física es la fuente oficial del estado remoto.
+- [ ] Las 85 pruebas de firmware existentes continúan aprobando junto con las nuevas.
+- [ ] Las 70 pruebas frontend existentes continúan aprobando junto con las nuevas.
+- [ ] TypeScript, lint y build aprueban.
+- [ ] No hay credenciales en Git ni en el ZIP.
+- [ ] La guía demo coincide con el comportamiento observado.
+
+## 9. Exclusiones explícitas
+
+- Python completamente arbitrario o preemptivo dentro de MicroPython.
+- JavaScript ejecutado en la Pico.
+- Broker en la nube, autenticación, permisos o persistencia de producción.
+- CRDT general para edición offline prolongada.
+- Varios proyectos ejecutándose simultáneamente en una única Pico; la placa mantiene un modelo activo.
+- Reescritura de `Task`, `Scheduler`, `Node`, `MqttTransport`, React Flow o Pyodide.
+
+Si una prueba demuestra un defecto en una pieza ya entregada, se corrige el defecto mínimo y se conserva su arquitectura; no se vuelve a asignar el módulo completo.
