@@ -1,0 +1,13 @@
+{
+  "descripcion": "Función calcular con salida por nombre de puerto",
+  "element_id": "fb-medidas",
+  "codigo": "def calcular(**inputs):\n    x = inputs.get('x')\n    return {'doble': x * 2, 'positivo': x > 0}",
+  "entradas": ["x"],
+  "salidas": ["doble", "positivo"],
+  "tipos_entrada": { "x": "integer" },
+  "tipos_salida": { "doble": "integer", "positivo": "boolean" },
+  "casos": [
+    { "entradas": { "x": 4 }, "salidas": { "doble": 8, "positivo": true } },
+    { "entradas": { "x": -2 }, "salidas": { "doble": -4, "positivo": false } }
+  ]
+}

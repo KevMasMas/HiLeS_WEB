@@ -139,20 +139,20 @@ udfjc/hiles/v2/projects/<projectId>/cursor              no retained
 
 #### Control de avance nuevo
 
-- [ ] Definir y congelar la extensión IR para Python: lenguaje, código, entradas, salidas, límites y errores.
-- [ ] Definir el perfil Python permitido y los casos explícitamente rechazados.
-- [ ] Implementar validación estática sin ejecutar el código recibido.
-- [ ] Implementar compilación única al cargar el modelo, no en cada paso.
-- [ ] Implementar entorno de ejecución con globals/builtins mínimos.
-- [ ] Resolver argumentos desde los puertos de entrada y resultados escalares o por nombre de puerto.
-- [ ] Validar tipos escalares, vector y custom acotados antes y después de ejecutar.
+- [x] Definir y congelar la extensión IR para Python: lenguaje, código, entradas, salidas, límites y errores.
+- [x] Definir el perfil Python permitido y los casos explícitamente rechazados.
+- [x] Implementar validación estática sin ejecutar el código recibido.
+- [x] Implementar compilación única al cargar el modelo, no en cada paso.
+- [x] Implementar entorno de ejecución con globals/builtins mínimos.
+- [x] Resolver argumentos desde los puertos de entrada y resultados escalares o por nombre de puerto.
+- [x] Validar tipos escalares, vector y custom acotados antes y después de ejecutar.
 - [ ] Aislar errores por Functional Block y conservar activo el modelo anterior cuando falle la carga.
-- [ ] Agregar límites de tamaño de código, variables y resultado.
-- [ ] Crear `WatchdogTask` que publique memoria, RSSI, temperatura disponible y estadísticas de tareas.
+- [x] Agregar límites de tamaño de código, variables y resultado.
+- [x] Crear `WatchdogTask` que publique memoria, RSSI, temperatura disponible y estadísticas de tareas.
 - [ ] Probar que un error del bloque no detiene MQTT, LED, Watchdog ni las demás tareas.
 - [ ] Probar en la Pico física un modelo mínimo `Service → Functional Block Python → Service`.
-- [ ] Entregar a Persona 2 los fixtures IR válidos/inválidos y los códigos de error congelados.
-- [ ] Entregar a Persona 3 la API estable de `PythonExecutor` y ejemplos de una y varias salidas.
+- [x] Entregar a Persona 2 los fixtures IR válidos/inválidos y los códigos de error congelados.
+- [x] Entregar a Persona 3 la API estable de `PythonExecutor` y ejemplos de una y varias salidas.
 
 #### Archivos propios
 
@@ -179,9 +179,9 @@ firmware/pico/pubsub/mqtt_transport.py
 #### Entregable y criterio de cierre
 
 - [ ] Código Python válido produce una salida medida en la Pico física.
-- [ ] Código prohibido se rechaza antes de activarse.
+- [x] Código prohibido se rechaza antes de activarse.
 - [ ] Error de ejecución se publica con `elemento_id` y no detiene el scheduler.
-- [ ] Persona 2 y Persona 3 recibieron contrato, fixtures y API sin depender de cambios posteriores.
+- [x] Persona 2 y Persona 3 recibieron contrato, fixtures y API sin depender de cambios posteriores.
 
 ---
 

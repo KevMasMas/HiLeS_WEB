@@ -1,0 +1,8 @@
+{
+  "descripcion": "No se permite importar machine",
+  "element_id": "fb-hardware",
+  "codigo": "import machine\ndef calcular(x):\n    return x",
+  "entradas": ["x"],
+  "salidas": ["salida"],
+  "codigo_esperado": "PYTHON_PERFIL_PROHIBIDO"
+}

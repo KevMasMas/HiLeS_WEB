@@ -1,0 +1,13 @@
+{
+  "descripcion": "Expresión con dos entradas y una salida escalar",
+  "element_id": "fb-suma",
+  "codigo": "a + b",
+  "entradas": ["a", "b"],
+  "salidas": ["resultado"],
+  "tipos_entrada": { "a": "real", "b": "real" },
+  "tipos_salida": { "resultado": "real" },
+  "casos": [
+    { "entradas": { "a": 2, "b": 3 }, "salidas": { "resultado": 5 } },
+    { "entradas": { "a": -4, "b": 1.5 }, "salidas": { "resultado": -2.5 } }
+  ]
+}

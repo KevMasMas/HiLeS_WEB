@@ -13,6 +13,9 @@ Casos cubiertos:
 - reconexión Wi-Fi/MQTT y recuperación de suscripciones;
 - límite de mensajes, composición completa de `main.py` y enrutamiento del modelo;
 - deduplicación de comandos QoS 1 con ventana de 32 identificadores.
+- perfil Python acotado, compilación única y ejecución de Functional Blocks;
+- validación y copia segura de valores escalares, `vector` y `custom`;
+- Watchdog cooperativo con memoria, sensores opcionales y métricas de tareas.
 
 Los archivos de prueba se agregan junto con cada módulo implementado; no se crean esqueletos vacíos que aparenten funcionalidad inexistente.
 
@@ -29,6 +32,9 @@ Pruebas del motor HiLeS (Persona 3, Juan Ramos):
 - `test_hiles_engine.py`: vectores `ejecucion/` paso a paso, tokens, pesos, capacidad, conflicto, reinicio y generalidad.
 - `test_engine_task.py`: flujo completo `FakeTransport → Node → EngineTask → Node` con `Scheduler` y `FakeClock`.
 - `hiles_vectors.py`: lectura de `docs/mqtt/vectores_ir_v1/` y constructores de modelos pequeños.
+- `test_python_executor.py`: perfil permitido/prohibido, errores estables, una o varias salidas, aislamiento del scheduler y vectores compartidos de Persona 1.
+- `test_runtime_values.py`: tipos y límites JSON del contrato IR v2 Python.
+- `test_watchdog_task.py`: publicación periódica y tolerancia a fallos de sensores de telemetría.
 
 ## Copiar el firmware a una Pico W
 

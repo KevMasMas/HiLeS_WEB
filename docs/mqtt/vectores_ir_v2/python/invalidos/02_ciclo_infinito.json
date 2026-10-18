@@ -1,0 +1,8 @@
+{
+  "descripcion": "No se permiten ciclos en código cooperativo",
+  "element_id": "fb-ciclo",
+  "codigo": "def calcular(x):\n    while True:\n        x = x + 1",
+  "entradas": ["x"],
+  "salidas": ["salida"],
+  "codigo_esperado": "PYTHON_PERFIL_PROHIBIDO"
+}
