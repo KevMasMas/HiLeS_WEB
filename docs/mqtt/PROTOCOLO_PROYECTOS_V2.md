@@ -1,6 +1,6 @@
 # Protocolo MQTT colaborativo por proyecto (v2)
 
-Especificación de sincronización colaborativa y ejecución remota aislada por `projectId` (`?project=<projectId>`).  
+Especificación de sincronización colaborativa y ejecución remota aislada por `projectId` (`?project=<projectId>`).
 Implementación de referencia: [`frontend/src/services/projects/`](../../frontend/src/services/projects/) (`projectUrl.ts`, `projectTopics.ts`, `projectMessages.ts`, `ProjectSyncClient.ts`).
 
 ---
@@ -27,7 +27,7 @@ Prefijo base por defecto (`PREFIJO_PROYECTOS_V2_POR_DEFECTO`): `udfjc/hiles/v2/p
 |---|---|---:|:---:|---|
 | `documentSnapshot` (`edicionEstado`) | `udfjc/hiles/v2/projects/<projectId>/document/snapshot` | `1` | `true` | Snapshot retenido del documento (`HilesModelDocument`) para hidratación inmediata al abrir `?project=<id>`. |
 | `documentOps` (`edicionOperacion`) | `udfjc/hiles/v2/projects/<projectId>/document/ops` | `1` | `false` | Operaciones incrementales (`node.add`, `node.move`, `node.update`, `node.remove`, `connection.add`, `connection.update`, `connection.remove`, `document.patch`) en tiempo real. |
-| `presence` (`edicionPresencia`) | `udfjc/hiles/v2/projects/<projectId>/presence` | `1` | `true` | Presencia retenida de colaboradores (`conectado`, `usuario`, `color`, `vista_activa`, `ttl_ms`) con soporte de Last Will MQTT. |
+| `presence` (`edicionPresencia`) | `udfjc/hiles/v2/projects/<projectId>/presence/<clientId>` | `1` | `true` | Un registro retenido por colaborador (`conectado`, `usuario`, `color`, `vista_activa`, `ttl_ms`) con Last Will MQTT. La suscripción usa `presence/+`. |
 | `cursor` (`edicionCursor`) | `udfjc/hiles/v2/projects/<projectId>/cursor` | `0` | `false` | Posición de cursor remoto en el canvas (`x`, `y`, `vista_activa`). |
 | `simulacionModeloCargar` | `udfjc/hiles/v2/projects/<projectId>/simulacion/modelo/cargar` | `1` | `true` | Carga de modelo IR v1/v2 aislado por proyecto hacia la Pico. |
 | `simulacionModeloConfirmacion` | `udfjc/hiles/v2/projects/<projectId>/simulacion/modelo/confirmacion` | `1` | `false` | Confirmación de carga o rechazo diagnóstico del modelo en la Pico. |
@@ -101,7 +101,7 @@ Tipos de `operacion.kind` soportados:
 - `connection.remove`: `{ kind: "connection.remove", connectionId: string }`
 - `document.patch`: `{ kind: "document.patch", changes: Partial<Pick<HilesModelDocument, "id" | "name" | "description" | "createdAt" | "updatedAt" | "activeSystemId">> }`
 
-### 3.3 `presence` (`MensajeProyectoPresencia`)
+### 3.3 `presence/<clientId>` (`MensajeProyectoPresencia`)
 
 ```json
 {
@@ -121,11 +121,19 @@ Tipos de `operacion.kind` soportados:
 ```
 
 - **Ciclo de vida y limpieza:**
-  1. Se publica con `retain: true, qos: 1`.
-  2. Al conectar, `ProjectSyncClient` registra un mensaje **Last Will** (`setWillMessage`) sobre `udfjc/hiles/v2/projects/<projectId>/presence` con `conectado: false`, `retain: true` y `qos: 1` para cubrir cierres abruptos del navegador.
-  3. Incluye `ttl_ms` (por defecto `30000` ms) y `expirarColaboradoresInactivos(ahoraMs)` para expirar colaboradores cuya presencia haya vencido y limpiar sus cursores remotos.
+  1. Cada cliente publica con `retain: true, qos: 1` en su propio topic `presence/<clientId>`; de este modo el broker conserva una entrada por colaborador y no solamente la última presencia global.
+  2. Los clientes se suscriben a `presence/+` y validan que el `client_id` del payload coincida con el segmento final del topic.
+  3. Al conectar, `ProjectSyncClient` registra un mensaje **Last Will** (`setWillMessage`) con `conectado: false`. Si el transporte MQTT ya estaba conectado, ejecuta una reconexión limpia porque el Will solo puede instalarse durante el paquete CONNECT.
+  4. Mientras la sesión permanece conectada se renueva la presencia mediante heartbeat (por defecto cada `ttl_ms / 3`). `expirarColaboradoresInactivos(ahoraMs)` marca como inactivos los clientes vencidos y limpia sus cursores remotos.
 
-### 3.4 `cursor` (`MensajeProyectoCursor`)
+### 3.4 Checkpoints y recuperación de publicaciones
+
+- `document/ops` continúa transportando cambios incrementales no retenidos.
+- Después de un lote de operaciones exitosas, `ProjectSyncClient` programa un checkpoint retenido en `document/snapshot` (por defecto tras 2 segundos de inactividad). Así, un cliente que entra tarde recibe el documento actualizado sin reproducir todo el historial.
+- Si una publicación incremental falla sincrónicamente, el documento confirmado no avanza hasta esa operación. El documento objetivo queda pendiente y se vuelve a calcular/publicar cuando MQTT informa `CONNECTED`.
+- Las suscripciones se registran una sola vez en el transporte. La reconexión del transporte restaura esos topics sin incrementar el contador de consumidores.
+
+### 3.5 `cursor` (`MensajeProyectoCursor`)
 
 ```json
 {

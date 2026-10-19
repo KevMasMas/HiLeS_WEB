@@ -101,7 +101,7 @@ El proyecto compartido usa MQTT del PC, no la Pico:
 ```text
 udfjc/hiles/v2/projects/<projectId>/document/snapshot   retained
 udfjc/hiles/v2/projects/<projectId>/document/ops        no retained
-udfjc/hiles/v2/projects/<projectId>/presence            retained/offline
+udfjc/hiles/v2/projects/<projectId>/presence/<clientId> retained/offline
 udfjc/hiles/v2/projects/<projectId>/cursor              no retained
 ```
 

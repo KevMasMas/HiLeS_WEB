@@ -46,6 +46,22 @@ class MqttBrowserClient implements TransporteMqttProyectoV2 {
     this.willMessage = will ? { ...will } : null;
   }
 
+  /**
+   * Cierra limpiamente la sesión actual y crea otra para que el broker reciba
+   * las opciones vigentes (incluido Last Will). Las suscripciones registradas
+   * se restauran en el evento `connect`.
+   */
+  public reconnect(): void {
+    const anterior = this.client;
+    this.client = null;
+    this.notifyStatus('DISCONNECTED');
+    if (!anterior) {
+      this.connect();
+      return;
+    }
+    anterior.end(false, {}, () => this.connect());
+  }
+
   public getWillMessage(): MqttWillMessage | null {
     return this.willMessage ? { ...this.willMessage } : null;
   }
@@ -246,7 +262,8 @@ class MqttBrowserClient implements TransporteMqttProyectoV2 {
 
   public disconnect(): void {
     if (this.client) {
-      this.client.end(true);
+      // Cierre MQTT limpio: el broker no debe publicar el Last Will.
+      this.client.end(false);
       this.client = null;
     }
     this.notifyStatus('DISCONNECTED');

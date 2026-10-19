@@ -17,6 +17,7 @@ import {
   obtenerProjectIdDeSearch,
 } from './projectUrl';
 import {
+  construirTopicoPresenciaProyectoV2,
   construirTopicosProyectoV2,
   parsearTopicoProyectoV2,
   resolverPoliticaTopicoProyectoV2,
@@ -45,6 +46,9 @@ import {
 class TransporteMqttValidado implements TransporteMqttProyectoV2, ClienteMqttRemoto {
   public status: MqttConnectionStatus = 'CONNECTED';
   public suscripciones = new Set<string>();
+  public conteoSuscripciones = new Map<string, number>();
+  public reconexiones = 0;
+  public fallarSiguientePublicacion = false;
   public willConfigurado: {
     topic: string;
     payload: unknown;
@@ -68,6 +72,12 @@ class TransporteMqttValidado implements TransporteMqttProyectoV2, ClienteMqttRem
     this.statusListeners.forEach((l) => l('CONNECTED'));
   };
 
+  reconnect = (): void => {
+    this.reconexiones += 1;
+    this.status = 'CONNECTED';
+    this.statusListeners.forEach((l) => l('CONNECTED'));
+  };
+
   setWillMessage = (
     will: {
       topic: string;
@@ -80,11 +90,18 @@ class TransporteMqttValidado implements TransporteMqttProyectoV2, ClienteMqttRem
   };
 
   subscribe = (topic: string): void => {
+    this.conteoSuscripciones.set(topic, (this.conteoSuscripciones.get(topic) ?? 0) + 1);
     this.suscripciones.add(topic);
   };
 
   unsubscribe = (topic: string): void => {
-    this.suscripciones.delete(topic);
+    const siguiente = (this.conteoSuscripciones.get(topic) ?? 0) - 1;
+    if (siguiente > 0) {
+      this.conteoSuscripciones.set(topic, siguiente);
+    } else {
+      this.conteoSuscripciones.delete(topic);
+      this.suscripciones.delete(topic);
+    }
   };
 
   publish = (
@@ -92,6 +109,10 @@ class TransporteMqttValidado implements TransporteMqttProyectoV2, ClienteMqttRem
     payload: unknown,
     policy?: Partial<MqttTopicPolicy>
   ): boolean => {
+    if (this.fallarSiguientePublicacion) {
+      this.fallarSiguientePublicacion = false;
+      return false;
+    }
     const validacion = validarMensajeMqtt(topic, payload);
     if (!validacion.valido) {
       this.erroresValidacion.push({ topic, error: validacion.error });
@@ -100,6 +121,11 @@ class TransporteMqttValidado implements TransporteMqttProyectoV2, ClienteMqttRem
     this.publicaciones.push({ topic, payload, policy });
     return true;
   };
+
+  emitirEstado(status: MqttConnectionStatus): void {
+    this.status = status;
+    this.statusListeners.forEach((l) => l(status));
+  }
 
   onMessage = (listener: (topic: MqttTopic, payload: MensajeMqtt) => void): (() => void) => {
     this.messageListeners.add(listener);
@@ -232,6 +258,18 @@ describe('projectTopics y projectMessages: contrato congelado udfjc/hiles/v2/pro
     expect(topicos.presence).toBe(
       'udfjc/hiles/v2/projects/cruce-01/presence',
     );
+    expect(topicos.presenceWildcard).toBe(
+      'udfjc/hiles/v2/projects/cruce-01/presence/+',
+    );
+    const presenciaNavA = construirTopicoPresenciaProyectoV2(topicos, 'nav-a');
+    expect(presenciaNavA).toBe(
+      'udfjc/hiles/v2/projects/cruce-01/presence/nav-a',
+    );
+    expect(parsearTopicoProyectoV2(presenciaNavA)).toMatchObject({
+      projectId: 'cruce-01',
+      sufijo: 'presence',
+      clientIdPresencia: 'nav-a',
+    });
     expect(topicos.cursor).toBe(
       'udfjc/hiles/v2/projects/cruce-01/cursor',
     );
@@ -420,7 +458,7 @@ describe('ProjectSyncClient: operaciones incrementales, cursores, presencia rete
       ).toBe(true);
       expect(
         transporte.suscripciones.has(
-          'udfjc/hiles/v2/projects/cruce-compartido/presence'
+          'udfjc/hiles/v2/projects/cruce-compartido/presence/+'
         )
       ).toBe(true);
       expect(
@@ -429,10 +467,16 @@ describe('ProjectSyncClient: operaciones incrementales, cursores, presencia rete
         )
       ).toBe(true);
       expect(transporte.willConfigurado).toMatchObject({
-        topic: 'udfjc/hiles/v2/projects/cruce-compartido/presence',
+        topic: 'udfjc/hiles/v2/projects/cruce-compartido/presence/nav-a',
         qos: 1,
         retain: true,
       });
+      expect(transporte.reconexiones).toBe(1);
+      expect(
+        transporte.conteoSuscripciones.get(
+          'udfjc/hiles/v2/projects/cruce-compartido/document/ops'
+        )
+      ).toBe(1);
 
       transporte.publicaciones.length = 0;
 
@@ -473,6 +517,103 @@ describe('ProjectSyncClient: operaciones incrementales, cursores, presencia rete
         x: 300,
         y: 400,
       });
+      cliente.desconectar();
+      expect(transporte.conteoSuscripciones.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('vacía un cambio con debounce antes de desconectar para no perder la última edición', () => {
+    vi.useFakeTimers();
+    try {
+      const transporte = new TransporteMqttValidado();
+      const inicial = crearDocumentoPrueba([crearNodoPrueba('n-a', 'Original', 10, 10)]);
+      const editado = crearDocumentoPrueba([crearNodoPrueba('n-a', 'Original', 55, 65)]);
+      const cliente = new ProjectSyncClient({
+        projectId: 'cruce-cierre',
+        mqtt: transporte,
+        clientId: 'nav-a',
+        debounceMs: 5000,
+        documentoInicial: inicial,
+      });
+      cliente.conectar();
+      transporte.publicaciones.length = 0;
+
+      cliente.notificarCambioLocal(editado, 'Último movimiento');
+      cliente.desconectar();
+
+      expect(
+        transporte.publicaciones.some((p) => p.topic.endsWith('/document/ops'))
+      ).toBe(true);
+      expect(
+        transporte.publicaciones.some((p) => p.topic.endsWith('/document/snapshot'))
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('conserva una edición fallida, la reintenta al reconectar y genera checkpoint retenido', () => {
+    vi.useFakeTimers();
+    try {
+      const transporte = new TransporteMqttValidado();
+      const inicial = crearDocumentoPrueba([crearNodoPrueba('n-a', 'Original', 10, 10)]);
+      const editado = crearDocumentoPrueba([crearNodoPrueba('n-a', 'Editado', 80, 90)]);
+      const cliente = new ProjectSyncClient({
+        projectId: 'cruce-reintento',
+        mqtt: transporte,
+        clientId: 'nav-a',
+        debounceMs: 0,
+        snapshotCheckpointMs: 100,
+        documentoInicial: inicial,
+      });
+      cliente.conectar();
+      transporte.publicaciones.length = 0;
+
+      transporte.fallarSiguientePublicacion = true;
+      expect(cliente.notificarCambioLocal(editado, 'Mover y renombrar')).toBe(false);
+      expect(cliente.obtenerDocumentoActual()?.allElements[0]?.name).toBe('Original');
+
+      transporte.emitirEstado('CONNECTED');
+      expect(cliente.obtenerDocumentoActual()?.allElements[0]?.name).toBe('Editado');
+      expect(
+        transporte.publicaciones.some((p) => p.topic.endsWith('/document/ops'))
+      ).toBe(true);
+
+      vi.advanceTimersByTime(100);
+      const checkpoints = transporte.publicaciones.filter((p) =>
+        p.topic.endsWith('/document/snapshot')
+      );
+      expect(checkpoints).toHaveLength(1);
+      expect(checkpoints[0]?.policy).toMatchObject({ qos: 1, retain: true });
+      cliente.desconectar();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('renueva presencia por heartbeat en un topic retenido exclusivo del cliente', () => {
+    vi.useFakeTimers();
+    try {
+      const transporte = new TransporteMqttValidado();
+      const cliente = new ProjectSyncClient({
+        projectId: 'cruce-heartbeat',
+        mqtt: transporte,
+        clientId: 'nav-a',
+        presenciaTtlMs: 3000,
+        presenciaHeartbeatMs: 1000,
+      });
+      cliente.conectar();
+      transporte.publicaciones.length = 0;
+
+      vi.advanceTimersByTime(1000);
+      expect(transporte.publicaciones).toHaveLength(1);
+      expect(transporte.publicaciones[0]).toMatchObject({
+        topic: 'udfjc/hiles/v2/projects/cruce-heartbeat/presence/nav-a',
+        policy: { qos: 1, retain: true },
+      });
+      cliente.desconectar();
     } finally {
       vi.useRealTimers();
     }
@@ -511,7 +652,7 @@ describe('ProjectSyncClient: operaciones incrementales, cursores, presencia rete
     });
 
     transporte.recibirDesdeBroker(
-      'udfjc/hiles/v2/projects/cruce-compartido/presence',
+      'udfjc/hiles/v2/projects/cruce-compartido/presence/nav-b',
       presenciaB
     );
     transporte.recibirDesdeBroker(
@@ -534,6 +675,7 @@ describe('ProjectSyncClient: operaciones incrementales, cursores, presencia rete
       { clientId: 'nav-b', conectado: false },
     ]);
     expect(cliente.obtenerCursoresRemotos()).toEqual([]);
+    cliente.desconectar();
   });
 });
 

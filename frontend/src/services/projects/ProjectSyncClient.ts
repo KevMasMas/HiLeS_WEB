@@ -21,6 +21,7 @@ import {
   type OperacionIncrementalProyectoV2,
 } from './projectMessages';
 import {
+  construirTopicoPresenciaProyectoV2,
   construirTopicosProyectoV2,
   normalizarIdProyectoV2,
   parsearTopicoProyectoV2,
@@ -43,6 +44,7 @@ export interface TransporteMqttProyectoV2 {
     qos?: 0 | 1;
     retain?: boolean;
   } | null) => void;
+  reconnect?: () => void;
 }
 
 export interface ColaboradorProyectoV2 {
@@ -87,6 +89,8 @@ export interface OpcionesProjectSyncClient {
   prefijoTopicos?: string;
   debounceMs?: number;
   presenciaTtlMs?: number;
+  presenciaHeartbeatMs?: number;
+  snapshotCheckpointMs?: number;
   documentoInicial?: HilesModelDocument;
   generarIdMensaje?: () => string;
   ahoraIso?: () => string;
@@ -133,6 +137,8 @@ export class ProjectSyncClient {
   private readonly prefijoTopicos: string;
   private readonly debounceMs: number;
   private readonly presenciaTtlMs: number;
+  private readonly presenciaHeartbeatMs: number;
+  private readonly snapshotCheckpointMs: number;
   private readonly generarIdMensaje: () => string;
   private readonly ahoraIso: () => string;
 
@@ -160,7 +166,10 @@ export class ProjectSyncClient {
   private cancelarSuscripcionMensajes: (() => void) | null = null;
   private cancelarSuscripcionEstado: (() => void) | null = null;
   private timerDebounce: ReturnType<typeof setTimeout> | null = null;
+  private timerHeartbeat: ReturnType<typeof setInterval> | null = null;
+  private timerCheckpoint: ReturnType<typeof setTimeout> | null = null;
   private borradorPendiente: { documento: HilesModelDocument; resumen?: string } | null = null;
+  private cambioPendienteReintento: { documento: HilesModelDocument; resumen?: string } | null = null;
   private suprimiendoCambioRemoto = false;
   private conectado = false;
 
@@ -175,6 +184,14 @@ export class ProjectSyncClient {
     this.prefijoTopicos = opciones.prefijoTopicos ?? PREFIJO_PROYECTOS_V2_POR_DEFECTO;
     this.debounceMs = Math.max(0, opciones.debounceMs ?? 150);
     this.presenciaTtlMs = Math.max(1000, opciones.presenciaTtlMs ?? PRESENCIA_TTL_MS_POR_DEFECTO);
+    this.presenciaHeartbeatMs = Math.max(
+      500,
+      Math.min(
+        this.presenciaTtlMs - 1,
+        opciones.presenciaHeartbeatMs ?? Math.floor(this.presenciaTtlMs / 3),
+      ),
+    );
+    this.snapshotCheckpointMs = Math.max(0, opciones.snapshotCheckpointMs ?? 2000);
     this.generarIdMensaje =
       opciones.generarIdMensaje ??
       (() => `msg-${this.clientId}-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`);
@@ -241,25 +258,35 @@ export class ProjectSyncClient {
 
     this.cancelarSuscripcionEstado = this.mqtt.onStatusChange((status) => {
       if (status === 'CONNECTED') {
-        this.suscribirTopicosProyecto();
         this.publicarPresencia(true, null);
+        this.iniciarHeartbeatPresencia();
+        this.reintentarCambioPendiente();
       }
     });
 
-    if (this.mqtt.getStatus() === 'DISCONNECTED') {
+    const estadoMqtt = this.mqtt.getStatus();
+    if (estadoMqtt === 'DISCONNECTED') {
       this.mqtt.connect();
-    } else if (this.mqtt.getStatus() === 'CONNECTED') {
+    } else if (this.mqtt.reconnect) {
+      // El Last Will forma parte del paquete CONNECT de MQTT. Si ya existe una
+      // conexión (o está en curso), hay que recrearla para instalarlo realmente.
+      this.mqtt.reconnect();
+    } else if (estadoMqtt === 'CONNECTED') {
       this.publicarPresencia(true, null);
+      this.iniciarHeartbeatPresencia();
     }
   }
 
   public desconectar(): void {
     if (!this.conectado) return;
-    this.limpiarDebounce();
+    this.publicarBorradorPendiente();
+    this.publicarCheckpointPendiente();
+    this.detenerHeartbeatPresencia();
     this.publicarPresencia(false, null);
 
     this.desuscribirTopicosProyecto();
     this.mqtt.setWillMessage?.(null);
+    this.limpiarCheckpoint();
     this.cancelarSuscripcionMensajes?.();
     this.cancelarSuscripcionMensajes = null;
     this.cancelarSuscripcionEstado?.();
@@ -274,7 +301,8 @@ export class ProjectSyncClient {
 
     const estabaConectado = this.conectado;
     if (estabaConectado) {
-      this.limpiarDebounce();
+      this.publicarBorradorPendiente();
+      this.publicarCheckpointPendiente();
       this.publicarPresencia(false, null);
       this.desuscribirTopicosProyecto();
     }
@@ -291,7 +319,12 @@ export class ProjectSyncClient {
     if (estabaConectado) {
       this.configurarLastWillPresencia();
       this.suscribirTopicosProyecto();
-      this.publicarPresencia(true, null);
+      if (this.mqtt.getStatus() === 'CONNECTED' && this.mqtt.reconnect) {
+        this.mqtt.reconnect();
+      } else {
+        this.publicarPresencia(true, null);
+        this.iniciarHeartbeatPresencia();
+      }
     }
   }
 
@@ -305,8 +338,6 @@ export class ProjectSyncClient {
 
     const base =
       this.documentoActual ?? crearDocumentoBaseVacio(this.projectId, this.ahoraIso());
-    this.documentoActual = aplicarOperacionIncrementalADocumento(base, operacion);
-
     const claveEntidad = claveEntidadOperacionProyectoV2(operacion);
     const metadatos = this.convergencia.prepararPublicacionLocal(this.ahoraIso(), claveEntidad);
     const opId = this.generarIdMensaje();
@@ -324,11 +355,16 @@ export class ProjectSyncClient {
     });
 
     const politicaOperacion = resolverPoliticaTopicoProyectoV2(this.topicos.documentOps);
-    return this.mqtt.publish(
+    const publicado = this.mqtt.publish(
       this.topicos.documentOps as MqttTopic,
       mensajeOperacion,
       politicaOperacion ?? undefined
     );
+    if (publicado) {
+      this.documentoActual = aplicarOperacionIncrementalADocumento(base, operacion);
+      this.programarCheckpointSnapshot();
+    }
+    return publicado;
   }
 
   public notificarCambioLocal(documento: HilesModelDocument, resumen?: string): boolean {
@@ -366,7 +402,7 @@ export class ProjectSyncClient {
       return false;
     }
     this.limpiarDebounce();
-    this.documentoActual = clonarDocumentoHiles(documento);
+    const documentoObjetivo = clonarDocumentoHiles(documento);
 
     const metadatos = this.convergencia.prepararPublicacionLocal(this.ahoraIso(), 'document');
     const opId = this.generarIdMensaje();
@@ -378,16 +414,21 @@ export class ProjectSyncClient {
       clock: metadatos.clock,
       revision: metadatos.revision,
       actualizadoEn: metadatos.actualizado_en,
-      documento: this.documentoActual,
+      documento: documentoObjetivo,
       resumen,
     });
 
     const politicaEstado = resolverPoliticaTopicoProyectoV2(this.topicos.documentSnapshot);
-    return this.mqtt.publish(
+    const publicado = this.mqtt.publish(
       this.topicos.documentSnapshot as MqttTopic,
       mensajeEstado,
       politicaEstado ?? undefined
     );
+    if (publicado) {
+      this.documentoActual = documentoObjetivo;
+      this.cambioPendienteReintento = null;
+    }
+    return publicado;
   }
 
   public publicarPresencia(conectado: boolean, vistaActiva?: string | null): boolean {
@@ -413,7 +454,7 @@ export class ProjectSyncClient {
 
     const politica = resolverPoliticaTopicoProyectoV2(this.topicos.presence);
     return this.mqtt.publish(
-      this.topicos.presence as MqttTopic,
+      construirTopicoPresenciaProyectoV2(this.topicos, this.clientId) as MqttTopic,
       mensaje,
       politica ?? undefined
     );
@@ -513,13 +554,15 @@ export class ProjectSyncClient {
 
   private publicarDiferenciasLocales(documento: HilesModelDocument, resumen?: string): boolean {
     const operaciones = calcularOperacionesEntreDocumentos(this.documentoActual, documento);
-    this.documentoActual = clonarDocumentoHiles(documento);
 
     if (operaciones.length === 0) {
       return false;
     }
 
     let exito = true;
+    let baseConfirmada = this.documentoActual
+      ? clonarDocumentoHiles(this.documentoActual)
+      : crearDocumentoBaseVacio(this.projectId, this.ahoraIso());
     const politicaOperacion = resolverPoliticaTopicoProyectoV2(this.topicos.documentOps);
     for (const operacion of operaciones) {
       const claveEntidad = claveEntidadOperacionProyectoV2(operacion);
@@ -542,9 +585,24 @@ export class ProjectSyncClient {
         mensajeOperacion,
         politicaOperacion ?? undefined
       );
-      exito = exito && okOp;
+      if (!okOp) {
+        this.documentoActual = baseConfirmada;
+        this.cambioPendienteReintento = {
+          documento: clonarDocumentoHiles(documento),
+          resumen,
+        };
+        exito = false;
+        break;
+      }
+      baseConfirmada = aplicarOperacionIncrementalADocumento(baseConfirmada, operacion);
+      this.documentoActual = baseConfirmada;
     }
 
+    if (exito) {
+      this.documentoActual = clonarDocumentoHiles(documento);
+      this.cambioPendienteReintento = null;
+      this.programarCheckpointSnapshot();
+    }
     return exito;
   }
 
@@ -566,7 +624,7 @@ export class ProjectSyncClient {
     });
     const politica = resolverPoliticaTopicoProyectoV2(this.topicos.presence);
     this.mqtt.setWillMessage({
-      topic: this.topicos.presence,
+      topic: construirTopicoPresenciaProyectoV2(this.topicos, this.clientId),
       payload: mensajeWill,
       qos: politica?.qos ?? 1,
       retain: politica?.retain ?? true,
@@ -576,14 +634,14 @@ export class ProjectSyncClient {
   private suscribirTopicosProyecto(): void {
     this.mqtt.subscribe(this.topicos.documentSnapshot as MqttTopic);
     this.mqtt.subscribe(this.topicos.documentOps as MqttTopic);
-    this.mqtt.subscribe(this.topicos.presence as MqttTopic);
+    this.mqtt.subscribe(this.topicos.presenceWildcard as MqttTopic);
     this.mqtt.subscribe(this.topicos.cursor as MqttTopic);
   }
 
   private desuscribirTopicosProyecto(): void {
     this.mqtt.unsubscribe(this.topicos.documentSnapshot as MqttTopic);
     this.mqtt.unsubscribe(this.topicos.documentOps as MqttTopic);
-    this.mqtt.unsubscribe(this.topicos.presence as MqttTopic);
+    this.mqtt.unsubscribe(this.topicos.presenceWildcard as MqttTopic);
     this.mqtt.unsubscribe(this.topicos.cursor as MqttTopic);
   }
 
@@ -600,6 +658,12 @@ export class ProjectSyncClient {
 
     if (parseado.sufijo === 'presence') {
       const presencia = validacion.mensaje as MensajeProyectoPresencia;
+      if (
+        parseado.clientIdPresencia &&
+        parseado.clientIdPresencia !== presencia.client_id
+      ) {
+        return;
+      }
       if (presencia.proyecto_id !== this.projectId || presencia.client_id === this.clientId) {
         return;
       }
@@ -718,5 +782,65 @@ export class ProjectSyncClient {
       this.timerDebounce = null;
     }
     this.borradorPendiente = null;
+  }
+
+  private publicarBorradorPendiente(): boolean {
+    if (this.timerDebounce !== null) {
+      clearTimeout(this.timerDebounce);
+      this.timerDebounce = null;
+    }
+    const pendiente = this.borradorPendiente;
+    this.borradorPendiente = null;
+    if (!pendiente) return false;
+    return this.publicarDiferenciasLocales(pendiente.documento, pendiente.resumen);
+  }
+
+  private iniciarHeartbeatPresencia(): void {
+    this.detenerHeartbeatPresencia();
+    this.timerHeartbeat = setInterval(() => {
+      if (!this.conectado || this.mqtt.getStatus() !== 'CONNECTED') return;
+      this.publicarPresencia(true, null);
+      this.expirarColaboradoresInactivos();
+    }, this.presenciaHeartbeatMs);
+  }
+
+  private detenerHeartbeatPresencia(): void {
+    if (this.timerHeartbeat !== null) {
+      clearInterval(this.timerHeartbeat);
+      this.timerHeartbeat = null;
+    }
+  }
+
+  private programarCheckpointSnapshot(): void {
+    this.limpiarCheckpoint();
+    if (this.snapshotCheckpointMs === 0) {
+      this.publicarCheckpointPendiente();
+      return;
+    }
+    this.timerCheckpoint = setTimeout(() => {
+      this.timerCheckpoint = null;
+      this.publicarCheckpointPendiente();
+    }, this.snapshotCheckpointMs);
+  }
+
+  private publicarCheckpointPendiente(): boolean {
+    if (!this.documentoActual || this.mqtt.getStatus() !== 'CONNECTED') return false;
+    return this.publicarSnapshotInmediato(
+      this.documentoActual,
+      'Checkpoint de operaciones incrementales',
+    );
+  }
+
+  private limpiarCheckpoint(): void {
+    if (this.timerCheckpoint !== null) {
+      clearTimeout(this.timerCheckpoint);
+      this.timerCheckpoint = null;
+    }
+  }
+
+  private reintentarCambioPendiente(): void {
+    const pendiente = this.cambioPendienteReintento;
+    if (!pendiente) return;
+    this.publicarDiferenciasLocales(pendiente.documento, pendiente.resumen);
   }
 }

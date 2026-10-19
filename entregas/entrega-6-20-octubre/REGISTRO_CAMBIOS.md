@@ -191,6 +191,39 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
   - Las pruebas ejecutadas por Persona 2 son de escritorio sobre Vitest; la prueba E2E con broker Mosquitto real, cuatro navegadores y la Pico física corresponde a la integración de Persona 5.
 - **Reversión, si aplica:** eliminar los archivos nuevos listados arriba y restaurar con `git checkout --` los archivos modificados de `frontend/src/`; la compatibilidad con IR v1 permanece intacta.
 
+### [2026-10-18 21:12] — Responsable: Kevin Rincón (Persona 1, revisión técnica del handoff de Persona 2)
+
+- **Estado:** [x] Correcciones de revisión terminadas y probadas en escritorio; [!] prueba E2E con Mosquitto real y cuatro navegadores continúa asignada a Persona 5.
+- **Actividad del plan:** cierre de defectos encontrados al revisar Persona 2 antes del merge de sincronización colaborativa.
+- **Qué se corrigió:**
+  - La presencia retenida dejó de compartir un único topic. Cada colaborador publica en `udfjc/hiles/v2/projects/<projectId>/presence/<clientId>` y los clientes se suscriben a `presence/+`, por lo que el broker conserva una entrada independiente por usuario.
+  - El parser de topics extrae `clientIdPresencia` y `ProjectSyncClient` rechaza mensajes cuyo `client_id` no coincide con el segmento del topic.
+  - Se agregó reconexión MQTT limpia para instalar realmente el Last Will cuando el cliente compartido ya estaba conectado o conectándose. Las suscripciones registradas se recuperan sin duplicar el contador de consumidores.
+  - El cierre MQTT normal ahora usa DISCONNECT limpio y evita disparar incorrectamente el Last Will.
+  - Se agregó heartbeat automático de presencia con intervalo configurable y valor por defecto `ttl_ms / 3`; el mismo ciclo expira colaboradores remotos vencidos y elimina sus cursores.
+  - Una publicación incremental fallida ya no adelanta el documento confirmado. El documento objetivo queda pendiente y se recalcula/reintenta cuando MQTT vuelve a `CONNECTED`.
+  - Después de operaciones exitosas se genera un checkpoint retenido de `document/snapshot`, con debounce configurable de 2 segundos, para que un cliente tardío pueda hidratar el estado actual sin historial de operaciones.
+  - Se eliminó la doble suscripción causada por suscribirse en `conectar()` y otra vez en cada evento `CONNECTED`.
+  - Al cerrar o cambiar de proyecto se publica primero cualquier edición que aún estuviera esperando el debounce y después su checkpoint, evitando perder el último movimiento del usuario.
+- **Archivos modificados:**
+  - `frontend/src/services/projects/projectTopics.ts`
+  - `frontend/src/services/projects/ProjectSyncClient.ts`
+  - `frontend/src/services/projects/projectSync.test.ts`
+  - `frontend/src/services/mqtt/MqttClient.ts`
+  - `docs/mqtt/PROTOCOLO_PROYECTOS_V2.md`
+  - `entregas/entrega-6-20-octubre/PLAN_IMPLEMENTACION_ENTREGA_20.md`
+  - `entregas/entrega-6-20-octubre/REGISTRO_CAMBIOS.md`
+- **Commit o rama:** `persona2-local`, commit pendiente.
+- **Cómo se probó:**
+  - `npm.cmd test -- --run` en `frontend/`: **15 archivos y 95 pruebas aprobadas**.
+  - `npm.cmd run lint` en `frontend/`: **0 errores y 0 advertencias**.
+  - `npm.cmd run build` en `frontend/`: TypeScript y Vite aprobados; permanece únicamente el aviso conocido del chunk principal mayor a 500 kB.
+  - Python incluido con Codex, `-m unittest discover -s firmware/tests -v`: **104 pruebas aprobadas en 0,063 s**.
+- **Evidencia nueva:** pruebas automáticas para topic de presencia por cliente, wildcard, Last Will individual, una sola suscripción por topic, reconexión para aplicar Will, reintento de una edición fallida, checkpoint retenido, heartbeat periódico y vaciado del último cambio con debounce al cerrar.
+- **Impacto sobre otros integrantes:** Persona 5 puede integrar `ProjectSyncClient` con los stores y componentes sin implementar temporizadores, reintentos, checkpoints ni corregir la gestión de presencia en archivos de Persona 2.
+- **Riesgos o pendientes:** falta ejecutar con Mosquitto real la desconexión abrupta, comprobar el Last Will y abrir cuatro navegadores para validar la retención de cuatro presencias. Esa evidencia no se reemplaza con las pruebas de escritorio.
+- **Reversión, si aplica:** revertir esta entrada y los cambios de los seis archivos funcionales/documentales anteriores; no existen migraciones persistentes.
+
 ## Confirmación de responsables
 
 - [x] Persona 1 — Nombre: Kevin Rincón

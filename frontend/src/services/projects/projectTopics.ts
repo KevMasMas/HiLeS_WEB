@@ -23,12 +23,13 @@ export interface TopicosProyectoV2 {
   documentSnapshot: string;
   documentOps: string;
   presence: string;
+  presenceWildcard: string;
   cursor: string;
   /** Alias hacia `documentSnapshot` (`udfjc/hiles/v2/projects/<projectId>/document/snapshot`). */
   edicionEstado: string;
   /** Alias hacia `documentOps` (`udfjc/hiles/v2/projects/<projectId>/document/ops`). */
   edicionOperacion: string;
-  /** Alias hacia `presence` (`udfjc/hiles/v2/projects/<projectId>/presence`). */
+  /** Alias hacia la raíz de `presence` (`udfjc/hiles/v2/projects/<projectId>/presence`). */
   edicionPresencia: string;
   /** Alias hacia `cursor` (`udfjc/hiles/v2/projects/<projectId>/cursor`). */
   edicionCursor: string;
@@ -87,6 +88,7 @@ export function construirTopicosProyectoV2(
   const documentSnapshot = `${base}/document/snapshot`;
   const documentOps = `${base}/document/ops`;
   const presence = `${base}/presence`;
+  const presenceWildcard = `${presence}/+`;
   const cursor = `${base}/cursor`;
 
   return {
@@ -95,6 +97,7 @@ export function construirTopicosProyectoV2(
     documentSnapshot,
     documentOps,
     presence,
+    presenceWildcard,
     cursor,
     edicionEstado: documentSnapshot,
     edicionOperacion: documentOps,
@@ -114,6 +117,22 @@ export interface TopicoProyectoParseadoV2 {
   projectId: string;
   sufijo: SufijoTopicoProyectoV2;
   topicoCompleto: string;
+  clientIdPresencia?: string;
+}
+
+const esSegmentoMqttValido = (valor: string): boolean =>
+  valor.length > 0 && !/[+#/]/.test(valor);
+
+/** Construye el topic retenido exclusivo de un colaborador. */
+export function construirTopicoPresenciaProyectoV2(
+  topicos: Pick<TopicosProyectoV2, 'presence'>,
+  clientId: string,
+): string {
+  const limpio = clientId.trim();
+  if (!esSegmentoMqttValido(limpio)) {
+    throw new Error('clientId de presencia no puede estar vacío ni contener /, + o #.');
+  }
+  return `${topicos.presence}/${limpio}`;
 }
 
 /**
@@ -138,7 +157,17 @@ export function parsearTopicoProyectoV2(
   }
 
   const projectId = resto.slice(0, idxBarra);
-  const sufijo = resto.slice(idxBarra + 1);
+  const sufijoCrudo = resto.slice(idxBarra + 1);
+  let sufijo = sufijoCrudo;
+  let clientIdPresencia: string | undefined;
+
+  if (sufijoCrudo.startsWith('presence/')) {
+    clientIdPresencia = sufijoCrudo.slice('presence/'.length);
+    if (!esSegmentoMqttValido(clientIdPresencia)) {
+      return null;
+    }
+    sufijo = 'presence';
+  }
 
   if (!esProjectIdValido(projectId) || !SUFIJOS_VALIDOS.has(sufijo)) {
     return null;
@@ -148,6 +177,7 @@ export function parsearTopicoProyectoV2(
     projectId,
     sufijo: sufijo as SufijoTopicoProyectoV2,
     topicoCompleto: topic,
+    ...(clientIdPresencia ? { clientIdPresencia } : {}),
   };
 }
 
