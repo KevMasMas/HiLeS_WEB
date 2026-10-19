@@ -1,0 +1,1134 @@
+{
+  "schemaVersion": 2,
+  "metadata": {
+    "savedAt": "2026-10-18T22:00:00-05:00",
+    "description": "Cuatro semáforos independientes con sensores propios. Las FSM y los permisos de paso se ejecutan en la Pico; el modelo refleja luces, solicitudes y la matriz de conflictos."
+  },
+  "network": {
+    "topology": null,
+    "protocol": null,
+    "nodes": [
+      "norte-block",
+      "sur-block",
+      "este-block",
+      "oeste-block",
+      "control-block"
+    ]
+  },
+  "allElements": [
+    {
+      "id": "norte-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo Norte",
+      "layout": {
+        "x": 80,
+        "y": 80,
+        "width": 640,
+        "height": 340
+      },
+      "ports": [],
+      "properties": {
+        "description": "Semáforo independiente del sentido Norte (eje norte-sur). Su FSM corre en la Pico.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sensor-norte",
+      "type": "SERVICE",
+      "name": "🚗 Sensor Norte",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 40,
+        "y": 60
+      },
+      "ports": [
+        {
+          "id": "sensor-norte-out",
+          "name": "presencia",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Presencia vehicular del sentido Norte; la publica su sensor propio.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "luz-norte",
+      "type": "SERVICE",
+      "name": "🚦 Luz Norte",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 40,
+        "y": 210
+      },
+      "ports": [
+        {
+          "id": "luz-norte-out",
+          "name": "luz",
+          "direction": "output",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Color oficial (rojo, amarillo o verde) decidido por la FSM de este sentido.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "lamparas-norte",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Lámparas Norte",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 330,
+        "y": 110
+      },
+      "ports": [
+        {
+          "id": "lamparas-norte-luz",
+          "name": "luz",
+          "direction": "input",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.3
+        },
+        {
+          "id": "lamparas-norte-presencia",
+          "name": "presencia",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.7
+        },
+        {
+          "id": "lamparas-norte-rojo",
+          "name": "rojo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.2
+        },
+        {
+          "id": "lamparas-norte-amarillo",
+          "name": "amarillo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.4
+        },
+        {
+          "id": "lamparas-norte-verde",
+          "name": "verde",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.6
+        },
+        {
+          "id": "lamparas-norte-solicitud",
+          "name": "solicitud",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.8
+        }
+      ],
+      "properties": {
+        "description": "Traduce la luz a lámparas y muestra la solicitud de paso cuando hay vehículos en rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "codeLanguage": "python",
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }"
+      }
+    },
+    {
+      "id": "sur-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo Sur",
+      "layout": {
+        "x": 820,
+        "y": 80,
+        "width": 640,
+        "height": 340
+      },
+      "ports": [],
+      "properties": {
+        "description": "Semáforo independiente del sentido Sur (eje norte-sur). Su FSM corre en la Pico.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sensor-sur",
+      "type": "SERVICE",
+      "name": "🚗 Sensor Sur",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 40,
+        "y": 60
+      },
+      "ports": [
+        {
+          "id": "sensor-sur-out",
+          "name": "presencia",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Presencia vehicular del sentido Sur; la publica su sensor propio.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "luz-sur",
+      "type": "SERVICE",
+      "name": "🚦 Luz Sur",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 40,
+        "y": 210
+      },
+      "ports": [
+        {
+          "id": "luz-sur-out",
+          "name": "luz",
+          "direction": "output",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Color oficial (rojo, amarillo o verde) decidido por la FSM de este sentido.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "lamparas-sur",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Lámparas Sur",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 330,
+        "y": 110
+      },
+      "ports": [
+        {
+          "id": "lamparas-sur-luz",
+          "name": "luz",
+          "direction": "input",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.3
+        },
+        {
+          "id": "lamparas-sur-presencia",
+          "name": "presencia",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.7
+        },
+        {
+          "id": "lamparas-sur-rojo",
+          "name": "rojo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.2
+        },
+        {
+          "id": "lamparas-sur-amarillo",
+          "name": "amarillo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.4
+        },
+        {
+          "id": "lamparas-sur-verde",
+          "name": "verde",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.6
+        },
+        {
+          "id": "lamparas-sur-solicitud",
+          "name": "solicitud",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.8
+        }
+      ],
+      "properties": {
+        "description": "Traduce la luz a lámparas y muestra la solicitud de paso cuando hay vehículos en rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "codeLanguage": "python",
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }"
+      }
+    },
+    {
+      "id": "este-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo Este",
+      "layout": {
+        "x": 80,
+        "y": 520,
+        "width": 640,
+        "height": 340
+      },
+      "ports": [],
+      "properties": {
+        "description": "Semáforo independiente del sentido Este (eje este-oeste). Su FSM corre en la Pico.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sensor-este",
+      "type": "SERVICE",
+      "name": "🚗 Sensor Este",
+      "parentId": "este-block",
+      "layout": {
+        "x": 40,
+        "y": 60
+      },
+      "ports": [
+        {
+          "id": "sensor-este-out",
+          "name": "presencia",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Presencia vehicular del sentido Este; la publica su sensor propio.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "luz-este",
+      "type": "SERVICE",
+      "name": "🚦 Luz Este",
+      "parentId": "este-block",
+      "layout": {
+        "x": 40,
+        "y": 210
+      },
+      "ports": [
+        {
+          "id": "luz-este-out",
+          "name": "luz",
+          "direction": "output",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Color oficial (rojo, amarillo o verde) decidido por la FSM de este sentido.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "lamparas-este",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Lámparas Este",
+      "parentId": "este-block",
+      "layout": {
+        "x": 330,
+        "y": 110
+      },
+      "ports": [
+        {
+          "id": "lamparas-este-luz",
+          "name": "luz",
+          "direction": "input",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.3
+        },
+        {
+          "id": "lamparas-este-presencia",
+          "name": "presencia",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.7
+        },
+        {
+          "id": "lamparas-este-rojo",
+          "name": "rojo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.2
+        },
+        {
+          "id": "lamparas-este-amarillo",
+          "name": "amarillo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.4
+        },
+        {
+          "id": "lamparas-este-verde",
+          "name": "verde",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.6
+        },
+        {
+          "id": "lamparas-este-solicitud",
+          "name": "solicitud",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.8
+        }
+      ],
+      "properties": {
+        "description": "Traduce la luz a lámparas y muestra la solicitud de paso cuando hay vehículos en rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "codeLanguage": "python",
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }"
+      }
+    },
+    {
+      "id": "oeste-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo Oeste",
+      "layout": {
+        "x": 820,
+        "y": 520,
+        "width": 640,
+        "height": 340
+      },
+      "ports": [],
+      "properties": {
+        "description": "Semáforo independiente del sentido Oeste (eje este-oeste). Su FSM corre en la Pico.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sensor-oeste",
+      "type": "SERVICE",
+      "name": "🚗 Sensor Oeste",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 40,
+        "y": 60
+      },
+      "ports": [
+        {
+          "id": "sensor-oeste-out",
+          "name": "presencia",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Presencia vehicular del sentido Oeste; la publica su sensor propio.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "luz-oeste",
+      "type": "SERVICE",
+      "name": "🚦 Luz Oeste",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 40,
+        "y": 210
+      },
+      "ports": [
+        {
+          "id": "luz-oeste-out",
+          "name": "luz",
+          "direction": "output",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Color oficial (rojo, amarillo o verde) decidido por la FSM de este sentido.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "lamparas-oeste",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Lámparas Oeste",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 330,
+        "y": 110
+      },
+      "ports": [
+        {
+          "id": "lamparas-oeste-luz",
+          "name": "luz",
+          "direction": "input",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.3
+        },
+        {
+          "id": "lamparas-oeste-presencia",
+          "name": "presencia",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.7
+        },
+        {
+          "id": "lamparas-oeste-rojo",
+          "name": "rojo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.2
+        },
+        {
+          "id": "lamparas-oeste-amarillo",
+          "name": "amarillo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.4
+        },
+        {
+          "id": "lamparas-oeste-verde",
+          "name": "verde",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.6
+        },
+        {
+          "id": "lamparas-oeste-solicitud",
+          "name": "solicitud",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.8
+        }
+      ],
+      "properties": {
+        "description": "Traduce la luz a lámparas y muestra la solicitud de paso cuando hay vehículos en rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "codeLanguage": "python",
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }"
+      }
+    },
+    {
+      "id": "control-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Matriz de conflictos",
+      "layout": {
+        "x": 400,
+        "y": 960,
+        "width": 760,
+        "height": 300
+      },
+      "ports": [],
+      "properties": {
+        "description": "Comprueba en cada paso que Norte–Sur y Este–Oeste nunca estén activos a la vez. No decide colores.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "seguridad-cruce",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Seguridad del cruce",
+      "parentId": "control-block",
+      "layout": {
+        "x": 260,
+        "y": 90
+      },
+      "ports": [
+        {
+          "id": "seguridad-luz-norte",
+          "name": "luz_norte",
+          "direction": "input",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.2
+        },
+        {
+          "id": "seguridad-luz-sur",
+          "name": "luz_sur",
+          "direction": "input",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.4
+        },
+        {
+          "id": "seguridad-luz-este",
+          "name": "luz_este",
+          "direction": "input",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.6000000000000001
+        },
+        {
+          "id": "seguridad-luz-oeste",
+          "name": "luz_oeste",
+          "direction": "input",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.8
+        },
+        {
+          "id": "seguridad-seguro",
+          "name": "seguro",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.35
+        },
+        {
+          "id": "seguridad-eje",
+          "name": "eje",
+          "direction": "output",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.65
+        }
+      ],
+      "properties": {
+        "description": "seguro=false indicaría verdes o amarillos incompatibles; eje muestra el movimiento activo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "codeLanguage": "python",
+        "code": "def calcular(**inputs):\n    norte = inputs.get('luz_norte') == 'verde' or inputs.get('luz_norte') == 'amarillo'\n    sur = inputs.get('luz_sur') == 'verde' or inputs.get('luz_sur') == 'amarillo'\n    este = inputs.get('luz_este') == 'verde' or inputs.get('luz_este') == 'amarillo'\n    oeste = inputs.get('luz_oeste') == 'verde' or inputs.get('luz_oeste') == 'amarillo'\n    conflicto = (norte and oeste) or (este and norte) or (este and sur) or (oeste and sur)\n    eje = 'todo-rojo'\n    if conflicto:\n        eje = 'conflicto'\n    elif norte or sur:\n        eje = 'norte-sur'\n    elif este or oeste:\n        eje = 'este-oeste'\n    return {'seguro': not conflicto, 'eje': eje}"
+      }
+    }
+  ],
+  "relationNode": [
+    {
+      "nodeId": "norte-block",
+      "elementIds": [
+        "sensor-norte",
+        "luz-norte",
+        "lamparas-norte"
+      ]
+    },
+    {
+      "nodeId": "sur-block",
+      "elementIds": [
+        "sensor-sur",
+        "luz-sur",
+        "lamparas-sur"
+      ]
+    },
+    {
+      "nodeId": "este-block",
+      "elementIds": [
+        "sensor-este",
+        "luz-este",
+        "lamparas-este"
+      ]
+    },
+    {
+      "nodeId": "oeste-block",
+      "elementIds": [
+        "sensor-oeste",
+        "luz-oeste",
+        "lamparas-oeste"
+      ]
+    },
+    {
+      "nodeId": "control-block",
+      "elementIds": [
+        "seguridad-cruce"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "cch-sensor-norte",
+      "source": "sensor-norte",
+      "sourceHandle": "sensor-norte-out",
+      "target": "lamparas-norte",
+      "targetHandle": "lamparas-norte-presencia",
+      "label": "CCH · presencia",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-luz-norte",
+      "source": "luz-norte",
+      "sourceHandle": "luz-norte-out",
+      "target": "lamparas-norte",
+      "targetHandle": "lamparas-norte-luz",
+      "label": "CCH · luz",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-sensor-sur",
+      "source": "sensor-sur",
+      "sourceHandle": "sensor-sur-out",
+      "target": "lamparas-sur",
+      "targetHandle": "lamparas-sur-presencia",
+      "label": "CCH · presencia",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-luz-sur",
+      "source": "luz-sur",
+      "sourceHandle": "luz-sur-out",
+      "target": "lamparas-sur",
+      "targetHandle": "lamparas-sur-luz",
+      "label": "CCH · luz",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-sensor-este",
+      "source": "sensor-este",
+      "sourceHandle": "sensor-este-out",
+      "target": "lamparas-este",
+      "targetHandle": "lamparas-este-presencia",
+      "label": "CCH · presencia",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-luz-este",
+      "source": "luz-este",
+      "sourceHandle": "luz-este-out",
+      "target": "lamparas-este",
+      "targetHandle": "lamparas-este-luz",
+      "label": "CCH · luz",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-sensor-oeste",
+      "source": "sensor-oeste",
+      "sourceHandle": "sensor-oeste-out",
+      "target": "lamparas-oeste",
+      "targetHandle": "lamparas-oeste-presencia",
+      "label": "CCH · presencia",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-luz-oeste",
+      "source": "luz-oeste",
+      "sourceHandle": "luz-oeste-out",
+      "target": "lamparas-oeste",
+      "targetHandle": "lamparas-oeste-luz",
+      "label": "CCH · luz",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-seguridad-norte",
+      "source": "luz-norte",
+      "sourceHandle": "luz-norte-out",
+      "target": "seguridad-cruce",
+      "targetHandle": "seguridad-luz-norte",
+      "label": "CCH · luz Norte",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-seguridad-sur",
+      "source": "luz-sur",
+      "sourceHandle": "luz-sur-out",
+      "target": "seguridad-cruce",
+      "targetHandle": "seguridad-luz-sur",
+      "label": "CCH · luz Sur",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-seguridad-este",
+      "source": "luz-este",
+      "sourceHandle": "luz-este-out",
+      "target": "seguridad-cruce",
+      "targetHandle": "seguridad-luz-este",
+      "label": "CCH · luz Este",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-seguridad-oeste",
+      "source": "luz-oeste",
+      "sourceHandle": "luz-oeste-out",
+      "target": "seguridad-cruce",
+      "targetHandle": "seguridad-luz-oeste",
+      "label": "CCH · luz Oeste",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    }
+  ]
+}

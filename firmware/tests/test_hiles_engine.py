@@ -1,4 +1,5 @@
 import json
+import re
 import unittest
 from pathlib import Path
 
@@ -226,11 +227,13 @@ class GeneralityTests(unittest.TestCase):
             self.assertEqual(motor.snapshot(), paso["elementos_esperados"])
 
     def test_engine_sources_contain_no_traffic_light_rules(self):
-        prohibidas = ("semaforo", "semáforo", "sem1", "verde", "amarillo", "rojo", "norte", "sur")
+        prohibidas = ("semaforo", "semáforo", "sem1", "verde", "amarillo", "rojo", "norte", "sur", "oeste")
         for path in sorted(HILES_DIRECTORY.glob("*.py")):
             contenido = path.read_text(encoding="utf-8").lower()
+            # Palabras completas: «sur» no debe coincidir dentro de «ensure_ascii».
+            palabras = set(re.findall(r"[a-záéíóúñ0-9]+", contenido))
             for palabra in prohibidas:
-                self.assertNotIn(palabra, contenido, "{} contiene «{}»".format(path.name, palabra))
+                self.assertNotIn(palabra, palabras, "{} contiene «{}»".format(path.name, palabra))
 
 
 if __name__ == "__main__":

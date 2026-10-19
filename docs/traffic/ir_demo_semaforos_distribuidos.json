@@ -1,0 +1,461 @@
+{
+  "ir_version": 2,
+  "modelo_id": "semaforos-distribuidos",
+  "version": 1,
+  "nombre": "Modelo HiLeS",
+  "metadata": {
+    "documento_schema_version": 2,
+    "compilado_en": "2026-10-18T22:00:00.000Z",
+    "bloque_raiz_id": null,
+    "structural_blocks_aplanados": [
+      "norte-block",
+      "sur-block",
+      "este-block",
+      "oeste-block",
+      "control-block"
+    ],
+    "normalizaciones_legadas": [
+      "structural_block_aplanado"
+    ]
+  },
+  "entradas_externas": [
+    {
+      "elemento_id": "sensor-norte",
+      "nombre": "🚗 Sensor Norte",
+      "puerto_salida": "sensor-norte-out",
+      "tipo_dato": "boolean"
+    },
+    {
+      "elemento_id": "luz-norte",
+      "nombre": "🚦 Luz Norte",
+      "puerto_salida": "luz-norte-out",
+      "tipo_dato": "string"
+    },
+    {
+      "elemento_id": "sensor-sur",
+      "nombre": "🚗 Sensor Sur",
+      "puerto_salida": "sensor-sur-out",
+      "tipo_dato": "boolean"
+    },
+    {
+      "elemento_id": "luz-sur",
+      "nombre": "🚦 Luz Sur",
+      "puerto_salida": "luz-sur-out",
+      "tipo_dato": "string"
+    },
+    {
+      "elemento_id": "sensor-este",
+      "nombre": "🚗 Sensor Este",
+      "puerto_salida": "sensor-este-out",
+      "tipo_dato": "boolean"
+    },
+    {
+      "elemento_id": "luz-este",
+      "nombre": "🚦 Luz Este",
+      "puerto_salida": "luz-este-out",
+      "tipo_dato": "string"
+    },
+    {
+      "elemento_id": "sensor-oeste",
+      "nombre": "🚗 Sensor Oeste",
+      "puerto_salida": "sensor-oeste-out",
+      "tipo_dato": "boolean"
+    },
+    {
+      "elemento_id": "luz-oeste",
+      "nombre": "🚦 Luz Oeste",
+      "puerto_salida": "luz-oeste-out",
+      "tipo_dato": "string"
+    }
+  ],
+  "elementos": [
+    {
+      "id": "sensor-norte",
+      "tipo": "service",
+      "nombre": "🚗 Sensor Norte",
+      "tipo_dato": "boolean",
+      "salidas": [
+        "sensor-norte-out"
+      ],
+      "entradas": []
+    },
+    {
+      "id": "luz-norte",
+      "tipo": "service",
+      "nombre": "🚦 Luz Norte",
+      "tipo_dato": "string",
+      "salidas": [
+        "luz-norte-out"
+      ],
+      "entradas": []
+    },
+    {
+      "id": "lamparas-norte",
+      "tipo": "functional_block",
+      "nombre": "Lámparas Norte",
+      "habilitado": true,
+      "lenguaje": "python",
+      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }",
+      "entradas": [
+        {
+          "puerto": "lamparas-norte-luz",
+          "variable": "luz",
+          "tipo_dato": "string"
+        },
+        {
+          "puerto": "lamparas-norte-presencia",
+          "variable": "presencia",
+          "tipo_dato": "boolean"
+        }
+      ],
+      "salidas": [
+        {
+          "puerto": "lamparas-norte-rojo",
+          "variable": "rojo",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-norte-amarillo",
+          "variable": "amarillo",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-norte-verde",
+          "variable": "verde",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-norte-solicitud",
+          "variable": "solicitud",
+          "tipo_dato": "boolean"
+        }
+      ]
+    },
+    {
+      "id": "sensor-sur",
+      "tipo": "service",
+      "nombre": "🚗 Sensor Sur",
+      "tipo_dato": "boolean",
+      "salidas": [
+        "sensor-sur-out"
+      ],
+      "entradas": []
+    },
+    {
+      "id": "luz-sur",
+      "tipo": "service",
+      "nombre": "🚦 Luz Sur",
+      "tipo_dato": "string",
+      "salidas": [
+        "luz-sur-out"
+      ],
+      "entradas": []
+    },
+    {
+      "id": "lamparas-sur",
+      "tipo": "functional_block",
+      "nombre": "Lámparas Sur",
+      "habilitado": true,
+      "lenguaje": "python",
+      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }",
+      "entradas": [
+        {
+          "puerto": "lamparas-sur-luz",
+          "variable": "luz",
+          "tipo_dato": "string"
+        },
+        {
+          "puerto": "lamparas-sur-presencia",
+          "variable": "presencia",
+          "tipo_dato": "boolean"
+        }
+      ],
+      "salidas": [
+        {
+          "puerto": "lamparas-sur-rojo",
+          "variable": "rojo",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-sur-amarillo",
+          "variable": "amarillo",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-sur-verde",
+          "variable": "verde",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-sur-solicitud",
+          "variable": "solicitud",
+          "tipo_dato": "boolean"
+        }
+      ]
+    },
+    {
+      "id": "sensor-este",
+      "tipo": "service",
+      "nombre": "🚗 Sensor Este",
+      "tipo_dato": "boolean",
+      "salidas": [
+        "sensor-este-out"
+      ],
+      "entradas": []
+    },
+    {
+      "id": "luz-este",
+      "tipo": "service",
+      "nombre": "🚦 Luz Este",
+      "tipo_dato": "string",
+      "salidas": [
+        "luz-este-out"
+      ],
+      "entradas": []
+    },
+    {
+      "id": "lamparas-este",
+      "tipo": "functional_block",
+      "nombre": "Lámparas Este",
+      "habilitado": true,
+      "lenguaje": "python",
+      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }",
+      "entradas": [
+        {
+          "puerto": "lamparas-este-luz",
+          "variable": "luz",
+          "tipo_dato": "string"
+        },
+        {
+          "puerto": "lamparas-este-presencia",
+          "variable": "presencia",
+          "tipo_dato": "boolean"
+        }
+      ],
+      "salidas": [
+        {
+          "puerto": "lamparas-este-rojo",
+          "variable": "rojo",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-este-amarillo",
+          "variable": "amarillo",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-este-verde",
+          "variable": "verde",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-este-solicitud",
+          "variable": "solicitud",
+          "tipo_dato": "boolean"
+        }
+      ]
+    },
+    {
+      "id": "sensor-oeste",
+      "tipo": "service",
+      "nombre": "🚗 Sensor Oeste",
+      "tipo_dato": "boolean",
+      "salidas": [
+        "sensor-oeste-out"
+      ],
+      "entradas": []
+    },
+    {
+      "id": "luz-oeste",
+      "tipo": "service",
+      "nombre": "🚦 Luz Oeste",
+      "tipo_dato": "string",
+      "salidas": [
+        "luz-oeste-out"
+      ],
+      "entradas": []
+    },
+    {
+      "id": "lamparas-oeste",
+      "tipo": "functional_block",
+      "nombre": "Lámparas Oeste",
+      "habilitado": true,
+      "lenguaje": "python",
+      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }",
+      "entradas": [
+        {
+          "puerto": "lamparas-oeste-luz",
+          "variable": "luz",
+          "tipo_dato": "string"
+        },
+        {
+          "puerto": "lamparas-oeste-presencia",
+          "variable": "presencia",
+          "tipo_dato": "boolean"
+        }
+      ],
+      "salidas": [
+        {
+          "puerto": "lamparas-oeste-rojo",
+          "variable": "rojo",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-oeste-amarillo",
+          "variable": "amarillo",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-oeste-verde",
+          "variable": "verde",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "lamparas-oeste-solicitud",
+          "variable": "solicitud",
+          "tipo_dato": "boolean"
+        }
+      ]
+    },
+    {
+      "id": "seguridad-cruce",
+      "tipo": "functional_block",
+      "nombre": "Seguridad del cruce",
+      "habilitado": true,
+      "lenguaje": "python",
+      "codigo": "def calcular(**inputs):\n    norte = inputs.get('luz_norte') == 'verde' or inputs.get('luz_norte') == 'amarillo'\n    sur = inputs.get('luz_sur') == 'verde' or inputs.get('luz_sur') == 'amarillo'\n    este = inputs.get('luz_este') == 'verde' or inputs.get('luz_este') == 'amarillo'\n    oeste = inputs.get('luz_oeste') == 'verde' or inputs.get('luz_oeste') == 'amarillo'\n    conflicto = (norte and oeste) or (este and norte) or (este and sur) or (oeste and sur)\n    eje = 'todo-rojo'\n    if conflicto:\n        eje = 'conflicto'\n    elif norte or sur:\n        eje = 'norte-sur'\n    elif este or oeste:\n        eje = 'este-oeste'\n    return {'seguro': not conflicto, 'eje': eje}",
+      "entradas": [
+        {
+          "puerto": "seguridad-luz-norte",
+          "variable": "luz_norte",
+          "tipo_dato": "string"
+        },
+        {
+          "puerto": "seguridad-luz-sur",
+          "variable": "luz_sur",
+          "tipo_dato": "string"
+        },
+        {
+          "puerto": "seguridad-luz-este",
+          "variable": "luz_este",
+          "tipo_dato": "string"
+        },
+        {
+          "puerto": "seguridad-luz-oeste",
+          "variable": "luz_oeste",
+          "tipo_dato": "string"
+        }
+      ],
+      "salidas": [
+        {
+          "puerto": "seguridad-seguro",
+          "variable": "seguro",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "seguridad-eje",
+          "variable": "eje",
+          "tipo_dato": "string"
+        }
+      ]
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "cch-sensor-norte",
+      "tipo": "cch",
+      "origen": "sensor-norte",
+      "puerto_origen": "sensor-norte-out",
+      "destino": "lamparas-norte",
+      "puerto_destino": "lamparas-norte-presencia"
+    },
+    {
+      "id": "cch-luz-norte",
+      "tipo": "cch",
+      "origen": "luz-norte",
+      "puerto_origen": "luz-norte-out",
+      "destino": "lamparas-norte",
+      "puerto_destino": "lamparas-norte-luz"
+    },
+    {
+      "id": "cch-sensor-sur",
+      "tipo": "cch",
+      "origen": "sensor-sur",
+      "puerto_origen": "sensor-sur-out",
+      "destino": "lamparas-sur",
+      "puerto_destino": "lamparas-sur-presencia"
+    },
+    {
+      "id": "cch-luz-sur",
+      "tipo": "cch",
+      "origen": "luz-sur",
+      "puerto_origen": "luz-sur-out",
+      "destino": "lamparas-sur",
+      "puerto_destino": "lamparas-sur-luz"
+    },
+    {
+      "id": "cch-sensor-este",
+      "tipo": "cch",
+      "origen": "sensor-este",
+      "puerto_origen": "sensor-este-out",
+      "destino": "lamparas-este",
+      "puerto_destino": "lamparas-este-presencia"
+    },
+    {
+      "id": "cch-luz-este",
+      "tipo": "cch",
+      "origen": "luz-este",
+      "puerto_origen": "luz-este-out",
+      "destino": "lamparas-este",
+      "puerto_destino": "lamparas-este-luz"
+    },
+    {
+      "id": "cch-sensor-oeste",
+      "tipo": "cch",
+      "origen": "sensor-oeste",
+      "puerto_origen": "sensor-oeste-out",
+      "destino": "lamparas-oeste",
+      "puerto_destino": "lamparas-oeste-presencia"
+    },
+    {
+      "id": "cch-luz-oeste",
+      "tipo": "cch",
+      "origen": "luz-oeste",
+      "puerto_origen": "luz-oeste-out",
+      "destino": "lamparas-oeste",
+      "puerto_destino": "lamparas-oeste-luz"
+    },
+    {
+      "id": "cch-seguridad-norte",
+      "tipo": "cch",
+      "origen": "luz-norte",
+      "puerto_origen": "luz-norte-out",
+      "destino": "seguridad-cruce",
+      "puerto_destino": "seguridad-luz-norte"
+    },
+    {
+      "id": "cch-seguridad-sur",
+      "tipo": "cch",
+      "origen": "luz-sur",
+      "puerto_origen": "luz-sur-out",
+      "destino": "seguridad-cruce",
+      "puerto_destino": "seguridad-luz-sur"
+    },
+    {
+      "id": "cch-seguridad-este",
+      "tipo": "cch",
+      "origen": "luz-este",
+      "puerto_origen": "luz-este-out",
+      "destino": "seguridad-cruce",
+      "puerto_destino": "seguridad-luz-este"
+    },
+    {
+      "id": "cch-seguridad-oeste",
+      "tipo": "cch",
+      "origen": "luz-oeste",
+      "puerto_origen": "luz-oeste-out",
+      "destino": "seguridad-cruce",
+      "puerto_destino": "seguridad-luz-oeste"
+    }
+  ]
+}

@@ -261,7 +261,7 @@ frontend/src/engine/__tests__/**
 
 ### Persona 3 — Motor MicroPython completo y cuatro semáforos independientes
 
-**Responsable:** por confirmar
+**Responsable:** Juan Ramos
 
 **Dependencias:** Personas 1 y 2.
 
@@ -274,24 +274,24 @@ frontend/src/engine/__tests__/**
 
 #### Control de avance nuevo
 
-- [ ] Cargar IR v2 y mantener compatibilidad de lectura con IR v1.
-- [ ] Integrar `PythonExecutor` de Persona 1 en Functional Block.
-- [ ] Implementar `Sample` con dato continuo, evento de captura y salida DCH.
-- [ ] Implementar `Hold` con entrada DCH, valor retenido CCH y evento LCH de actualización.
-- [ ] Implementar canales CCH, cola DCH y evento LCH diferenciados.
-- [ ] Implementar vector/custom acotados sin copiar estructuras indefinidamente.
-- [ ] Implementar retardos como fechas límite en el motor usando `scheduler.clock`, sin `sleep`.
-- [ ] Cancelar eventos y retardos pendientes al reiniciar o cargar otro modelo.
-- [ ] Ampliar snapshots con valor retenido, evento/cola pendiente, timer y error observable.
-- [ ] Reproducir todos los vectores de conformidad de Persona 2.
-- [ ] Diseñar cuatro FSM separadas: Norte, Sur, Este y Oeste.
-- [ ] Crear un sensor de presencia independiente por sentido.
-- [ ] Crear solicitudes y permisos de paso para que cada FSM decida con su sensor sin compartir un único estado interno.
-- [ ] Garantizar la secuencia `Rojo → Verde → Amarillo → Rojo`, con todo-rojo de seguridad antes de un movimiento conflictivo.
-- [ ] Definir matriz de conflictos, tiempo mínimo verde, amarillo, todo-rojo y espera máxima para evitar inanición.
-- [ ] Crear simulador de sensores y adaptador GPIO opcional.
-- [ ] Generar el nuevo JSON desde script; no editar manualmente el archivo de demo.
-- [ ] Probar ausencia de verdes incompatibles, transición por amarillo, equidad y fail-safe ante sensor inválido.
+- [x] Cargar IR v2 y mantener compatibilidad de lectura con IR v1.
+- [x] Integrar `PythonExecutor` de Persona 1 en Functional Block.
+- [x] Implementar `Sample` con dato continuo, evento de captura y salida DCH.
+- [x] Implementar `Hold` con entrada DCH, valor retenido CCH y evento LCH de actualización.
+- [x] Implementar canales CCH, cola DCH y evento LCH diferenciados.
+- [x] Implementar vector/custom acotados sin copiar estructuras indefinidamente.
+- [x] Implementar retardos como fechas límite en el motor usando `scheduler.clock`, sin `sleep`.
+- [x] Cancelar eventos y retardos pendientes al reiniciar o cargar otro modelo.
+- [x] Ampliar snapshots con valor retenido, evento/cola pendiente, timer y error observable.
+- [x] Reproducir todos los vectores de conformidad de Persona 2.
+- [x] Diseñar cuatro FSM separadas: Norte, Sur, Este y Oeste.
+- [x] Crear un sensor de presencia independiente por sentido.
+- [x] Crear solicitudes y permisos de paso para que cada FSM decida con su sensor sin compartir un único estado interno.
+- [x] Garantizar la secuencia `Rojo → Verde → Amarillo → Rojo`, con todo-rojo de seguridad antes de un movimiento conflictivo.
+- [x] Definir matriz de conflictos, tiempo mínimo verde, amarillo, todo-rojo y espera máxima para evitar inanición.
+- [x] Crear simulador de sensores y adaptador GPIO opcional (GPIO probado con un `machine` simulado; falta la placa física).
+- [x] Generar el nuevo JSON desde script; no editar manualmente el archivo de demo.
+- [x] Probar ausencia de verdes incompatibles, transición por amarillo, equidad y fail-safe ante sensor inválido.
 
 #### Archivos propios
 
@@ -318,15 +318,15 @@ docs/traffic/MATRIZ_CONFLICTOS.md
 #### Inputs recibidos
 
 - [x] Persona 1: `PythonExecutor`, valores, límites y errores.
-- [ ] Persona 2: IR v2 congelada, semántica de canales/retardos y vectores.
+- [x] Persona 2: IR v2 congelada, semántica de canales/retardos y vectores.
 
 #### Entregable y criterio de cierre
 
-- [ ] Los mismos vectores v2 producen el mismo estado observable en TypeScript y MicroPython.
-- [ ] MQTT y Watchdog continúan ejecutándose mientras hay retardos pendientes.
-- [ ] Cada semáforo conserva su propio estado y sensor.
-- [ ] Ningún sentido pasa de verde directamente a rojo.
-- [ ] Nunca hay verdes simultáneos en movimientos incompatibles.
+- [x] Los mismos vectores v2 producen el mismo estado observable en TypeScript y MicroPython.
+- [x] MQTT y Watchdog continúan ejecutándose mientras hay retardos pendientes (escritorio, con `FakeTransport` y `WatchdogTask`; falta la Pico física).
+- [x] Cada semáforo conserva su propio estado y sensor.
+- [x] Ningún sentido pasa de verde directamente a rojo.
+- [x] Nunca hay verdes simultáneos en movimientos incompatibles.
 
 ---
 
@@ -495,14 +495,14 @@ Handoff obligatorio de cada persona:
 
 - [x] Persona 1 termina PythonExecutor, valores y Watchdog.
 - [x] Persona 2 termina tipos/compilador IR v2 y protocolo de proyecto.
-- [ ] Persona 3 inicia desde los fixtures congelados, sin modificar contratos.
+- [x] Persona 3 inicia desde los fixtures congelados, sin modificar contratos.
 - [ ] Persona 4 construye topbar y paneles sobre las APIs existentes.
 
 ### Lunes 19, tarde — motores e integración web
 
 - [x] Persona 2 termina motor TypeScript de referencia y `ProjectSyncClient`.
-- [ ] Persona 3 termina motor MicroPython v2 y pruebas de paridad.
-- [ ] Persona 3 genera y prueba semáforos distribuidos.
+- [x] Persona 3 termina motor MicroPython v2 y pruebas de paridad.
+- [x] Persona 3 genera y prueba semáforos distribuidos.
 - [ ] Persona 5 conecta store, snapshot, operaciones, presencia y cursores.
 
 ### Lunes 19, noche — integración y regresión
@@ -528,11 +528,11 @@ Handoff obligatorio de cada persona:
 ### Runtime Pico
 
 - [ ] El código Python del Functional Block se compila y ejecuta en MicroPython.
-- [ ] Código inválido no sustituye el modelo activo.
+- [x] Código inválido no sustituye el modelo activo.
 - [ ] `Service`, Functional Block, Sample, Hold, Place y Transition funcionan remotamente.
-- [ ] CCH, DCH, LCH y Petri mantienen semánticas diferenciadas.
-- [ ] Los retardos no contienen `sleep` ni bloquean MQTT/Watchdog.
-- [ ] Reset limpia entradas, salidas, colas, eventos, timers, valores retenidos y tokens.
+- [x] CCH, DCH, LCH y Petri mantienen semánticas diferenciadas.
+- [x] Los retardos no contienen `sleep` ni bloquean MQTT/Watchdog.
+- [x] Reset limpia entradas, salidas, colas, eventos, timers, valores retenidos y tokens.
 - [ ] Vectores web y Pico producen estados equivalentes.
 
 ### Proyecto y colaboración
@@ -545,11 +545,11 @@ Handoff obligatorio de cada persona:
 
 ### Semáforos
 
-- [ ] Existen cuatro FSM y cuatro sensores independientes.
-- [ ] Toda salida de verde pasa por amarillo.
-- [ ] Existe intervalo seguro de todo-rojo antes de conceder un conflicto.
-- [ ] Nunca se observan verdes incompatibles.
-- [ ] Una demanda sostenida no causa inanición permanente de otro sentido.
+- [x] Existen cuatro FSM y cuatro sensores independientes.
+- [x] Toda salida de verde pasa por amarillo.
+- [x] Existe intervalo seguro de todo-rojo antes de conceder un conflicto.
+- [x] Nunca se observan verdes incompatibles (pruebas de escritorio con demanda aleatoria y sostenida).
+- [x] Una demanda sostenida no causa inanición permanente de otro sentido.
 
 ### UI, calidad y entrega
 

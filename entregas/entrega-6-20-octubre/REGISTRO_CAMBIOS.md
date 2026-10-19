@@ -224,11 +224,118 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
 - **Riesgos o pendientes:** falta ejecutar con Mosquitto real la desconexión abrupta, comprobar el Last Will y abrir cuatro navegadores para validar la retención de cuatro presencias. Esa evidencia no se reemplaza con las pruebas de escritorio.
 - **Reversión, si aplica:** revertir esta entrada y los cambios de los seis archivos funcionales/documentales anteriores; no existen migraciones persistentes.
 
+### [2026-10-18 22:03] — Responsable: Juan Ramos (Persona 3)
+
+- **Estado:** [x] Motor MicroPython v2 y semáforos distribuidos terminados y probados en escritorio. [!] Pendientes: integración en `main.py` y paquete de despliegue (Persona 5), y prueba en la Pico física.
+- **Actividad del plan:** Persona 3 — Motor MicroPython completo y cuatro semáforos independientes (las 18 casillas de «Control de avance nuevo» y las 5 del entregable).
+- **Revisión previa:**
+  - Se revisaron el plan, este registro, `IR_V2.md`, `IR_V2_PYTHON.md`, los 18 vectores de `docs/mqtt/vectores_ir_v2/`, `python_executor.py` y `runtime_values.py` de Persona 1.
+  - También el motor TypeScript de referencia de Persona 2 (`validadorIrV2.ts`, `BusObserver.ts`, `GrafoDatos.ts`, `MotorSimulacion.ts`, elementos, `extraerElementosEstadoIrV2` y `MotorSimulacionIrV2.test.ts`) y el `EngineTask` con deduplicación de Persona 1.
+  - Línea base: 104 pruebas de firmware y 95 de frontend aprobadas.
+- **Qué se implementó:**
+  1. **Carga IR v2 con compatibilidad v1** (`hiles/model_v2.py`):
+     - `validate_ir_v2` replica el orden de comprobaciones de `validarModeloIrV2` y reporta el mismo primer código que la web.
+     - Cubre límites, perfil Python (mediante `validate_python_source`), valores (mediante `validate_runtime_value`), `IR_CAPACIDAD_INVALIDA`, `IR_RETARDO_INVALIDO`, puertos, arcos, ciclos (DFS iterativo) y presupuesto de 31744 bytes.
+     - `migrate_v1_to_v2` equivale a `migrarIrV1AV2`.
+     - `validate_load_message_v2` acepta `ir_version` 1 o 2.
+  2. **Canales diferenciados** (`hiles/channels.py`):
+     - CCH continuo, con retardo solo si el valor cambia y reemplazo de la entrega pendiente.
+     - DCH con cola FIFO acotada (8 por defecto, 32 como máximo), un consumo por paso y puerto, y `desbordada` visible.
+     - LCH como pulso de un paso; al cerrar el paso se limpia en transiciones.
+     - Un Service solo emite por DCH/LCH las muestras inyectadas en el paso.
+  3. **Elementos v2** (`hiles/elements_v2.py`): `Service`, `Functional Block` en modo Python o expresión, `Sample`, `Hold`, `Place` (con `capacidad: null` sin cota) y `Transition`.
+  4. **`PythonExecutor` de Persona 1 en Functional Block:**
+     - Compila una sola vez al cargar; un fallo rechaza toda la carga y conserva el modelo activo.
+     - Ejecuta una vez por evaluación, enruta salidas por nombre de variable y trata `None` como «sin salida».
+     - Publica en el snapshot el `codigo` del error del bloque sin detener a los demás elementos.
+  5. **Motor v2** (`hiles/engine_v2.py`):
+     - Paso igual al de `MotorSimulacion.paso`: reloj lógico, entregas vencidas, orden services → transitions → resto topológico, Petri con conflicto y cierre de pulsos.
+     - Retardos de elemento, conexión y transición como fechas límite; con `time_source` el avance se mide con `scheduler.clock`.
+     - Snapshot con el formato exacto de `extraerElementosEstadoIrV2`: `salidas`, `valor_retenido`, `evento_pendiente`, `cola_dch`, `cola_desbordada`, `timer_pendiente` y `error`.
+     - `reset()` limpia entradas, salidas, colas, eventos, timers, retenidos, tokens y reloj.
+     - Los valores inyectados se validan y clonan una sola vez y se propagan sin nuevas copias.
+  6. **`EngineTaskV2`** (`hiles/engine_task_v2.py`):
+     - Hereda sin modificarlo el `EngineTask` existente (cola, deduplicación y comandos).
+     - `ir_version: 1` usa el motor v1 y conserva sus snapshots; `ir_version: 2` usa el motor v2.
+     - `submit_local_input` permite que los dispositivos de la Pico inyecten valores por la cola acotada, sin MQTT.
+  7. **Cuatro semáforos independientes** (`devices/traffic_controller.py`):
+     - Una `TrafficLightFsm` por sentido, con estado privado `ROJO → VERDE → AMARILLO → ROJO`; el salto verde → rojo lanza excepción.
+     - `IntersectionArbiter` solo concede permisos de un ciclo: exige que los conflictos estén en rojo hace al menos `todo_rojo_ms`, impide adelantar a solicitudes más antiguas en conflicto y señala ceder o urgente.
+     - Matriz de conflictos validada (simétrica) y `TrafficTiming` para verde mínimo y máximo, amarillo, todo-rojo y espera máxima.
+     - Monitor que entra en modo seguro ante un conflicto imposible.
+     - Fail-safe: un sensor inválido se trata como presencia.
+  8. **Sensores, simulador y GPIO:**
+     - `VehicleSensorTask` (`devices/vehicle_sensor_task.py`): antirrebote, detección de falla por `falla_ms` y fuentes `Simulated`, `Scripted` y `Manual` (generador reproducible igual en CPython y MicroPython).
+     - `platform/traffic_io.py`: `GpioPresenceInput`, `TrafficLightOutput` y `build_traffic_io` con `machine` inyectable.
+  9. **Demo generado por script:**
+     - `scripts/generate-distributed-traffic-demo.mjs` genera `output/demo-4-semaforos-distribuidos.json`: cuatro bloques con su sensor, su luz y un Functional Block Python de lámparas y solicitud, más un bloque «Seguridad del cruce» con la matriz.
+     - Se compiló con el compilador web real `compilarModeloEditorAIrV2`: 0 errores, 0 advertencias, 13 elementos y 12 conexiones CCH.
+     - La IR resultante quedó como fixture en `docs/traffic/ir_demo_semaforos_distribuidos.json`.
+  10. **Documentación:** `docs/traffic/PROTOCOLO_SEMAFOROS.md` (arquitectura, FSM, permisos, fail-safe, formato publicado y fragmento de integración para `main.py`) y `docs/traffic/MATRIZ_CONFLICTOS.md` (pares incompatibles, tiempos y espera máxima garantizada).
+- **Archivos creados:**
+  - `firmware/pico/hiles/model_v2.py`
+  - `firmware/pico/hiles/channels.py`
+  - `firmware/pico/hiles/elements_v2.py`
+  - `firmware/pico/hiles/engine_v2.py`
+  - `firmware/pico/hiles/engine_task_v2.py`
+  - `firmware/pico/devices/traffic_controller.py`
+  - `firmware/pico/devices/vehicle_sensor_task.py`
+  - `firmware/pico/platform/traffic_io.py`
+  - `firmware/tests/test_hiles_model_v2.py`
+  - `firmware/tests/test_hiles_engine_v2.py`
+  - `firmware/tests/test_hiles_channels.py`
+  - `firmware/tests/test_hiles_delays.py`
+  - `firmware/tests/test_traffic_controller.py`
+  - `scripts/generate-distributed-traffic-demo.mjs`
+  - `output/demo-4-semaforos-distribuidos.json` (generado; no se edita a mano)
+  - `docs/traffic/PROTOCOLO_SEMAFOROS.md`
+  - `docs/traffic/MATRIZ_CONFLICTOS.md`
+  - `docs/traffic/ir_demo_semaforos_distribuidos.json` (fixture compilado; archivo adicional dentro de la carpeta propia `docs/traffic/`)
+- **Archivos modificados:**
+  - `firmware/tests/test_hiles_engine.py` (prueba propia de la entrega 5; ver el detalle en «Cambios en archivos fuera de la lista propia»)
+  - `entregas/entrega-6-20-octubre/PLAN_IMPLEMENTACION_ENTREGA_20.md`
+  - `entregas/entrega-6-20-octubre/REGISTRO_CAMBIOS.md`
+- **Commit o rama:** rama `mqtt-pico`; commit pendiente.
+- **Cómo se probó:**
+  - Firmware, desde la raíz: `python -m unittest discover -s firmware/tests -t .` (Python 3.13.2) → **172 pruebas aprobadas** (`OK`): las 104 anteriores y 68 nuevas.
+  - Por archivo nuevo: `test_hiles_model_v2` 15, `test_hiles_engine_v2` 15, `test_hiles_channels` 10, `test_hiles_delays` 6 y `test_traffic_controller` 22.
+  - Frontend, como regresión en `frontend/`: `npx vitest run` → **15 archivos y 95 pruebas aprobadas**, sin cambios en archivos del frontend.
+  - Compilación del demo: prueba temporal de Vitest fuera del repositorio que llama `compilarModeloEditorAIrV2` sobre `output/demo-4-semaforos-distribuidos.json` → aprobada, sin errores ni advertencias. Esa prueba no quedó en el repositorio.
+- **Resultado obtenido:**
+  - Paridad: los 3 modelos válidos, los 8 inválidos (con el mismo `codigo_esperado`) y los 3 vectores de ejecución v2 se reproducen sin modificar los vectores. También se portaron las 3 pruebas de `MotorSimulacionIrV2.test.ts` (ruta Service → DCH → Hold con desborde, CCH con retardo que se estabiliza, cancelación de timer y reset).
+  - Compatibilidad v1: los 3 vectores v1 siguen produciendo sus snapshots por `EngineTaskV2`, y los modelos v1 se migran y validan como v2.
+  - No bloqueo: con un retardo pendiente de 5 s, `CounterTask` y `WatchdogTask` siguieron ejecutándose (≥ 390 actualizaciones y ≥ 19 publicaciones de telemetría) y la transición disparó al vencer la fecha límite. Cargar otro modelo o reiniciar descarta los temporizadores.
+  - Semáforos:
+    - Con demanda permanente en los cuatro sentidos se observa `rr → vv (20 s) → aa (3 s) → rr (2 s) → ` alternando ejes; tiempo máximo en rojo ≤ 27,2 s y al menos tres verdes por sentido.
+    - Con tráfico aleatorio no hubo verdes incompatibles ni saltos verde → rojo: 3 semillas en las pruebas, más 5 horas virtuales en una exploración previa con espera máxima de 17 s.
+    - Una espera larga obliga a ceder.
+    - Con sensores inválidos (`None`, excepción o texto) todos los sentidos siguen recibiendo servicio.
+    - El monitor entra en modo seguro ante un conflicto forzado.
+  - Integración del demo: `TrafficControllerTask` alimentó el modelo del demo por `submit_local_input`; `Seguridad del cruce` reportó siempre `seguro: true`.
+- **Evidencia:** salida de `unittest` y Vitest en la consola de trabajo.
+- **Cambios en archivos fuera de la lista propia:**
+  - `firmware/tests/test_hiles_engine.py` es una prueba propia de la entrega 5. Buscaba palabras del semáforo como subcadenas, y `ensure_ascii` de `model_v2.py` contiene «sur». Ahora compara palabras completas y se agregó «oeste». Es el riesgo que se dejó anotado en la entrega 5.
+  - No se modificó `engine_task.py`, `python_executor.py`, `runtime_values.py`, `watchdog_task.py`, `main.py`, ningún archivo del frontend, los contratos ni los vectores.
+- **Impacto sobre otros integrantes:**
+  - **Persona 5:** debe reemplazar `EngineTask` por `EngineTaskV2` en `main.py` y registrar sensores y `TrafficControllerTask`; el fragmento está en `PROTOCOLO_SEMAFOROS.md` §7. También debe agregar a `prepare-pico-deployment.ps1` los archivos nuevos de `hiles/`, `devices/` y `platform/`. Conviene `queue_size` ≥ 16 porque el controlador puede encolar hasta 8 entradas locales por cambio.
+  - **Persona 4:** los estados observables para la UI son los campos del snapshot v2 (`salidas`, `valor_retenido`, `evento_pendiente`, `cola_dch`, `cola_desbordada`, `timer_pendiente`, `error`) y, en el demo, `seguridad-cruce.salidas.seguridad-eje`.
+  - **Persona 2 (diferencias encontradas en el motor TS; la Pico sigue la decisión indicada):**
+    1. En TS, `capacidad: null` crea un Place con capacidad 1, pero `IR_V2.md` dice «sin cota»; la Pico sigue la especificación.
+    2. El validador acepta `+` y `!` unarios y `&&`/`||`, pero el evaluador TS niega numéricamente `!` y devuelve 0 para `&&`/`||`; la Pico los trata como alias de identidad, `not`, `and` y `or`.
+    3. Sample y Hold ignoran `habilitado` en TS; la Pico hace lo mismo por paridad.
+    4. La política de conflicto Petri es global, lo que impide FSM Petri concurrentes (explicado en `PROTOCOLO_SEMAFOROS.md` §6).
+    5. Con varias salidas, TS exige el diccionario completo y el ejecutor de Persona 1 acepta uno parcial; la Pico usa el ejecutor, como manda el contrato.
+- **Riesgos o pendientes:**
+  - No hay MicroPython ni Pico disponibles. El código evita funciones exclusivas de CPython (sin f-strings, sin recursión profunda en la detección de ciclos), pero falta medir memoria y tiempos de `update()` con modelos de 64 elementos en la placa.
+  - El adaptador GPIO solo se probó con un `machine` simulado.
+  - En la simulación local de la web, `paso()` avanza el tiempo en 0 ms, así que los retardos solo avanzan cuando el llamador indica tiempo. En la Pico, `EngineTaskV2` usa el tiempo real del scheduler.
+- **Reversión, si aplica:** eliminar los archivos creados listados, restaurar `firmware/tests/test_hiles_engine.py` y revertir esta entrada y las casillas de Persona 3 del plan. No hay migraciones persistentes.
+
 ## Confirmación de responsables
 
 - [x] Persona 1 — Nombre: Kevin Rincón
 - [x] Persona 2 — Nombre: Ivan Felipe Prado Blanco
-- [ ] Persona 3 — Nombre:
+- [x] Persona 3 — Nombre: Juan Ramos
 - [ ] Persona 4 — Nombre:
 - [ ] Persona 5 — Nombre:
 
@@ -236,7 +343,7 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
 
 - [x] Persona 1 registra contrato y runtime autónomo; integración IR v2 y prueba física continúan pendientes.
 - [x] Persona 2 registra protocolo web y URL.
-- [ ] Persona 3 registra semáforos y sensores.
+- [x] Persona 3 registra motor v2, semáforos y sensores; integración en `main.py` y prueba física continúan pendientes.
 - [ ] Persona 4 registra UI/UX.
 - [ ] Persona 5 registra colaboración e integración.
 - [ ] Todos los integrantes registraron sus cambios y pruebas.
