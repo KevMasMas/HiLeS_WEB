@@ -1,0 +1,38 @@
+{
+  "descripcion": "Arco Petri que intenta unir un Place con un Sample en lugar de una Transition",
+  "codigo_esperado": "IR_ARCO_INVALIDO",
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "invalido-arco",
+    "version": 1,
+    "nombre": "Arco inválido",
+    "elementos": [
+      {
+        "id": "place-1",
+        "tipo": "place",
+        "nombre": "Place",
+        "tokens": 1,
+        "capacidad": 1
+      },
+      {
+        "id": "sample-1",
+        "tipo": "sample",
+        "nombre": "Sample",
+        "habilitado": true,
+        "tipo_dato": "real",
+        "puerto_dato": "data-in",
+        "puerto_control": "ctrl-in",
+        "puerto_salida": "sample-out"
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "arco-malo",
+        "tipo": "arco",
+        "origen": "place-1",
+        "destino": "sample-1",
+        "peso": 1
+      }
+    ]
+  }
+}

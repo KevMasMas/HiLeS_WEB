@@ -1,0 +1,40 @@
+{
+  "descripcion": "Conexión LCH que apunta a un puerto de entrada inexistente en Sample",
+  "codigo_esperado": "IR_PUERTO_INVALIDO",
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "invalido-puerto",
+    "version": 1,
+    "nombre": "Puerto inválido",
+    "elementos": [
+      {
+        "id": "trans-1",
+        "tipo": "transition",
+        "nombre": "Transición",
+        "habilitada": true,
+        "puerto_condicion": "condicion",
+        "puerto_accion": "accion-out"
+      },
+      {
+        "id": "sample-1",
+        "tipo": "sample",
+        "nombre": "Sample",
+        "habilitado": true,
+        "tipo_dato": "real",
+        "puerto_dato": "data-in",
+        "puerto_control": "ctrl-in",
+        "puerto_salida": "sample-out"
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "lch-mala",
+        "tipo": "lch",
+        "origen": "trans-1",
+        "puerto_origen": "accion-out",
+        "destino": "sample-1",
+        "puerto_destino": "puerto-inexistente"
+      }
+    ]
+  }
+}

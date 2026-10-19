@@ -1,0 +1,131 @@
+{
+  "descripcion": "Transición con retardo_ms = 100 ms gobernada por reloj lógico no bloqueante",
+  "modelo_id": "retardos-y-cancelacion-03",
+  "version": 1,
+  "ir_version": 2,
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "retardos-y-cancelacion-03",
+    "version": 1,
+    "nombre": "Retardo en transición",
+    "metadata": {
+      "documento_schema_version": 2,
+      "compilado_en": "2026-10-18T12:00:00.000Z",
+      "bloque_raiz_id": null
+    },
+    "entradas_externas": [
+      {
+        "elemento_id": "entrada-habilitar",
+        "nombre": "Habilitar",
+        "puerto_salida": "hab-out",
+        "tipo_dato": "boolean"
+      }
+    ],
+    "elementos": [
+      {
+        "id": "entrada-habilitar",
+        "tipo": "service",
+        "nombre": "Habilitar",
+        "tipo_dato": "boolean",
+        "salidas": ["hab-out"],
+        "entradas": []
+      },
+      {
+        "id": "lugar-inicio",
+        "tipo": "place",
+        "nombre": "Inicio",
+        "tokens": 1,
+        "capacidad": 1
+      },
+      {
+        "id": "trans-temporizada",
+        "tipo": "transition",
+        "nombre": "Transición 100 ms",
+        "habilitada": true,
+        "puerto_condicion": "condicion",
+        "puerto_accion": "accion-out",
+        "retardo_ms": 100
+      },
+      {
+        "id": "lugar-fin",
+        "tipo": "place",
+        "nombre": "Fin",
+        "tokens": 0,
+        "capacidad": 1
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "cch-hab-trans",
+        "tipo": "cch",
+        "origen": "entrada-habilitar",
+        "puerto_origen": "hab-out",
+        "destino": "trans-temporizada",
+        "puerto_destino": "condicion"
+      },
+      {
+        "id": "arco-inicio-trans",
+        "tipo": "arco",
+        "origen": "lugar-inicio",
+        "destino": "trans-temporizada",
+        "peso": 1
+      },
+      {
+        "id": "arco-trans-fin",
+        "tipo": "arco",
+        "origen": "trans-temporizada",
+        "destino": "lugar-fin",
+        "peso": 1
+      }
+    ]
+  },
+  "estado_inicial": {
+    "entrada-habilitar": {},
+    "lugar-inicio": { "tokens": 1 },
+    "trans-temporizada": { "habilitada": false, "disparada": false },
+    "lugar-fin": { "tokens": 0 }
+  },
+  "pasos": [
+    {
+      "avance_tiempo_ms": 0,
+      "entradas": { "entrada-habilitar": true },
+      "elementos_esperados": {
+        "entrada-habilitar": { "valor": true },
+        "lugar-inicio": { "tokens": 1 },
+        "trans-temporizada": {
+          "habilitada": true,
+          "disparada": false,
+          "timer_pendiente": true
+        },
+        "lugar-fin": { "tokens": 0 }
+      }
+    },
+    {
+      "avance_tiempo_ms": 50,
+      "entradas": {},
+      "elementos_esperados": {
+        "entrada-habilitar": { "valor": true },
+        "lugar-inicio": { "tokens": 1 },
+        "trans-temporizada": {
+          "habilitada": true,
+          "disparada": false,
+          "timer_pendiente": true
+        },
+        "lugar-fin": { "tokens": 0 }
+      }
+    },
+    {
+      "avance_tiempo_ms": 50,
+      "entradas": {},
+      "elementos_esperados": {
+        "entrada-habilitar": { "valor": true },
+        "lugar-inicio": { "tokens": 0 },
+        "trans-temporizada": {
+          "habilitada": true,
+          "disparada": true
+        },
+        "lugar-fin": { "tokens": 1 }
+      }
+    }
+  ]
+}

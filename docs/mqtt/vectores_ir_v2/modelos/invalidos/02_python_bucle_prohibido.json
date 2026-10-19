@@ -1,0 +1,27 @@
+{
+  "descripcion": "Bloque Python con bucle while prohibido por el perfil determinista",
+  "codigo_esperado": "PYTHON_PERFIL_PROHIBIDO",
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "invalido-bucle",
+    "version": 1,
+    "nombre": "Bucle prohibido",
+    "elementos": [
+      {
+        "id": "fb-bucle",
+        "tipo": "functional_block",
+        "nombre": "Bloque con while",
+        "habilitado": true,
+        "lenguaje": "python",
+        "codigo": "def calcular(x):\n    while x > 0:\n        x = x - 1\n    return x",
+        "entradas": [
+          { "puerto": "in-1", "variable": "x", "tipo_dato": "real" }
+        ],
+        "salidas": [
+          { "puerto": "out-1", "variable": "out", "tipo_dato": "real" }
+        ]
+      }
+    ],
+    "conexiones": []
+  }
+}

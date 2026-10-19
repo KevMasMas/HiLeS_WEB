@@ -1,0 +1,28 @@
+{
+  "descripcion": "Service de tipo vector cuyo valor_inicial supera MAX_VECTOR_LENGTH (32)",
+  "codigo_esperado": "VALOR_LIMITE_EXCEDIDO",
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "invalido-vector-largo",
+    "version": 1,
+    "nombre": "Vector demasiado largo",
+    "elementos": [
+      {
+        "id": "srv-vector",
+        "tipo": "service",
+        "nombre": "Vector excedido",
+        "tipo_dato": "vector",
+        "salidas": ["out"],
+        "entradas": [],
+        "valor_inicial": [
+          1, 2, 3, 4, 5, 6, 7, 8,
+          9, 10, 11, 12, 13, 14, 15, 16,
+          17, 18, 19, 20, 21, 22, 23, 24,
+          25, 26, 27, 28, 29, 30, 31, 32,
+          33
+        ]
+      }
+    ],
+    "conexiones": []
+  }
+}

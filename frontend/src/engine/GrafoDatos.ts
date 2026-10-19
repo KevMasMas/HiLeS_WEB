@@ -1,16 +1,51 @@
-import { HilesConnectionType } from '../types/hiles';
+import { HilesConnectionType, HilesElementType } from '../types/hiles';
 import type { IElementoHiLeS } from './elementos/interfaces';
 import type { AristaHiLeS, NodoHiLeS, ValorRuntime } from './tipos';
 import type { BusObserver } from './BusObserver';
+
+/**
+ * Determina el tipo de canal IR v2 correspondiente a una arista del motor.
+ */
+export const obtenerTipoCanalArista = (
+  arista: AristaHiLeS,
+): 'cch' | 'dch' | 'lch' | 'arco' => {
+  const explicito = (
+    arista.data as { channelType?: 'cch' | 'dch' | 'lch' | 'arco' } | undefined
+  )?.channelType;
+  if (
+    explicito === 'cch' ||
+    explicito === 'dch' ||
+    explicito === 'lch' ||
+    explicito === 'arco'
+  ) {
+    return explicito;
+  }
+
+  const tipoHiles = arista.data?.hilesConnectionType;
+  if (tipoHiles === HilesConnectionType.TOKEN_FLOW) {
+    return 'arco';
+  }
+  if (tipoHiles === HilesConnectionType.PETRI) {
+    if (
+      arista.sourceHandle?.startsWith('petri') ||
+      arista.targetHandle?.startsWith('petri')
+    ) {
+      return 'arco';
+    }
+    return 'lch';
+  }
+  if (tipoHiles === HilesConnectionType.DISCRETE) {
+    return 'dch';
+  }
+  return 'cch';
+};
 
 /**
  * Una arista transporta datos por CCH/DCH o eventos lógicos por LCH. Los arcos
  * de tokens Petri se distinguen por sus handles y los administra EvaluadorPetri.
  */
 export const esAristaDatos = (arista: AristaHiLeS): boolean =>
-  arista.data?.hilesConnectionType !== HilesConnectionType.TOKEN_FLOW
-  && (arista.data?.hilesConnectionType !== HilesConnectionType.PETRI
-    || (!arista.sourceHandle?.startsWith('petri') && !arista.targetHandle?.startsWith('petri')));
+  obtenerTipoCanalArista(arista) !== 'arco';
 
 export interface ResultadoOrdenTopologico {
   /**
@@ -24,17 +59,165 @@ export interface ResultadoOrdenTopologico {
   nodosEnCiclo: string[];
 }
 
+/**
+ * Resuelve cadenas de conexiones que atraviesan puertos de frontera de `STRUCTURAL_BLOCK`
+ * o nodos `PORT` hacia conexiones planas verificables entre elementos ejecutables.
+ */
+export const aplanarConexionesFrontera = (
+  nodos: readonly NodoHiLeS[],
+  aristas: readonly AristaHiLeS[],
+): AristaHiLeS[] => {
+  const mapaNodos = new Map<string, NodoHiLeS>(nodos.map((n) => [n.id, n]));
+  const idsFrontera = new Set<string>(
+    nodos
+      .filter(
+        (n) =>
+          n.data.hilesType === HilesElementType.STRUCTURAL_BLOCK ||
+          n.data.hilesType === HilesElementType.PORT,
+      )
+      .map((n) => n.id),
+  );
+
+  if (idsFrontera.size === 0) {
+    return [...aristas];
+  }
+
+  const tieneAristasFrontera = aristas.some(
+    (a) => idsFrontera.has(a.source) || idsFrontera.has(a.target),
+  );
+  if (!tieneAristasFrontera) {
+    return [...aristas];
+  }
+
+  const clavesTunel = (nodoId: string, handle?: string | null): string[] => {
+    const claves = new Set<string>();
+    const h = handle ?? 'default';
+    claves.add(`${nodoId}::${h}`);
+    const nodo = mapaNodos.get(nodoId);
+    if (!nodo) return [...claves];
+    const puertoObj = nodo.data.ports.find((p) => p.id === handle);
+    if (puertoObj) {
+      claves.add(`${nodoId}::name:${puertoObj.name}`);
+    }
+    if (nodo.data.hilesType === HilesElementType.PORT && nodo.parentId) {
+      claves.add(`${nodo.parentId}::${nodo.id}`);
+      claves.add(`${nodo.parentId}::name:${nodo.data.name}`);
+      if (puertoObj) {
+        claves.add(`${nodo.parentId}::name:${puertoObj.name}`);
+      }
+    }
+    return [...claves];
+  };
+
+  const directas: AristaHiLeS[] = [];
+  const frontera: AristaHiLeS[] = [];
+
+  for (const arista of aristas) {
+    if (!idsFrontera.has(arista.source) && !idsFrontera.has(arista.target)) {
+      directas.push(arista);
+    } else {
+      frontera.push(arista);
+    }
+  }
+
+  const salientesPorClave = new Map<string, AristaHiLeS[]>();
+  for (const a of frontera) {
+    if (idsFrontera.has(a.source)) {
+      for (const k of clavesTunel(a.source, a.sourceHandle)) {
+        const lista = salientesPorClave.get(k) ?? [];
+        if (!lista.includes(a)) lista.push(a);
+        salientesPorClave.set(k, lista);
+      }
+    }
+  }
+
+  const entradas = frontera.filter(
+    (a) => !idsFrontera.has(a.source) && idsFrontera.has(a.target),
+  );
+
+  const aplanadas: AristaHiLeS[] = [...directas];
+
+  for (const entrada of entradas) {
+    const explorar = (
+      actual: AristaHiLeS,
+      retardoAcum: number,
+      visitadas: Set<string>,
+    ) => {
+      const candidatos: AristaHiLeS[] = [];
+      for (const k of clavesTunel(actual.target, actual.targetHandle)) {
+        for (const sig of salientesPorClave.get(k) ?? []) {
+          if (!candidatos.includes(sig)) candidatos.push(sig);
+        }
+      }
+      for (const sig of candidatos) {
+        if (visitadas.has(sig.id)) continue;
+        const nuevoVisitadas = new Set(visitadas);
+        nuevoVisitadas.add(sig.id);
+        const delaySig =
+          typeof sig.data?.delay === 'number' && Number.isFinite(sig.data.delay)
+            ? sig.data.delay
+            : 0;
+        const nuevoRetardo = retardoAcum + delaySig;
+        if (!idsFrontera.has(sig.target)) {
+          aplanadas.push({
+            ...entrada,
+            id: `${entrada.id}__${sig.id}`,
+            source: entrada.source,
+            sourceHandle: entrada.sourceHandle,
+            target: sig.target,
+            targetHandle: sig.targetHandle,
+            data: entrada.data
+              ? {
+                  ...entrada.data,
+                  ...(nuevoRetardo > 0 ? { delay: nuevoRetardo } : {}),
+                }
+              : nuevoRetardo > 0
+                ? {
+                    hilesConnectionType: HilesConnectionType.CONTINUOUS,
+                    routing: 'orthogonal',
+                    dataType: 'real',
+                    weight: 1,
+                    delay: nuevoRetardo,
+                  }
+                : undefined,
+          });
+        } else {
+          explorar(sig, nuevoRetardo, nuevoVisitadas);
+        }
+      }
+    };
+
+    const delayInicial =
+      typeof entrada.data?.delay === 'number' &&
+      Number.isFinite(entrada.data.delay)
+        ? entrada.data.delay
+        : 0;
+    explorar(entrada, delayInicial, new Set([entrada.id]));
+  }
+
+  return aplanadas;
+};
+
 /** Índice de aristas de datos válidas: ambas puntas deben existir en el canvas. */
 const aristasDatosValidas = (
   nodos: readonly NodoHiLeS[],
   aristas: readonly AristaHiLeS[],
 ): AristaHiLeS[] => {
   const existentes = new Set(nodos.map((nodo) => nodo.id));
-  return aristas.filter((arista) =>
-    esAristaDatos(arista)
-    && arista.data?.hilesConnectionType !== HilesConnectionType.PETRI
-    && existentes.has(arista.source)
-    && existentes.has(arista.target));
+  return aristas.filter((arista) => {
+    const tipoCanal = obtenerTipoCanalArista(arista);
+    const delayMs =
+      typeof arista.data?.delay === 'number' && Number.isFinite(arista.data.delay)
+        ? arista.data.delay
+        : 0;
+    return (
+      (tipoCanal === 'cch' || tipoCanal === 'dch') &&
+      delayMs <= 0 &&
+      arista.data?.hilesConnectionType !== HilesConnectionType.PETRI &&
+      existentes.has(arista.source) &&
+      existentes.has(arista.target)
+    );
+  });
 };
 
 /**
@@ -48,15 +231,21 @@ export const construirOrdenTopologico = (
   aristas: readonly AristaHiLeS[],
 ): ResultadoOrdenTopologico => {
   const identificadores = nodos.map((nodo) => nodo.id);
-  const sucesores = new Map<string, string[]>(identificadores.map((id) => [id, []]));
-  const gradoEntrada = new Map<string, number>(identificadores.map((id) => [id, 0]));
+  const sucesores = new Map<string, string[]>(
+    identificadores.map((id) => [id, []]),
+  );
+  const gradoEntrada = new Map<string, number>(
+    identificadores.map((id) => [id, 0]),
+  );
 
   aristasDatosValidas(nodos, aristas).forEach((arista) => {
     sucesores.get(arista.source)?.push(arista.target);
     gradoEntrada.set(arista.target, (gradoEntrada.get(arista.target) ?? 0) + 1);
   });
 
-  const pendientes = identificadores.filter((id) => gradoEntrada.get(id) === 0);
+  const pendientes = identificadores.filter(
+    (id) => gradoEntrada.get(id) === 0,
+  );
   const orden: string[] = [];
 
   while (pendientes.length > 0) {
@@ -90,7 +279,9 @@ export const detectarCiclos = (
   nodos: readonly NodoHiLeS[],
   aristas: readonly AristaHiLeS[],
 ): string[][] => {
-  const sucesores = new Map<string, string[]>(nodos.map((nodo) => [nodo.id, []]));
+  const sucesores = new Map<string, string[]>(
+    nodos.map((nodo) => [nodo.id, []]),
+  );
   aristasDatosValidas(nodos, aristas).forEach((arista) => {
     sucesores.get(arista.source)?.push(arista.target);
   });
@@ -168,10 +359,13 @@ export type EjecutorElementoAsync = (
 ) => Map<string, ValorRuntime> | Promise<Map<string, ValorRuntime>>;
 
 /** Ejecutor estándar: delega en la lógica propia de cada elemento. */
-export const ejecutorPorDefecto: EjecutorElemento = (_elementoId, elemento) => elemento.evaluar();
+export const ejecutorPorDefecto: EjecutorElemento = (_elementoId, elemento) =>
+  elemento.evaluar();
 
-export const ejecutorAsyncPorDefecto: EjecutorElementoAsync = (_elementoId, elemento) =>
-  elemento.evaluarAsync ? elemento.evaluarAsync() : elemento.evaluar();
+export const ejecutorAsyncPorDefecto: EjecutorElementoAsync = (
+  _elementoId,
+  elemento,
+) => (elemento.evaluarAsync ? elemento.evaluarAsync() : elemento.evaluar());
 
 /** Un valor que viajó de un puerto de salida a un puerto de entrada. */
 export interface EntregaValor {
@@ -197,18 +391,32 @@ export interface ResultadoPropagacion {
   errores: ErrorPropagacion[];
 }
 
+function sonValoresIguales(a: ValorRuntime | undefined, b: ValorRuntime): boolean {
+  if (a === b) return true;
+  if (
+    typeof a === 'object' &&
+    a !== null &&
+    typeof b === 'object' &&
+    b !== null
+  ) {
+    try {
+      return JSON.stringify(a) === JSON.stringify(b);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 /**
  * Recorre los nodos en orden topológico, evalúa cada uno y entrega sus salidas
  * a los elementos conectados por CCH/DCH (modo push).
- *
- * Como el orden garantiza que un nodo se evalúa después de sus predecesores,
- * un solo recorrido basta para que el dato atraviese toda la cadena de bloques.
  */
 export const propagarValores = (
   orden: readonly string[],
   estadoRuntime: EstadoRuntimeGrafo,
   ejecutor: EjecutorElemento = ejecutorPorDefecto,
-  bus?: BusObserver
+  bus?: BusObserver,
 ): ResultadoPropagacion => {
   const { elementos, valores } = estadoRuntime;
   const aristasDatos = estadoRuntime.aristas.filter(esAristaDatos);
@@ -226,7 +434,10 @@ export const propagarValores = (
     } catch (error) {
       errores.push({
         elementoId,
-        mensaje: error instanceof Error ? error.message : 'Fallo desconocido al evaluar el elemento.',
+        mensaje:
+          error instanceof Error
+            ? error.message
+            : 'Fallo desconocido al evaluar el elemento.',
       });
       return;
     }
@@ -235,29 +446,33 @@ export const propagarValores = (
     if (errorInterno) errores.push({ elementoId, mensaje: errorInterno });
 
     salidas.forEach((valor, puertoOrigenId) => {
-      if (valores.get(elementoId) !== valor) {
+      if (!sonValoresIguales(valores.get(elementoId), valor)) {
         valores.set(elementoId, valor);
-        if (!nodosActualizados.includes(elementoId)) nodosActualizados.push(elementoId);
+        if (!nodosActualizados.includes(elementoId))
+          nodosActualizados.push(elementoId);
       }
 
       if (bus) {
-        // Uso del patrón Observer: el bus notifica a todos los suscriptores conectados.
         bus.notificar(elementoId, puertoOrigenId, valor);
       } else {
-        // Lógica antigua: acoplamiento directo mediante recorrido de aristas.
         aristasDatos
-          .filter((arista) => arista.source === elementoId
-            && (!arista.sourceHandle || arista.sourceHandle === puertoOrigenId))
+          .filter(
+            (arista) =>
+              arista.source === elementoId &&
+              (!arista.sourceHandle || arista.sourceHandle === puertoOrigenId),
+          )
           .forEach((arista) => {
             const destino = elementos.get(arista.target);
             if (!destino) return;
 
-            const puertoDestinoId = arista.targetHandle
-              ?? estadoRuntime.puertoEntradaPorDefecto?.(arista.target);
+            const puertoDestinoId =
+              arista.targetHandle ??
+              estadoRuntime.puertoEntradaPorDefecto?.(arista.target);
             if (!puertoDestinoId) {
               errores.push({
                 elementoId: arista.target,
-                mensaje: 'La conexión de datos no indica a qué puerto de entrada llega el valor.',
+                mensaje:
+                  'La conexión de datos no indica a qué puerto de entrada llega el valor.',
               });
               return;
             }
@@ -306,7 +521,10 @@ export const propagarValoresAsync = async (
     } catch (error) {
       errores.push({
         elementoId,
-        mensaje: error instanceof Error ? error.message : 'Fallo desconocido al evaluar el elemento.',
+        mensaje:
+          error instanceof Error
+            ? error.message
+            : 'Fallo desconocido al evaluar el elemento.',
       });
       continue;
     }
@@ -315,9 +533,11 @@ export const propagarValoresAsync = async (
     if (errorInterno) errores.push({ elementoId, mensaje: errorInterno });
 
     salidas.forEach((valor, puertoOrigenId) => {
-      if (valores.get(elementoId) !== valor) {
+      if (!sonValoresIguales(valores.get(elementoId), valor)) {
         valores.set(elementoId, valor);
-        nodosActualizados.push(elementoId);
+        if (!nodosActualizados.includes(elementoId)) {
+          nodosActualizados.push(elementoId);
+        }
       }
 
       if (bus) {
@@ -326,16 +546,21 @@ export const propagarValoresAsync = async (
       }
 
       aristasDatos
-        .filter((arista) => arista.source === elementoId
-          && (!arista.sourceHandle || arista.sourceHandle === puertoOrigenId))
+        .filter(
+          (arista) =>
+            arista.source === elementoId &&
+            (!arista.sourceHandle || arista.sourceHandle === puertoOrigenId),
+        )
         .forEach((arista) => {
           const destino = elementos.get(arista.target);
-          const puertoDestinoId = arista.targetHandle
-            ?? estadoRuntime.puertoEntradaPorDefecto?.(arista.target);
+          const puertoDestinoId =
+            arista.targetHandle ??
+            estadoRuntime.puertoEntradaPorDefecto?.(arista.target);
           if (!destino || !puertoDestinoId) {
             errores.push({
               elementoId: arista.target,
-              mensaje: 'La conexión de datos no indica a qué puerto de entrada llega el valor.',
+              mensaje:
+                'La conexión de datos no indica a qué puerto de entrada llega el valor.',
             });
             return;
           }
@@ -354,4 +579,3 @@ export const propagarValoresAsync = async (
 
   return { valores, nodosActualizados, entregas, errores };
 };
-

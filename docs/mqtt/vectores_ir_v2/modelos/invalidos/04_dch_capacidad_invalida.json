@@ -1,0 +1,43 @@
+{
+  "descripcion": "Conexión DCH con capacidad_cola mayor a MAX_DCH_QUEUE_CAPACITY (32)",
+  "codigo_esperado": "IR_CAPACIDAD_INVALIDA",
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "invalido-dch-capacidad",
+    "version": 1,
+    "nombre": "Capacidad DCH inválida",
+    "elementos": [
+      {
+        "id": "sample-1",
+        "tipo": "sample",
+        "nombre": "Sample",
+        "habilitado": true,
+        "tipo_dato": "real",
+        "puerto_dato": "data-in",
+        "puerto_control": "ctrl-in",
+        "puerto_salida": "sample-out"
+      },
+      {
+        "id": "hold-1",
+        "tipo": "hold",
+        "nombre": "Hold",
+        "habilitado": true,
+        "tipo_dato": "real",
+        "puerto_entrada": "hold-in",
+        "puerto_cch": "cch-out",
+        "puerto_lch": "lch-out"
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "dch-invalida",
+        "tipo": "dch",
+        "origen": "sample-1",
+        "puerto_origen": "sample-out",
+        "destino": "hold-1",
+        "puerto_destino": "hold-in",
+        "capacidad_cola": 64
+      }
+    ]
+  }
+}

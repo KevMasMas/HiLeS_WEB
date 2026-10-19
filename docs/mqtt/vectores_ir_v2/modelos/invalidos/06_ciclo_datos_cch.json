@@ -1,0 +1,50 @@
+{
+  "descripcion": "Ciclo algebraico instantáneo entre dos bloques funcionales unidos por CCH sin retardo",
+  "codigo_esperado": "IR_CICLO_DATOS",
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "invalido-ciclo",
+    "version": 1,
+    "nombre": "Ciclo de datos",
+    "elementos": [
+      {
+        "id": "fb-a",
+        "tipo": "functional_block",
+        "nombre": "Bloque A",
+        "habilitado": true,
+        "lenguaje": "python",
+        "codigo": "x + 1",
+        "entradas": [{ "puerto": "in-a", "variable": "x", "tipo_dato": "real" }],
+        "salidas": [{ "puerto": "out-a", "variable": "out", "tipo_dato": "real" }]
+      },
+      {
+        "id": "fb-b",
+        "tipo": "functional_block",
+        "nombre": "Bloque B",
+        "habilitado": true,
+        "lenguaje": "python",
+        "codigo": "y + 1",
+        "entradas": [{ "puerto": "in-b", "variable": "y", "tipo_dato": "real" }],
+        "salidas": [{ "puerto": "out-b", "variable": "out", "tipo_dato": "real" }]
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "c-ab",
+        "tipo": "cch",
+        "origen": "fb-a",
+        "puerto_origen": "out-a",
+        "destino": "fb-b",
+        "puerto_destino": "in-b"
+      },
+      {
+        "id": "c-ba",
+        "tipo": "cch",
+        "origen": "fb-b",
+        "puerto_origen": "out-b",
+        "destino": "fb-a",
+        "puerto_destino": "in-a"
+      }
+    ]
+  }
+}

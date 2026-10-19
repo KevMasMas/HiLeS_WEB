@@ -2,3 +2,6 @@ export * from './tiposIr';
 export * from './expresiones';
 export * from './validadorIr';
 export * from './compiladorIr';
+export * from './tiposIrV2';
+export * from './validadorIrV2';
+export * from './compiladorIrV2';

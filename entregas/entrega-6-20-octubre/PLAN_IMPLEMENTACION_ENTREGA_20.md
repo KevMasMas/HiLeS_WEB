@@ -187,7 +187,7 @@ firmware/pico/pubsub/mqtt_transport.py
 
 ### Persona 2 — IR v2, compilador, canales y protocolo de proyecto
 
-**Responsable:** por confirmar
+**Responsable:** Ivan Felipe Prado Blanco
 
 **Dependencias:** solo Persona 1.
 
@@ -200,22 +200,22 @@ firmware/pico/pubsub/mqtt_transport.py
 
 #### Control de avance nuevo
 
-- [ ] Extender los tipos TypeScript a IR v2 conservando lectura de IR v1.
-- [ ] Transportar código Python, firma de puertos y límites definidos por Persona 1.
-- [ ] Compilar `Sample` y `Hold` en lugar de rechazarlos.
-- [ ] Mantener separados CCH, DCH, LCH y arco Petri en la IR.
-- [ ] Definir semántica exacta de DCH: evento de un solo consumo, orden FIFO y desbordamiento visible.
-- [ ] Definir y transportar `executionDelay`, retardo de transición y `connection.delay`.
-- [ ] Resolver Structural Blocks y puertos de frontera a conexiones planas verificables.
-- [ ] Normalizar elementos/conexiones legados `TOKEN` y `TOKEN_FLOW` cuando sea posible.
-- [ ] Validar valores `vector` y `custom` con límites de profundidad, longitud y bytes.
-- [ ] Actualizar el motor TypeScript de referencia para que CCH, DCH, LCH y retardos tengan la misma semántica acordada.
-- [ ] Implementar lectura y creación de `?project=<id>` sin romper `?modelo`/`version`.
-- [ ] Definir topics dinámicos y esquemas de snapshot, operación, presencia y cursor.
-- [ ] Implementar un cliente de proyecto desacoplado de React con deduplicación y reloj lógico.
-- [ ] Preparar fixtures de carga inicial, operación repetida, reconexión y aislamiento entre dos proyectos.
-- [ ] Entregar a Persona 3 vectores completos de conformidad web/MicroPython.
-- [ ] Entregar a Persona 5 la API estable de `ProjectSyncClient`.
+- [x] Extender los tipos TypeScript a IR v2 conservando lectura de IR v1.
+- [x] Transportar código Python, firma de puertos y límites definidos por Persona 1.
+- [x] Compilar `Sample` y `Hold` en lugar de rechazarlos.
+- [x] Mantener separados CCH, DCH, LCH y arco Petri en la IR.
+- [x] Definir semántica exacta de DCH: evento de un solo consumo, orden FIFO y desbordamiento visible.
+- [x] Definir y transportar `executionDelay`, retardo de transición y `connection.delay`.
+- [x] Resolver Structural Blocks y puertos de frontera a conexiones planas verificables.
+- [x] Normalizar elementos/conexiones legados `TOKEN` y `TOKEN_FLOW` cuando sea posible.
+- [x] Validar valores `vector` y `custom` con límites de profundidad, longitud y bytes.
+- [x] Actualizar el motor TypeScript de referencia para que CCH, DCH, LCH y retardos tengan la misma semántica acordada.
+- [x] Implementar lectura y creación de `?project=<id>` sin romper `?modelo`/`version`.
+- [x] Definir topics dinámicos y esquemas de snapshot, operación, presencia y cursor.
+- [x] Implementar un cliente de proyecto desacoplado de React con deduplicación y reloj lógico.
+- [x] Preparar fixtures de carga inicial, operación repetida, reconexión y aislamiento entre dos proyectos.
+- [x] Entregar a Persona 3 vectores completos de conformidad web/MicroPython.
+- [x] Entregar a Persona 5 la API estable de `ProjectSyncClient`.
 
 #### Archivos propios
 
@@ -246,16 +246,16 @@ frontend/src/engine/__tests__/**
 
 #### Inputs recibidos de Persona 1
 
-- [ ] Perfil Python y límites congelados.
-- [ ] Forma de entradas/salidas del ejecutor.
-- [ ] Códigos de error y fixtures válidos/inválidos.
+- [x] Perfil Python y límites congelados.
+- [x] Forma de entradas/salidas del ejecutor.
+- [x] Códigos de error y fixtures válidos/inválidos.
 
 #### Entregable y criterio de cierre
 
-- [ ] Un documento con Python, Sample, Hold, CCH, DCH, LCH, Petri y retardos compila a IR v2 sin edición manual.
-- [ ] El motor local reproduce los vectores v2 esperados.
-- [ ] Abrir `?project=demo` solicita el snapshot de `demo` y nunca aplica mensajes de otro proyecto.
-- [ ] Persona 3 y Persona 5 recibieron contratos y fixtures aprobados.
+- [x] Un documento con Python, Sample, Hold, CCH, DCH, LCH, Petri y retardos compila a IR v2 sin edición manual.
+- [x] El motor local reproduce los vectores v2 esperados.
+- [x] Abrir `?project=demo` solicita el snapshot de `demo` y nunca aplica mensajes de otro proyecto.
+- [x] Persona 3 y Persona 5 recibieron contratos y fixtures aprobados.
 
 ---
 
@@ -317,8 +317,8 @@ docs/traffic/MATRIZ_CONFLICTOS.md
 
 #### Inputs recibidos
 
-- [ ] Persona 1: `PythonExecutor`, valores, límites y errores.
-- [ ] Persona 2: IR v2 congelada, semántica de canales/retardos y vectores.
+- [x] Persona 1: `PythonExecutor`, valores, límites y errores.
+- [x] Persona 2: IR v2 congelada, semántica de canales/retardos y vectores.
 
 #### Entregable y criterio de cierre
 
@@ -373,7 +373,7 @@ frontend/src/features/editor/*.test.tsx
 
 #### Inputs recibidos
 
-- [ ] Persona 2: identidad y estado del proyecto.
+- [x] Persona 2: identidad y estado del proyecto.
 - [ ] Persona 3: estados observables que deben mostrarse.
 
 #### Entregable y criterio de cierre
@@ -440,8 +440,8 @@ entregas/entrega-6-20-octubre/GUIA_DEMO.md
 
 #### Inputs recibidos
 
-- [ ] Persona 1: ejecutor y Watchdog aprobados.
-- [ ] Persona 2: `ProjectSyncClient`, IR v2, topics y fixtures aprobados.
+- [x] Persona 1: ejecutor y Watchdog aprobados.
+- [x] Persona 2: `ProjectSyncClient`, IR v2, topics y fixtures aprobados.
 - [ ] Persona 3: motor remoto y demo distribuido aprobados.
 - [ ] Persona 4: shell visual y contenedor de colaboración aprobados.
 
@@ -487,20 +487,20 @@ Handoff obligatorio de cada persona:
 - [x] Auditar entregas 3, 4 y 5 contra el código actual.
 - [x] Confirmar que scheduler, MQTT, IR v1 y cliente remoto no se reimplementan.
 - [ ] Confirmar nombres de Personas 2 a 5.
-- [ ] Congelar perfil Python, IR v2, errores y límites.
-- [ ] Congelar protocolo de proyecto y semántica de CCH/DCH/LCH/retardos.
-- [ ] Congelar propiedad de archivos.
+- [x] Congelar perfil Python, IR v2, errores y límites.
+- [x] Congelar protocolo de proyecto y semántica de CCH/DCH/LCH/retardos.
+- [x] Congelar propiedad de archivos.
 
 ### Lunes 19, mañana — unidades independientes
 
-- [ ] Persona 1 termina PythonExecutor, valores y Watchdog.
-- [ ] Persona 2 termina tipos/compilador IR v2 y protocolo de proyecto.
+- [x] Persona 1 termina PythonExecutor, valores y Watchdog.
+- [x] Persona 2 termina tipos/compilador IR v2 y protocolo de proyecto.
 - [ ] Persona 3 inicia desde los fixtures congelados, sin modificar contratos.
 - [ ] Persona 4 construye topbar y paneles sobre las APIs existentes.
 
 ### Lunes 19, tarde — motores e integración web
 
-- [ ] Persona 2 termina motor TypeScript de referencia y `ProjectSyncClient`.
+- [x] Persona 2 termina motor TypeScript de referencia y `ProjectSyncClient`.
 - [ ] Persona 3 termina motor MicroPython v2 y pruebas de paridad.
 - [ ] Persona 3 genera y prueba semáforos distribuidos.
 - [ ] Persona 5 conecta store, snapshot, operaciones, presencia y cursores.

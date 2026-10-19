@@ -1,14 +1,24 @@
-import { MQTT_IR_VERSION, MQTT_TOPICS, type MqttConnectionStatus, type MqttTopic } from './config';
+import {
+  MQTT_IR_VERSION,
+  MQTT_TOPICS,
+  type MqttConnectionStatus,
+  type MqttIrVersion,
+  type MqttTopic,
+} from './config';
 import {
   ControlSecuenciaRemota,
   type AccionSimulacion,
-  type MensajeModeloConfirmacion,
   type MensajeErrorMqtt,
+  type MensajeModeloConfirmacion,
   type MensajeMqtt,
   type MensajeSimulacionEstado,
   type ModeloEjecutableMqtt,
   type ValorMensajeMqtt,
 } from './messages';
+import {
+  construirTopicosProyectoV2,
+  type TopicosProyectoV2,
+} from '../projects/projectTopics';
 
 export interface ClienteMqttRemoto {
   getStatus: () => MqttConnectionStatus;
@@ -23,6 +33,7 @@ export interface ClienteMqttRemoto {
 export interface SesionRemota {
   modeloId: string;
   version: number;
+  projectId?: string;
 }
 
 export type EventoEjecucionRemota =
@@ -39,11 +50,30 @@ const crearIdMensaje = (): string => {
   return uuid ? `web-${uuid}` : `web-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
 };
 
+const inferirVersionIr = (
+  modelo: ModeloEjecutableMqtt,
+  versionExplicita?: MqttIrVersion,
+): MqttIrVersion => {
+  if (versionExplicita === 1 || versionExplicita === 2) {
+    return versionExplicita;
+  }
+  if (
+    typeof modelo === 'object' &&
+    modelo !== null &&
+    'ir_version' in modelo &&
+    modelo.ir_version === 2
+  ) {
+    return 2;
+  }
+  return MQTT_IR_VERSION;
+};
+
 /**
  * Cliente de aplicación para controlar el motor de la Pico.
  *
  * No conoce React ni el canvas. Su única responsabilidad es publicar comandos
  * con la sesión activa y filtrar los estados oficiales recibidos por MQTT.
+ * Soporta tanto los topics legados de IR v1 como los topics por proyecto v2.
  */
 export class RemoteExecutionClient {
   private readonly mqtt: ClienteMqttRemoto;
@@ -53,6 +83,7 @@ export class RemoteExecutionClient {
   private unsubscribeMessage: (() => void) | null = null;
   private unsubscribeStatus: (() => void) | null = null;
   private sesion: SesionRemota | null = null;
+  private topicosProyecto: TopicosProyectoV2 | null = null;
 
   constructor(mqtt: ClienteMqttRemoto, idFactory: () => string = crearIdMensaje) {
     this.mqtt = mqtt;
@@ -63,9 +94,9 @@ export class RemoteExecutionClient {
     if (!this.unsubscribeMessage) {
       this.unsubscribeMessage = this.mqtt.onMessage((topic, payload) => this.procesarMensaje(topic, payload));
       this.unsubscribeStatus = this.mqtt.onStatusChange((estado) => this.emitir({ tipo: 'estado_mqtt', estado }));
-      this.mqtt.subscribe(MQTT_TOPICS.MODELO_CONFIRMACION);
-      this.mqtt.subscribe(MQTT_TOPICS.SIMULACION_ESTADO);
-      this.mqtt.subscribe(MQTT_TOPICS.ERROR);
+      for (const topic of this.obtenerTopicosSuscripcion()) {
+        this.mqtt.subscribe(topic);
+      }
     }
     this.emitir({ tipo: 'estado_mqtt', estado: this.mqtt.getStatus() });
     // Volver a pulsar «Unirse» también debe reintentar la conexión si el
@@ -78,9 +109,9 @@ export class RemoteExecutionClient {
     this.unsubscribeStatus?.();
     this.unsubscribeMessage = null;
     this.unsubscribeStatus = null;
-    this.mqtt.unsubscribe(MQTT_TOPICS.MODELO_CONFIRMACION);
-    this.mqtt.unsubscribe(MQTT_TOPICS.SIMULACION_ESTADO);
-    this.mqtt.unsubscribe(MQTT_TOPICS.ERROR);
+    for (const topic of this.obtenerTopicosSuscripcion()) {
+      this.mqtt.unsubscribe(topic);
+    }
   }
 
   public onEvent(listener: EventoRemotoHandler): () => void {
@@ -88,11 +119,39 @@ export class RemoteExecutionClient {
     return () => this.listeners.delete(listener);
   }
 
-  public activarSesion(modeloId: string, version: number): SesionRemota {
+  public activarProyecto(projectId: string | null): void {
+    const estabaActivo = Boolean(this.unsubscribeMessage);
+    if (estabaActivo) {
+      for (const topic of this.obtenerTopicosSuscripcion()) {
+        this.mqtt.unsubscribe(topic);
+      }
+    }
+    this.topicosProyecto = projectId ? construirTopicosProyectoV2(projectId) : null;
+    if (this.sesion) {
+      this.sesion = {
+        ...this.sesion,
+        ...(this.topicosProyecto ? { projectId: this.topicosProyecto.projectId } : { projectId: undefined }),
+      };
+    }
+    if (estabaActivo) {
+      for (const topic of this.obtenerTopicosSuscripcion()) {
+        this.mqtt.subscribe(topic);
+      }
+    }
+  }
+
+  public activarSesion(modeloId: string, version: number, projectId?: string): SesionRemota {
     const modeloNormalizado = modeloId.trim();
     if (!modeloNormalizado) throw new Error('El identificador del modelo no puede estar vacío.');
     if (!Number.isInteger(version) || version < 1) throw new Error('La versión debe ser un entero positivo.');
-    this.sesion = { modeloId: modeloNormalizado, version };
+    if (projectId !== undefined) {
+      this.activarProyecto(projectId);
+    }
+    this.sesion = {
+      modeloId: modeloNormalizado,
+      version,
+      ...(this.topicosProyecto ? { projectId: this.topicosProyecto.projectId } : {}),
+    };
     this.secuencias.activarModelo(modeloNormalizado, version);
     return this.sesion;
   }
@@ -101,12 +160,17 @@ export class RemoteExecutionClient {
     return this.sesion ? { ...this.sesion } : null;
   }
 
-  public cargarModelo(modelo: ModeloEjecutableMqtt): boolean {
+  public cargarModelo(
+    modelo: ModeloEjecutableMqtt,
+    opciones: { irVersion?: MqttIrVersion } = {},
+  ): boolean {
     const sesion = this.requerirSesion();
-    return this.mqtt.publish(MQTT_TOPICS.MODELO_CARGAR, {
+    const irVersion = inferirVersionIr(modelo, opciones.irVersion);
+    const topic = this.topicosProyecto?.simulacionModeloCargar ?? MQTT_TOPICS.MODELO_CARGAR;
+    return this.mqtt.publish(topic, {
       modelo_id: sesion.modeloId,
       version: sesion.version,
-      ir_version: MQTT_IR_VERSION,
+      ir_version: irVersion,
       modelo,
       id_mensaje: this.idFactory(),
     });
@@ -114,7 +178,8 @@ export class RemoteExecutionClient {
 
   public enviarComando(accion: AccionSimulacion): boolean {
     const sesion = this.requerirSesion();
-    return this.mqtt.publish(MQTT_TOPICS.SIMULACION_COMANDO, {
+    const topic = this.topicosProyecto?.simulacionComando ?? MQTT_TOPICS.SIMULACION_COMANDO;
+    return this.mqtt.publish(topic, {
       accion,
       modelo_id: sesion.modeloId,
       version: sesion.version,
@@ -124,7 +189,8 @@ export class RemoteExecutionClient {
 
   public establecerEntrada(servicioId: string, valor: ValorMensajeMqtt): boolean {
     const sesion = this.requerirSesion();
-    return this.mqtt.publish(MQTT_TOPICS.ENTRADA_ESTABLECER, {
+    const topic = this.topicosProyecto?.simulacionEntradaEstablecer ?? MQTT_TOPICS.ENTRADA_ESTABLECER;
+    return this.mqtt.publish(topic, {
       servicio_id: servicioId,
       valor,
       modelo_id: sesion.modeloId,
@@ -133,17 +199,34 @@ export class RemoteExecutionClient {
     });
   }
 
+  private obtenerTopicosSuscripcion(): string[] {
+    if (this.topicosProyecto) {
+      return [
+        this.topicosProyecto.simulacionModeloConfirmacion,
+        this.topicosProyecto.simulacionEstado,
+        this.topicosProyecto.error,
+      ];
+    }
+    return [
+      MQTT_TOPICS.MODELO_CONFIRMACION,
+      MQTT_TOPICS.SIMULACION_ESTADO,
+      MQTT_TOPICS.ERROR,
+    ];
+  }
+
   private requerirSesion(): SesionRemota {
     if (!this.sesion) throw new Error('Primero debes unirte a una sesión remota.');
     return this.sesion;
   }
 
   private procesarMensaje(topic: MqttTopic, payload: MensajeMqtt): void {
-    if (topic === MQTT_TOPICS.MODELO_CONFIRMACION) {
+    const topicConfirmacion = this.topicosProyecto?.simulacionModeloConfirmacion ?? MQTT_TOPICS.MODELO_CONFIRMACION;
+    const topicError = this.topicosProyecto?.error ?? MQTT_TOPICS.ERROR;
+    const topicEstado = this.topicosProyecto?.simulacionEstado ?? MQTT_TOPICS.SIMULACION_ESTADO;
+
+    if (topic === topicConfirmacion || topic === MQTT_TOPICS.MODELO_CONFIRMACION) {
       const confirmacion = payload as MensajeModeloConfirmacion;
       if (this.perteneceALaSesion(confirmacion.modelo_id, confirmacion.version)) {
-        // Una carga aceptada reinicia la secuencia del motor, incluso cuando
-        // otro navegador de la misma sesión fue quien publicó el modelo.
         if (confirmacion.aceptado) {
           this.secuencias.activarModelo(confirmacion.modelo_id, confirmacion.version);
         }
@@ -151,11 +234,11 @@ export class RemoteExecutionClient {
       }
       return;
     }
-    if (topic === MQTT_TOPICS.ERROR) {
+    if (topic === topicError || topic === MQTT_TOPICS.ERROR) {
       this.emitir({ tipo: 'error_remoto', error: payload as MensajeErrorMqtt });
       return;
     }
-    if (topic !== MQTT_TOPICS.SIMULACION_ESTADO) return;
+    if (topic !== topicEstado && topic !== MQTT_TOPICS.SIMULACION_ESTADO) return;
     const instantanea = payload as MensajeSimulacionEstado;
     const decision = this.secuencias.evaluar(instantanea);
     if (decision.aplicar) this.emitir({ tipo: 'instantanea', instantanea });

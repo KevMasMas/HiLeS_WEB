@@ -1,0 +1,92 @@
+{
+  "descripcion": "Ejecución paso a paso de Functional Block en modo Python con vector, custom y múltiples salidas",
+  "modelo_id": "python-vector-custom-01",
+  "version": 1,
+  "ir_version": 2,
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "python-vector-custom-01",
+    "version": 1,
+    "nombre": "Bloque Python con vector y custom",
+    "metadata": {
+      "documento_schema_version": 2,
+      "compilado_en": "2026-10-18T12:00:00.000Z",
+      "bloque_raiz_id": null
+    },
+    "entradas_externas": [
+      {
+        "elemento_id": "sensor-carriles",
+        "nombre": "Sensor carriles",
+        "puerto_salida": "carriles-out",
+        "tipo_dato": "vector"
+      }
+    ],
+    "elementos": [
+      {
+        "id": "sensor-carriles",
+        "tipo": "service",
+        "nombre": "Sensor carriles",
+        "tipo_dato": "vector",
+        "salidas": ["carriles-out"],
+        "entradas": []
+      },
+      {
+        "id": "analizador-python",
+        "tipo": "functional_block",
+        "nombre": "Analizador tráfico Python",
+        "habilitado": true,
+        "lenguaje": "python",
+        "codigo": "def calcular(carriles):\n    total = sum(carriles)\n    pico = max(carriles) if len(carriles) > 0 else 0\n    alerta = total >= 10\n    return {'resumen': {'total': total, 'pico': pico}, 'alerta': alerta}",
+        "entradas": [
+          { "puerto": "in-carriles", "variable": "carriles", "tipo_dato": "vector" }
+        ],
+        "salidas": [
+          { "puerto": "out-resumen", "variable": "resumen", "tipo_dato": "custom" },
+          { "puerto": "out-alerta", "variable": "alerta", "tipo_dato": "boolean" }
+        ]
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "cch-carriles",
+        "tipo": "cch",
+        "origen": "sensor-carriles",
+        "puerto_origen": "carriles-out",
+        "destino": "analizador-python",
+        "puerto_destino": "in-carriles"
+      }
+    ]
+  },
+  "estado_inicial": {
+    "sensor-carriles": {},
+    "analizador-python": {}
+  },
+  "pasos": [
+    {
+      "entradas": { "sensor-carriles": [2, 3, 4] },
+      "elementos_esperados": {
+        "sensor-carriles": { "valor": [2, 3, 4] },
+        "analizador-python": {
+          "salida": { "total": 9, "pico": 4 },
+          "salidas": {
+            "out-resumen": { "total": 9, "pico": 4 },
+            "out-alerta": false
+          }
+        }
+      }
+    },
+    {
+      "entradas": { "sensor-carriles": [5, 6, 2] },
+      "elementos_esperados": {
+        "sensor-carriles": { "valor": [5, 6, 2] },
+        "analizador-python": {
+          "salida": { "total": 13, "pico": 6 },
+          "salidas": {
+            "out-resumen": { "total": 13, "pico": 6 },
+            "out-alerta": true
+          }
+        }
+      }
+    }
+  ]
+}

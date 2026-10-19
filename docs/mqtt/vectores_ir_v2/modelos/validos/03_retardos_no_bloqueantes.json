@@ -1,0 +1,78 @@
+{
+  "ir_version": 2,
+  "modelo_id": "retardos-no-bloqueantes-03",
+  "version": 1,
+  "nombre": "Modelo con retardos no bloqueantes",
+  "metadata": {
+    "documento_schema_version": 2,
+    "compilado_en": "2026-10-18T12:00:00.000Z",
+    "bloque_raiz_id": null
+  },
+  "entradas_externas": [
+    {
+      "elemento_id": "entrada-habilitar",
+      "nombre": "Habilitar",
+      "puerto_salida": "hab-out",
+      "tipo_dato": "boolean",
+      "valor_inicial": false
+    }
+  ],
+  "elementos": [
+    {
+      "id": "entrada-habilitar",
+      "tipo": "service",
+      "nombre": "Habilitar",
+      "tipo_dato": "boolean",
+      "salidas": ["hab-out"],
+      "entradas": [],
+      "valor_inicial": false
+    },
+    {
+      "id": "lugar-inicio",
+      "tipo": "place",
+      "nombre": "Inicio",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "trans-temporizada",
+      "tipo": "transition",
+      "nombre": "Transición con retardo 100 ms",
+      "habilitada": true,
+      "puerto_condicion": "condicion",
+      "puerto_accion": "accion-out",
+      "retardo_ms": 100
+    },
+    {
+      "id": "lugar-fin",
+      "tipo": "place",
+      "nombre": "Fin",
+      "tokens": 0,
+      "capacidad": 1
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "cch-hab-trans",
+      "tipo": "cch",
+      "origen": "entrada-habilitar",
+      "puerto_origen": "hab-out",
+      "destino": "trans-temporizada",
+      "puerto_destino": "condicion"
+    },
+    {
+      "id": "arco-inicio-trans",
+      "tipo": "arco",
+      "origen": "lugar-inicio",
+      "destino": "trans-temporizada",
+      "peso": 1
+    },
+    {
+      "id": "arco-trans-fin",
+      "tipo": "arco",
+      "origen": "trans-temporizada",
+      "destino": "lugar-fin",
+      "peso": 1
+    }
+  ]
+}

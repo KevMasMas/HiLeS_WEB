@@ -1,0 +1,27 @@
+{
+  "descripcion": "Bloque Python con sentencia import prohibida por el perfil restringido",
+  "codigo_esperado": "PYTHON_PERFIL_PROHIBIDO",
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "invalido-import",
+    "version": 1,
+    "nombre": "Import prohibido",
+    "elementos": [
+      {
+        "id": "fb-malicioso",
+        "tipo": "functional_block",
+        "nombre": "Bloque con import",
+        "habilitado": true,
+        "lenguaje": "python",
+        "codigo": "def calcular(x):\n    import os\n    return x",
+        "entradas": [
+          { "puerto": "in-1", "variable": "x", "tipo_dato": "real" }
+        ],
+        "salidas": [
+          { "puerto": "out-1", "variable": "out", "tipo_dato": "real" }
+        ]
+      }
+    ],
+    "conexiones": []
+  }
+}

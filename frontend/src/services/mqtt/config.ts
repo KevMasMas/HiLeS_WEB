@@ -1,3 +1,9 @@
+import {
+  obtenerPoliticaTopicoProyectoV2,
+  parsearTopicoProyectoV2,
+  PREFIJO_PROYECTOS_V2_POR_DEFECTO,
+} from '../projects/projectTopics';
+
 export const MQTT_TOPICS = {
   LED_COMANDO: 'udfjc/hiles/v1/equipo1/pico01/led/comando',
   LED_ESTADO: 'udfjc/hiles/v1/equipo1/pico01/led/estado',
@@ -41,10 +47,18 @@ export const MQTT_TOPIC_POLICIES: Record<MqttTopic, MqttTopicPolicy> = {
 /** Límite conservador para no agotar la memoria de la Pico al decodificar JSON. */
 export const MQTT_MAX_PAYLOAD_BYTES = 32 * 1024;
 export const MQTT_IR_VERSION = 1;
+export const MQTT_IR_VERSION_V2 = 2;
+export const MQTT_SUPPORTED_IR_VERSIONS = [1, 2] as const;
+export type MqttIrVersion = (typeof MQTT_SUPPORTED_IR_VERSIONS)[number];
 export const MQTT_MAX_MODEL_ELEMENTS = 64;
 export const MQTT_MAX_MODEL_CONNECTIONS = 128;
+export const MQTT_PROJECT_V2_TOPIC_PREFIX = PREFIJO_PROYECTOS_V2_POR_DEFECTO;
 
-export type MqttConnectionStatus = 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED' | 'ERROR';
+export type MqttConnectionStatus =
+  | 'DISCONNECTED'
+  | 'CONNECTING'
+  | 'CONNECTED'
+  | 'ERROR';
 
 export interface MqttConfig {
   host: string;
@@ -56,6 +70,27 @@ export interface MqttConfig {
   clientId: string;
 }
 
+/**
+ * Obtiene la política QoS/retain tanto para topics estáticos v1 como para
+ * topics dinámicos de proyectos colaborativos v2.
+ */
+export const getMqttDynamicTopicPolicy = (topic: string): MqttTopicPolicy => {
+  const staticPolicy = MQTT_TOPIC_POLICIES[topic as MqttTopic];
+  if (staticPolicy) {
+    return staticPolicy;
+  }
+  const projectTopic = parsearTopicoProyectoV2(
+    topic,
+    MQTT_PROJECT_V2_TOPIC_PREFIX,
+  );
+  if (projectTopic) {
+    return obtenerPoliticaTopicoProyectoV2(projectTopic.sufijo);
+  }
+  return { qos: 0, retain: false };
+};
+
+export const resolverPoliticaTopicoMqtt = getMqttDynamicTopicPolicy;
+
 const readEnv = (key: string, fallback: string): string => {
   const value = import.meta.env[key];
   if (typeof value === 'string' && value.trim().length > 0) {
@@ -64,7 +99,12 @@ const readEnv = (key: string, fallback: string): string => {
   return fallback;
 };
 
-export const buildMqttWebSocketUrl = (host: string, port: number, path: string, protocol = 'ws'): string => {
+export const buildMqttWebSocketUrl = (
+  host: string,
+  port: number,
+  path: string,
+  protocol = 'ws',
+): string => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const normalizedProtocol = protocol.replace('://', '').toLowerCase();
   if (normalizedProtocol !== 'ws' && normalizedProtocol !== 'wss') {
@@ -79,7 +119,9 @@ export const getMqttConfig = (): MqttConfig => {
   const path = readEnv('VITE_MQTT_WS_PATH', '/mqtt');
   const protocol = readEnv(
     'VITE_MQTT_WS_PROTOCOL',
-    typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws',
+    typeof window !== 'undefined' && window.location.protocol === 'https:'
+      ? 'wss'
+      : 'ws',
   );
   const username = readEnv('VITE_MQTT_USERNAME', '');
   const password = readEnv('VITE_MQTT_PASSWORD', '');

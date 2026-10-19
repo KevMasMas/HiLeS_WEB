@@ -3,12 +3,27 @@ import {
   MQTT_MAX_MODEL_CONNECTIONS,
   MQTT_MAX_MODEL_ELEMENTS,
   MQTT_MAX_PAYLOAD_BYTES,
+  MQTT_SUPPORTED_IR_VERSIONS,
   MQTT_TOPICS,
+  type MqttIrVersion,
   type MqttTopic,
 } from './config';
-import { validarIrV1, type IrModeloV1 } from '../ir';
+import {
+  validarIrV1,
+  validarModeloIrV2,
+  validarValorRuntimeIrV2,
+  type IrModeloV1,
+  type IrModeloV2,
+  type IrValorRuntimeV2,
+} from '../ir';
+import { parsearTopicoProyectoV2 } from '../projects/projectTopics';
+import {
+  validarMensajeProyectoPorSufijo,
+  type PayloadMensajeProyectoV2,
+} from '../projects/projectMessages';
 
 export type ValorMensajeMqtt = boolean | number | string;
+export type ValorMensajeMqttV2 = IrValorRuntimeV2;
 export type AccionLed = 'encender' | 'apagar' | 'titilar';
 export type AccionLedEstado = AccionLed | 'inicio';
 export type AccionSimulacion = 'iniciar' | 'detener' | 'reiniciar' | 'paso';
@@ -72,7 +87,7 @@ export interface MensajeSalidaHiles {
   id_mensaje: string;
 }
 
-export type ModeloEjecutableMqtt = IrModeloV1;
+export type ModeloEjecutableMqtt = IrModeloV1 | IrModeloV2;
 
 export interface MensajeModeloCargar {
   modelo_id: string;
@@ -95,6 +110,13 @@ export interface MensajeModeloConfirmacion {
 export interface EstadoElementoSimulacion {
   valor?: ValorMensajeMqtt;
   salida?: ValorMensajeMqtt;
+  salidas?: Record<string, ValorMensajeMqttV2>;
+  valor_retenido?: ValorMensajeMqttV2;
+  evento_pendiente?: boolean;
+  cola_dch?: number;
+  cola_desbordada?: boolean;
+  timer_pendiente?: boolean;
+  error?: string | null;
   tokens?: number;
   habilitada?: boolean;
   disparada?: boolean;
@@ -124,7 +146,9 @@ export interface MensajesMqttPorTopic {
   [MQTT_TOPICS.SIMULACION_ESTADO]: MensajeSimulacionEstado;
 }
 
-export type MensajeMqtt = MensajesMqttPorTopic[keyof MensajesMqttPorTopic];
+export type MensajeMqtt =
+  | MensajesMqttPorTopic[keyof MensajesMqttPorTopic]
+  | PayloadMensajeProyectoV2;
 
 export type ResultadoValidacionMensaje =
   | { valido: true; topic: MqttTopic; mensaje: MensajeMqtt }
@@ -135,13 +159,32 @@ const ACCIONES_LED = new Set<AccionLed>(['encender', 'apagar', 'titilar']);
 const ACCIONES_ESTADO_LED = new Set<AccionLedEstado>(['encender', 'apagar', 'titilar', 'inicio']);
 const ACCIONES_SIMULACION = new Set<AccionSimulacion>(['iniciar', 'detener', 'reiniciar', 'paso']);
 const ESTADOS_SIMULACION = new Set<EstadoSimulacion>(['sin_modelo', 'lista', 'ejecutando', 'pausada', 'detenida', 'error']);
+const VERSIONES_IR_VALIDAS = new Set<number>(MQTT_SUPPORTED_IR_VERSIONS);
 
 const esObjeto = (valor: unknown): valor is Record<string, unknown> =>
   typeof valor === 'object' && valor !== null && !Array.isArray(valor);
 
 const esTexto = (valor: unknown): valor is string => typeof valor === 'string' && valor.trim().length > 0;
-const esValorMqtt = (valor: unknown): valor is ValorMensajeMqtt =>
-  typeof valor === 'boolean' || typeof valor === 'number' || typeof valor === 'string';
+
+const esValorMqtt = (valor: unknown): valor is ValorMensajeMqtt => {
+  if (
+    typeof valor === 'boolean' ||
+    (typeof valor === 'number' && Number.isFinite(valor)) ||
+    typeof valor === 'string'
+  ) {
+    return true;
+  }
+  if (Array.isArray(valor) || esObjeto(valor)) {
+    try {
+      validarValorRuntimeIrV2(valor, 'custom');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+};
+
 const esEnteroPositivo = (valor: unknown): valor is number =>
   typeof valor === 'number' && Number.isInteger(valor) && valor >= 1;
 const esEnteroNoNegativo = (valor: unknown): valor is number =>
@@ -168,6 +211,23 @@ const validarId = (topic: string, payload: Record<string, unknown>): ResultadoVa
  * al motor HiLeS. Los errores están redactados para poder mostrarlos al usuario.
  */
 export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoValidacionMensaje => {
+  const topicoProyectoV2 = parsearTopicoProyectoV2(topic);
+  if (topicoProyectoV2) {
+    if (!esObjeto(payload)) return error(topic, 'el contenido debe ser un objeto JSON');
+    if (calcularTamanoJson(payload) > MQTT_MAX_PAYLOAD_BYTES) {
+      return error(topic, `el contenido supera el límite de ${MQTT_MAX_PAYLOAD_BYTES} bytes`);
+    }
+    const validacionV2 = validarMensajeProyectoPorSufijo(topicoProyectoV2.sufijo, payload);
+    if (!validacionV2.ok || !validacionV2.mensaje) {
+      return error(topic, validacionV2.error ?? 'mensaje de proyecto inválido');
+    }
+    return {
+      valido: true,
+      topic: topic as MqttTopic,
+      mensaje: validacionV2.mensaje,
+    };
+  }
+
   if (!TOPICS_CONOCIDOS.has(topic)) return error(topic, 'el topic no pertenece al contrato MQTT de HiLeS');
   if (!esObjeto(payload)) return error(topic, 'el contenido debe ser un objeto JSON');
   if (calcularTamanoJson(payload) > MQTT_MAX_PAYLOAD_BYTES) {
@@ -221,7 +281,7 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
       const idError = validarId(topic, payload);
       if (idError) return idError;
       if (!esTexto(payload.servicio_id)) return error(topic, 'servicio_id debe ser un texto no vacío');
-      if (!esValorMqtt(payload.valor)) return error(topic, 'valor debe ser booleano, numérico o texto');
+      if (!esValorMqtt(payload.valor)) return error(topic, 'valor debe ser booleano, numérico, texto, vector o estructura válida');
       if (payload.modelo_id !== undefined && !esTexto(payload.modelo_id)) return error(topic, 'modelo_id debe ser texto');
       if (payload.version !== undefined && !esEnteroPositivo(payload.version)) return error(topic, 'version debe ser un entero positivo');
       break;
@@ -231,7 +291,9 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
       if (idError) return idError;
       if (!esTexto(payload.modelo_id)) return error(topic, 'modelo_id debe ser un texto no vacío');
       if (!esEnteroPositivo(payload.version)) return error(topic, 'version debe ser un entero positivo');
-      if (payload.ir_version !== MQTT_IR_VERSION) return error(topic, `ir_version debe ser ${MQTT_IR_VERSION}`);
+      if (typeof payload.ir_version !== 'number' || !VERSIONES_IR_VALIDAS.has(payload.ir_version as MqttIrVersion)) {
+        return error(topic, `ir_version debe ser ${MQTT_SUPPORTED_IR_VERSIONS.join(' o ')}`);
+      }
       if (!esObjeto(payload.modelo)) return error(topic, 'modelo debe ser un objeto JSON');
       if (!Array.isArray(payload.modelo.elementos)) return error(topic, 'modelo.elementos debe ser una lista');
       if (!Array.isArray(payload.modelo.conexiones)) return error(topic, 'modelo.conexiones debe ser una lista');
@@ -241,9 +303,16 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
       if (payload.modelo.conexiones.length > MQTT_MAX_MODEL_CONNECTIONS) {
         return error(topic, `modelo.conexiones supera el límite de ${MQTT_MAX_MODEL_CONNECTIONS}`);
       }
-      const validacionIr = validarIrV1(payload.modelo);
-      if (!validacionIr.valido) {
-        return error(topic, validacionIr.avisos[0].mensaje);
+      if (payload.ir_version === 1) {
+        const validacionIr = validarIrV1(payload.modelo);
+        if (!validacionIr.valido) {
+          return error(topic, validacionIr.avisos[0].mensaje);
+        }
+      } else {
+        const validacionIrV2 = validarModeloIrV2(payload.modelo, { permitirVacio: true });
+        if (!validacionIrV2.valido) {
+          return error(topic, validacionIrV2.errores[0]?.mensaje ?? 'modelo IR v2 inválido');
+        }
       }
       break;
     }
@@ -252,7 +321,9 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
       if (idError) return idError;
       if (!esTexto(payload.modelo_id)) return error(topic, 'modelo_id debe ser un texto no vacío');
       if (!esEnteroPositivo(payload.version)) return error(topic, 'version debe ser un entero positivo');
-      if (payload.ir_version !== MQTT_IR_VERSION) return error(topic, `ir_version debe ser ${MQTT_IR_VERSION}`);
+      if (typeof payload.ir_version !== 'number' || !VERSIONES_IR_VALIDAS.has(payload.ir_version as MqttIrVersion)) {
+        return error(topic, `ir_version debe ser ${MQTT_SUPPORTED_IR_VERSIONS.join(' o ')}`);
+      }
       if (typeof payload.aceptado !== 'boolean') return error(topic, 'aceptado debe ser booleano');
       if (payload.codigo !== undefined && !esTexto(payload.codigo)) return error(topic, 'codigo debe ser texto');
       if (payload.error !== undefined && !esTexto(payload.error)) return error(topic, 'error debe ser texto');
@@ -269,6 +340,30 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
         if (!esTexto(elementoId) || !esObjeto(estadoElemento)) return error(topic, 'cada estado de elemento debe ser un objeto');
         if (estadoElemento.valor !== undefined && !esValorMqtt(estadoElemento.valor)) return error(topic, `elementos.${elementoId}.valor no es válido`);
         if (estadoElemento.salida !== undefined && !esValorMqtt(estadoElemento.salida)) return error(topic, `elementos.${elementoId}.salida no es válida`);
+        if (estadoElemento.salidas !== undefined) {
+          if (!esObjeto(estadoElemento.salidas)) return error(topic, `elementos.${elementoId}.salidas debe ser un objeto`);
+          for (const [puertoId, valSalida] of Object.entries(estadoElemento.salidas)) {
+            if (!esTexto(puertoId) || !esValorMqtt(valSalida)) return error(topic, `elementos.${elementoId}.salidas.${puertoId} no es válido`);
+          }
+        }
+        if (estadoElemento.valor_retenido !== undefined && !esValorMqtt(estadoElemento.valor_retenido)) {
+          return error(topic, `elementos.${elementoId}.valor_retenido no es válido`);
+        }
+        if (estadoElemento.evento_pendiente !== undefined && typeof estadoElemento.evento_pendiente !== 'boolean') {
+          return error(topic, `elementos.${elementoId}.evento_pendiente debe ser booleano`);
+        }
+        if (estadoElemento.cola_dch !== undefined && !esEnteroNoNegativo(estadoElemento.cola_dch)) {
+          return error(topic, `elementos.${elementoId}.cola_dch debe ser un entero no negativo`);
+        }
+        if (estadoElemento.cola_desbordada !== undefined && typeof estadoElemento.cola_desbordada !== 'boolean') {
+          return error(topic, `elementos.${elementoId}.cola_desbordada debe ser booleana`);
+        }
+        if (estadoElemento.timer_pendiente !== undefined && typeof estadoElemento.timer_pendiente !== 'boolean') {
+          return error(topic, `elementos.${elementoId}.timer_pendiente debe ser booleano`);
+        }
+        if (estadoElemento.error !== undefined && estadoElemento.error !== null && typeof estadoElemento.error !== 'string') {
+          return error(topic, `elementos.${elementoId}.error debe ser texto o null`);
+        }
         if (estadoElemento.tokens !== undefined && !esEnteroNoNegativo(estadoElemento.tokens)) return error(topic, `elementos.${elementoId}.tokens debe ser un entero no negativo`);
         if (estadoElemento.habilitada !== undefined && typeof estadoElemento.habilitada !== 'boolean') return error(topic, `elementos.${elementoId}.habilitada debe ser booleana`);
         if (estadoElemento.disparada !== undefined && typeof estadoElemento.disparada !== 'boolean') return error(topic, `elementos.${elementoId}.disparada debe ser booleana`);

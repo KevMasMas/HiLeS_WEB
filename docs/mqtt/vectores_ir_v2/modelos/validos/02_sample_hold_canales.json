@@ -1,0 +1,141 @@
+{
+  "ir_version": 2,
+  "modelo_id": "sample-hold-canales-02",
+  "version": 1,
+  "nombre": "Circuito híbrido Sample y Hold con CCH, DCH, LCH y Petri",
+  "metadata": {
+    "documento_schema_version": 2,
+    "compilado_en": "2026-10-18T12:00:00.000Z",
+    "bloque_raiz_id": "bloque-raiz",
+    "structural_blocks_aplanados": ["sub-bloque-muestreo"],
+    "normalizaciones_legadas": ["structural_block_aplanado"]
+  },
+  "entradas_externas": [
+    {
+      "elemento_id": "sensor-analogico",
+      "nombre": "Sensor analógico",
+      "puerto_salida": "sensor-out",
+      "tipo_dato": "real",
+      "valor_inicial": 10
+    },
+    {
+      "elemento_id": "gatillo",
+      "nombre": "Gatillo muestreo",
+      "puerto_salida": "gatillo-out",
+      "tipo_dato": "boolean",
+      "valor_inicial": false
+    }
+  ],
+  "elementos": [
+    {
+      "id": "sensor-analogico",
+      "tipo": "service",
+      "nombre": "Sensor analógico",
+      "tipo_dato": "real",
+      "salidas": ["sensor-out"],
+      "entradas": [],
+      "valor_inicial": 10
+    },
+    {
+      "id": "gatillo",
+      "tipo": "service",
+      "nombre": "Gatillo muestreo",
+      "tipo_dato": "boolean",
+      "salidas": ["gatillo-out"],
+      "entradas": [],
+      "valor_inicial": false
+    },
+    {
+      "id": "place-espera",
+      "tipo": "place",
+      "nombre": "Espera",
+      "tokens": 1,
+      "capacidad": 2
+    },
+    {
+      "id": "trans-capturar",
+      "tipo": "transition",
+      "nombre": "Capturar muestra",
+      "habilitada": true,
+      "puerto_condicion": "condicion",
+      "puerto_accion": "accion-muestrear"
+    },
+    {
+      "id": "place-capturado",
+      "tipo": "place",
+      "nombre": "Capturado",
+      "tokens": 0,
+      "capacidad": 2
+    },
+    {
+      "id": "sample-1",
+      "tipo": "sample",
+      "nombre": "Muestreador",
+      "habilitado": true,
+      "tipo_dato": "real",
+      "puerto_dato": "sample-data-in",
+      "puerto_control": "sample-control-in",
+      "puerto_salida": "sample-out"
+    },
+    {
+      "id": "hold-1",
+      "tipo": "hold",
+      "nombre": "Retenedor",
+      "habilitado": true,
+      "tipo_dato": "real",
+      "puerto_entrada": "hold-in",
+      "puerto_cch": "hold-cch-out",
+      "puerto_lch": "hold-lch-out",
+      "valor_inicial": 0
+    }
+  ],
+  "conexiones": [
+    {
+      "id": "cch-gatillo-trans",
+      "tipo": "cch",
+      "origen": "gatillo",
+      "puerto_origen": "gatillo-out",
+      "destino": "trans-capturar",
+      "puerto_destino": "condicion"
+    },
+    {
+      "id": "arco-espera-trans",
+      "tipo": "arco",
+      "origen": "place-espera",
+      "destino": "trans-capturar",
+      "peso": 1
+    },
+    {
+      "id": "arco-trans-capturado",
+      "tipo": "arco",
+      "origen": "trans-capturar",
+      "destino": "place-capturado",
+      "peso": 1
+    },
+    {
+      "id": "cch-sensor-sample",
+      "tipo": "cch",
+      "origen": "sensor-analogico",
+      "puerto_origen": "sensor-out",
+      "destino": "sample-1",
+      "puerto_destino": "sample-data-in"
+    },
+    {
+      "id": "lch-trans-sample",
+      "tipo": "lch",
+      "origen": "trans-capturar",
+      "puerto_origen": "accion-muestrear",
+      "destino": "sample-1",
+      "puerto_destino": "sample-control-in"
+    },
+    {
+      "id": "dch-sample-hold",
+      "tipo": "dch",
+      "origen": "sample-1",
+      "puerto_origen": "sample-out",
+      "destino": "hold-1",
+      "puerto_destino": "hold-in",
+      "capacidad_cola": 8
+    }
+  ]
+}

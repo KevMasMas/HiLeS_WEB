@@ -2,14 +2,17 @@ import mqtt, { type IClientOptions, type MqttClient as BrowserMqttClient } from 
 import {
   getMqttConfig,
   MQTT_MAX_PAYLOAD_BYTES,
-  MQTT_TOPIC_POLICIES,
   MQTT_TOPICS,
+  resolverPoliticaTopicoMqtt,
   type MqttConnectionStatus,
   type MqttTopic,
+  type MqttTopicPolicy,
 } from './config';
 import { validarMensajeMqtt, type AccionLed, type MensajeMqtt } from './messages';
+import type { TransporteMqttProyectoV2 } from '../projects/ProjectSyncClient';
 
 export type MqttMessageHandler = (topic: MqttTopic, payload: MensajeMqtt) => void;
+export type MqttRawMessageHandler = (topic: string, rawPayload: string) => void;
 export type MqttStatusHandler = (status: MqttConnectionStatus) => void;
 export interface MqttValidationError {
   topic: string;
@@ -18,11 +21,12 @@ export interface MqttValidationError {
 }
 export type MqttValidationErrorHandler = (validationError: MqttValidationError) => void;
 
-class MqttBrowserClient {
+class MqttBrowserClient implements TransporteMqttProyectoV2 {
   private client: BrowserMqttClient | null = null;
   private status: MqttConnectionStatus = 'DISCONNECTED';
   private readonly statusListeners = new Set<MqttStatusHandler>();
   private readonly messageListeners = new Set<MqttMessageHandler>();
+  private readonly rawMessageListeners = new Set<MqttRawMessageHandler>();
   private readonly validationErrorListeners = new Set<MqttValidationErrorHandler>();
   /** Número de consumidores por topic; evita que un panel desuscriba a otro. */
   private readonly subscriptions = new Map<string, number>();
@@ -41,6 +45,11 @@ class MqttBrowserClient {
     return () => this.messageListeners.delete(listener);
   }
 
+  public onRawMessage(listener: MqttRawMessageHandler): () => void {
+    this.rawMessageListeners.add(listener);
+    return () => this.rawMessageListeners.delete(listener);
+  }
+
   public onValidationError(listener: MqttValidationErrorHandler): () => void {
     this.validationErrorListeners.add(listener);
     return () => this.validationErrorListeners.delete(listener);
@@ -53,6 +62,10 @@ class MqttBrowserClient {
 
   private notifyMessage(topic: MqttTopic, payload: MensajeMqtt): void {
     this.messageListeners.forEach((listener) => listener(topic, payload));
+  }
+
+  private notifyRawMessage(topic: string, rawPayload: string): void {
+    this.rawMessageListeners.forEach((listener) => listener(topic, rawPayload));
   }
 
   private notifyValidationError(validationError: MqttValidationError): void {
@@ -121,8 +134,9 @@ class MqttBrowserClient {
     client.on('message', (topic, payload) => {
       if (this.client !== client) return;
       const raw = payload.toString();
-      let parsed: unknown;
+      this.notifyRawMessage(topic, raw);
 
+      let parsed: unknown;
       try {
         parsed = JSON.parse(raw);
       } catch {
@@ -168,7 +182,7 @@ class MqttBrowserClient {
     this.client?.unsubscribe(topic);
   }
 
-  public publish(topic: string, payload: unknown): boolean {
+  public publish(topic: string, payload: unknown, customPolicy?: MqttTopicPolicy): boolean {
     if (!this.client?.connected) {
       this.notifyStatus('ERROR');
       return false;
@@ -181,7 +195,7 @@ class MqttBrowserClient {
         this.notifyStatus('ERROR');
         return false;
       }
-      const policy = MQTT_TOPIC_POLICIES[topic as MqttTopic] ?? { qos: 0 as const, retain: false };
+      const policy = customPolicy ?? resolverPoliticaTopicoMqtt(topic);
       this.client.publish(topic, message, policy, (error) => {
         if (error) {
           console.error(`MQTT publish failed: ${topic}`, error);

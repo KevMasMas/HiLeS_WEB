@@ -1,0 +1,22 @@
+{
+  "descripcion": "Transición con retardo_ms negativo fuera del rango permitido",
+  "codigo_esperado": "IR_RETARDO_INVALIDO",
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "invalido-retardo",
+    "version": 1,
+    "nombre": "Retardo inválido",
+    "elementos": [
+      {
+        "id": "trans-1",
+        "tipo": "transition",
+        "nombre": "Transición",
+        "habilitada": true,
+        "puerto_condicion": "condicion",
+        "puerto_accion": "accion-out",
+        "retardo_ms": -50
+      }
+    ],
+    "conexiones": []
+  }
+}
