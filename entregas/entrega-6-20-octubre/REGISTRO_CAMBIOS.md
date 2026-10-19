@@ -295,7 +295,7 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
   - `firmware/tests/test_hiles_engine.py` (prueba propia de la entrega 5; ver el detalle en «Cambios en archivos fuera de la lista propia»)
   - `entregas/entrega-6-20-octubre/PLAN_IMPLEMENTACION_ENTREGA_20.md`
   - `entregas/entrega-6-20-octubre/REGISTRO_CAMBIOS.md`
-- **Commit o rama:** rama `mqtt-pico`; commit pendiente.
+- **Commit o rama:** rama `mqtt-pico`, commit `d0ed8fb`.
 - **Cómo se probó:**
   - Firmware, desde la raíz: `python -m unittest discover -s firmware/tests -t .` (Python 3.13.2) → **172 pruebas aprobadas** (`OK`): las 104 anteriores y 68 nuevas.
   - Por archivo nuevo: `test_hiles_model_v2` 15, `test_hiles_engine_v2` 15, `test_hiles_channels` 10, `test_hiles_delays` 6 y `test_traffic_controller` 22.
