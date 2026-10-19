@@ -35,17 +35,11 @@ export const Palette: React.FC = () => {
 
   return (
     <div style={styles.wrapper}>
-      <button
-        type="button"
-        aria-label={open ? 'Close HiLeS elements menu' : 'Open HiLeS elements menu'}
-        aria-expanded={open}
-        onClick={() => setPaletteOpen(!open)}
-        style={styles.menuButton}
-      >
-        <span aria-hidden="true">☰</span>
-      </button>
       <aside style={{ ...styles.aside, ...(open ? styles.asideOpen : styles.asideClosed) }} aria-hidden={!open}>
-      <h3 style={styles.title}>HiLeS Elements</h3>
+      <div style={styles.titleRow}>
+        <h3 style={styles.title}>HiLeS Elements</h3>
+        <button type="button" aria-label="Close HiLeS elements" title="Close elements panel" onClick={() => setPaletteOpen(false)} style={styles.closeButton}>×</button>
+      </div>
       <div style={styles.scroll}>
         {groups.map((group) => (
           <section key={group.title} style={styles.section}>
@@ -84,11 +78,12 @@ export const Palette: React.FC = () => {
 
 const styles: Record<string, React.CSSProperties> = {
   wrapper: { position: 'absolute', inset: 0, zIndex: 20, pointerEvents: 'none' },
-  menuButton: { position: 'absolute', zIndex: 2, top: 12, left: 12, width: 38, height: 38, display: 'grid', placeItems: 'center', border: '1px solid #cbd5e1', borderRadius: 7, background: '#fff', color: '#172033', boxShadow: '0 3px 12px rgba(15,23,42,.18)', cursor: 'pointer', pointerEvents: 'auto', fontSize: 21, lineHeight: 1 },
-  aside: { position: 'absolute', top: 0, bottom: 0, left: 0, width: 276, background: '#f8fafc', borderRight: '1px solid #d8e0ea', padding: '60px 12px 14px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pointerEvents: 'auto', boxShadow: '5px 0 18px rgba(15,23,42,.12)', transition: 'transform 180ms ease, box-shadow 180ms ease' },
+  aside: { position: 'absolute', top: 12, bottom: 12, left: 12, width: 276, background: '#f8fafc', border: '1px solid #d8e0ea', borderRadius: 10, padding: '12px 12px 14px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box', pointerEvents: 'auto', boxShadow: '0 12px 32px rgba(15,23,42,.18)', transition: 'transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease' },
   asideOpen: { transform: 'translateX(0)' },
-  asideClosed: { transform: 'translateX(-100%)', pointerEvents: 'none', boxShadow: 'none' },
-  title: { margin: '0 0 10px', fontSize: 16, color: '#172033' },
+  asideClosed: { transform: 'translateX(calc(-100% - 20px))', opacity: 0, pointerEvents: 'none', boxShadow: 'none' },
+  titleRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  title: { margin: 0, fontSize: 16, color: '#172033' },
+  closeButton: { width: 28, height: 28, border: '1px solid #cbd5e1', borderRadius: 6, background: '#fff', color: '#475569', cursor: 'pointer', fontSize: 18, lineHeight: 1 },
   scroll: { overflowY: 'auto', paddingRight: 3 },
   section: { marginBottom: 16 },
   groupTitle: { margin: '0 0 7px', fontSize: 11, color: '#64748b', textTransform: 'uppercase', letterSpacing: '.07em' },

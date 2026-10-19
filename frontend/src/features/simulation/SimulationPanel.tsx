@@ -3,7 +3,7 @@ import { useRemoteExecutionStore } from '../../stores/useRemoteExecutionStore';
 import { useSimulationStore } from '../../stores/useSimulationStore';
 import './simulation.css';
 
-export const SimulationPanel: React.FC = () => {
+export const SimulationPanel: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const [expanded, setExpanded] = useState(true);
   const [selectedServiceId, setSelectedServiceId] = useState('');
   const [numericValue, setNumericValue] = useState('');
@@ -57,16 +57,16 @@ export const SimulationPanel: React.FC = () => {
   };
 
   return (
-    <section className={`simulation-panel ${expanded ? 'is-expanded' : 'is-collapsed'}`} aria-label="Control de simulación" aria-busy={ocupado}>
-      <button className="simulation-panel__header" type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
+    <section className={`simulation-panel ${embedded ? 'is-embedded' : ''} ${expanded || embedded ? 'is-expanded' : 'is-collapsed'}`} aria-label="Control de simulación" aria-busy={ocupado}>
+      {!embedded && <button className="simulation-panel__header" type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
         <span>
           <i className="simulation-panel__status" style={{ backgroundColor: getStatusColor(), opacity: 1, borderColor: getStatusColor() }} />
           Motor {esPico ? 'Pico' : 'local'}
         </span>
         <strong>{expanded ? '−' : '+'}</strong>
-      </button>
+      </button>}
 
-      {expanded && (
+      {(expanded || embedded) && (
         <div className="simulation-panel__body">
           <div className="simulation-panel__mode" role="group" aria-label="Motor de ejecución">
             <button type="button" className={!esPico ? 'is-active' : ''} onClick={remote.desactivar}>Local</button>
@@ -150,7 +150,7 @@ export const SimulationPanel: React.FC = () => {
             <p className="simulation-panel__empty">Agrega un Service con salida para inyectar datos.</p>
           )}
 
-          <div className="simulation-panel__actions">
+          {!embedded && <div className="simulation-panel__actions">
             <button type="button" onClick={() => esPico ? remote.enviarComando('paso') : void paso()} disabled={ocupado || estado === 'error' || (esPico ? !remote.sesionActiva : estado === 'inactiva')}>
               {ocupado && operacion === 'paso' ? 'Procesando…' : '▶ Paso'}
             </button>
@@ -162,10 +162,10 @@ export const SimulationPanel: React.FC = () => {
                 ■ Detener
               </button>
             )}
-          </div>
-          <button className="simulation-panel__reset" type="button" onClick={() => esPico ? remote.enviarComando('reiniciar') : reiniciar()} disabled={ocupado || (esPico && !remote.sesionActiva)}>
+          </div>}
+          {!embedded && <button className="simulation-panel__reset" type="button" onClick={() => esPico ? remote.enviarComando('reiniciar') : reiniciar()} disabled={ocupado || (esPico && !remote.sesionActiva)}>
             ↺ Reiniciar
-          </button>
+          </button>}
 
           {!esPico && (
             <div className="simulation-panel__events">

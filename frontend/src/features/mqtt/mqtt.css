@@ -48,3 +48,9 @@
 @keyframes mqtt-spin {
   to { transform: rotate(360deg); }
 }
+
+.mqtt-panel.is-embedded {
+  height: 100%;
+  overflow-y: auto;
+  border: 0 !important;
+}

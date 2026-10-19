@@ -1,4 +1,6 @@
 .simulation-panel { z-index: 18; width: 100%; flex: 0 0 auto; overflow: hidden; box-sizing: border-box; border-bottom: 1px solid #cbd5e1; background: #fff; color: #172033; }
+.simulation-panel.is-embedded { height: 100%; border: 0; }
+.simulation-panel.is-embedded .simulation-panel__body { max-height: none; height: 100%; box-sizing: border-box; }
 .simulation-panel.is-collapsed { width: 100%; }
 .simulation-panel__header { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: 0; background: #172033; color: #fff; cursor: pointer; font-size: 12px; font-weight: 800; }
 .simulation-panel__header span { display: flex; align-items: center; gap: 8px; }

@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { MQTT_TOPICS } from '../../services/mqtt/config';
 import { mqttClient } from '../../services/mqtt/MqttClient';
 import { mqttHilesBridge } from '../../services/mqtt/setupMqttHilesBridge';
 import type { AccionLed } from '../../services/mqtt/messages';
 import { useSimulationStore } from '../../stores/useSimulationStore';
+import { getMqttPanelPortalTarget, subscribeMqttPanelPortal } from '../editor/panelPortal';
 import './mqtt.css';
 
 type MessageEntry = {
@@ -56,6 +58,7 @@ export const MqttPanel: React.FC = () => {
   const [messages, setMessages] = useState<MessageEntry[]>([]);
   const [notices, setNotices] = useState<IntegrationNotice[]>([]);
   const [connectionFeedback, setConnectionFeedback] = useState<ConnectionFeedback | null>(null);
+  const dockTarget = useSyncExternalStore(subscribeMqttPanelPortal, getMqttPanelPortalTarget, () => null);
   const modoEjecucion = useSimulationStore((state) => state.modoEjecucion);
 
   useEffect(() => {
@@ -132,17 +135,17 @@ export const MqttPanel: React.FC = () => {
     mqttClient.sendLedCommand(accion);
   };
 
-  return (
-    <section style={styles.panel} aria-label="Panel MQTT del broker local">
-      <button type="button" style={styles.header} onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
+  const content = (
+    <section className={dockTarget ? 'mqtt-panel is-embedded' : 'mqtt-panel'} style={styles.panel} aria-label="Panel MQTT del broker local">
+      {!dockTarget && <button type="button" style={styles.header} onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
         <span style={styles.headerText}>
           <span style={{ ...styles.dot, background: getStatusColor(status) }} />
           MQTT local
         </span>
         <strong>{expanded ? '−' : '+'}</strong>
-      </button>
+      </button>}
 
-      {expanded && (
+      {(expanded || dockTarget) && (
         <div style={styles.body}>
           <div style={styles.row}>
             <span style={styles.label}>Estado</span>
@@ -215,6 +218,8 @@ export const MqttPanel: React.FC = () => {
       )}
     </section>
   );
+
+  return dockTarget ? createPortal(content, dockTarget) : content;
 };
 
 const styles = {

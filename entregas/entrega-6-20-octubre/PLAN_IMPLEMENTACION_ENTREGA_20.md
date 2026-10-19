@@ -332,7 +332,7 @@ docs/traffic/MATRIZ_CONFLICTOS.md
 
 ### Persona 4 — Topbar y aprovechamiento del canvas
 
-**Responsable:** por confirmar
+**Responsable:** Juan David Romero
 
 **Dependencias:** Personas 1, 2 y 3 únicamente mediante contratos ya congelados.
 
@@ -344,16 +344,16 @@ docs/traffic/MATRIZ_CONFLICTOS.md
 
 #### Control de avance nuevo
 
-- [ ] Crear una topbar compacta para proyecto, archivo, undo/redo, conexión y ejecución.
-- [ ] Mover controles dispersos del header y paneles a grupos claros sin duplicarlos.
-- [ ] Convertir paleta, propiedades, simulación y MQTT en paneles flotantes, desplegables o tabs.
-- [ ] Permitir cerrar paneles y recuperar el ancho completo del canvas.
-- [ ] Mantener visibles el modo Local/Pico, proyecto actual, conexión y estado de ejecución.
-- [ ] Añadir un contenedor visual reservado para presencia y colaboración que Persona 5 pueda montar sin editar estos archivos.
-- [ ] Mantener importación/exportación, autosave, undo/redo y edición de código.
+- [x] Crear una topbar compacta para proyecto, archivo, undo/redo, conexión y ejecución.
+- [x] Mover controles dispersos del header y paneles a grupos claros sin duplicarlos.
+- [x] Convertir paleta, propiedades, simulación y MQTT en paneles flotantes, desplegables o tabs.
+- [x] Permitir cerrar paneles y recuperar el ancho completo del canvas.
+- [x] Mantener visibles el modo Local/Pico, proyecto actual, conexión y estado de ejecución.
+- [x] Añadir un contenedor visual reservado para presencia y colaboración que Persona 5 pueda montar sin editar estos archivos.
+- [x] Mantener importación/exportación, autosave, undo/redo y edición de código.
 - [ ] Comprobar resoluciones de escritorio usadas en la demo sin superposición crítica.
-- [ ] Agregar estados de foco, tooltip y disabled para los controles principales.
-- [ ] Crear pruebas de interacción de apertura/cierre y regresión de acciones existentes.
+- [x] Agregar estados de foco, tooltip y disabled para los controles principales.
+- [x] Crear pruebas de interacción de apertura/cierre y regresión de acciones existentes.
 
 #### Archivos propios
 
@@ -373,14 +373,14 @@ frontend/src/features/editor/*.test.tsx
 
 #### Inputs recibidos
 
-- [ ] Persona 2: identidad y estado del proyecto.
-- [ ] Persona 3: estados observables que deben mostrarse.
+- [x] Persona 2: identidad y estado del proyecto.
+- [x] Persona 3: estados observables que deben mostrarse.
 
 #### Entregable y criterio de cierre
 
-- [ ] Con paneles cerrados, el canvas ocupa prácticamente toda el área debajo de la topbar.
-- [ ] Ninguna función ya entregada desaparece.
-- [ ] La UI reserva un punto estable para que Persona 5 muestre usuarios y cursores.
+- [x] Con paneles cerrados, el canvas ocupa prácticamente toda el área debajo de la topbar.
+- [x] Ninguna función ya entregada desaparece.
+- [x] La UI reserva un punto estable para que Persona 5 muestre usuarios y cursores.
 
 ---
 
@@ -496,7 +496,7 @@ Handoff obligatorio de cada persona:
 - [x] Persona 1 termina PythonExecutor, valores y Watchdog.
 - [x] Persona 2 termina tipos/compilador IR v2 y protocolo de proyecto.
 - [x] Persona 3 inicia desde los fixtures congelados, sin modificar contratos.
-- [ ] Persona 4 construye topbar y paneles sobre las APIs existentes.
+- [x] Persona 4 construye topbar y paneles sobre las APIs existentes.
 
 ### Lunes 19, tarde — motores e integración web
 
@@ -553,11 +553,11 @@ Handoff obligatorio de cada persona:
 
 ### UI, calidad y entrega
 
-- [ ] La topbar y paneles liberan el canvas sin eliminar funciones.
+- [x] La topbar y paneles liberan el canvas sin eliminar funciones.
 - [ ] La Pico física es la fuente oficial del estado remoto.
 - [ ] Las 85 pruebas de firmware existentes continúan aprobando junto con las nuevas.
-- [ ] Las 70 pruebas frontend existentes continúan aprobando junto con las nuevas.
-- [ ] TypeScript, lint y build aprueban.
+- [x] Las 70 pruebas frontend existentes continúan aprobando junto con las nuevas (99 pruebas aprobadas en total).
+- [x] TypeScript, lint y build aprueban.
 - [ ] No hay credenciales en Git ni en el ZIP.
 - [ ] La guía demo coincide con el comportamiento observado.
 

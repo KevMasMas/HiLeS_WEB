@@ -331,12 +331,68 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
   - En la simulación local de la web, `paso()` avanza el tiempo en 0 ms, así que los retardos solo avanzan cuando el llamador indica tiempo. En la Pico, `EngineTaskV2` usa el tiempo real del scheduler.
 - **Reversión, si aplica:** eliminar los archivos creados listados, restaurar `firmware/tests/test_hiles_engine.py` y revertir esta entrada y las casillas de Persona 3 del plan. No hay migraciones persistentes.
 
+### [2026-10-19 12:38] — Responsable: Juan David Romero (Persona 4)
+
+- **Estado:** [x] Implementación funcional terminada y validada en escritorio con pruebas automáticas, lint y build. [!] Queda pendiente la inspección visual manual en todas las resoluciones exactas que se usarán durante la demo.
+- **Actividad del plan:** Persona 4 — Topbar y aprovechamiento del canvas (9 de las 10 casillas de «Control de avance nuevo» y los 3 criterios del entregable completados).
+- **Revisión previa:**
+  - Se revisaron el shell anterior de `Editor`, la paleta, propiedades, simulación y MQTT, preservando las APIs y stores existentes.
+  - Se consumieron la identidad de proyecto y `asegurarProjectIdEnUrl` entregados por Persona 2, además de los estados locales/remotos expuestos por Personas 2 y 3.
+  - Se evitó modificar `App.tsx`, propiedad de Persona 5, mediante un punto de montaje estable para el panel MQTT y otro contenedor reservado para colaboración.
+- **Qué se implementó:**
+  1. **Topbar compacta (`TopBar.tsx`):** agrupación de proyecto, archivo, nuevo, importar, exportar, undo/redo, apertura de paneles y acciones de ejecución. Muestra permanentemente modo Local/Pico, estado de ejecución y conexión MQTT, con `title`, etiquetas accesibles, foco visible y estados `disabled`.
+  2. **Identidad y archivo del proyecto (`Editor.tsx`):** lectura y normalización de `?project=<id>`, edición del identificador desde la barra, nombre del JSON importado y exportación con el identificador actual, sin retirar autosave ni atajos de undo/redo.
+  3. **Dock de paneles (`PanelDock.tsx`, `panelState.ts`):** Propiedades, Simulación y MQTT comparten un único panel flotante con tabs, cierre y conmutación exclusiva. Al cerrarlo no se reserva un rail lateral y el canvas recupera el área disponible.
+  4. **Paleta flotante (`Palette.tsx`):** se retiró el botón duplicado y se integró la apertura en la topbar; la paleta puede cerrarse desde su propia cabecera y se superpone al canvas sin reducirlo permanentemente.
+  5. **Simulación integrada (`SimulationPanel.tsx`):** modo `embedded` para conservar selección Local/Pico, sesión remota, inyección de entradas y eventos, mientras las acciones Paso/Ejecutar/Detener/Reiniciar quedan centralizadas en la topbar sin duplicarse.
+  6. **MQTT integrado sin segunda instancia (`MqttPanel.tsx`, `panelPortal.ts`):** el panel existente se monta en el dock mediante portal y un store externo pequeño; así se conservan la única conexión, las suscripciones y la integración previa sin tocar `App.tsx`.
+  7. **Shell adaptable (`editor.css`, `simulation.css`, `mqtt.css`):** topbar, chips de estado, paneles flotantes, foco, estados activos/deshabilitados y breakpoints para escritorio y anchos reducidos.
+  8. **Punto de integración de Persona 5:** `#hiles-collaboration-slot` con `data-collaboration-slot` queda estable en la topbar para montar participantes sin editar los archivos de Persona 4.
+  9. **Pruebas (`PanelDock.test.tsx`, `panelState.ts`, `vitest.config.ts`):** apertura, cambio y cierre del dock, exclusividad del panel activo y disponibilidad de controles de ejecución Local/Pico.
+- **Archivos creados:**
+  - `frontend/src/features/editor/TopBar.tsx`
+  - `frontend/src/features/editor/PanelDock.tsx`
+  - `frontend/src/features/editor/PanelDock.test.tsx`
+  - `frontend/src/features/editor/panelState.ts`
+  - `frontend/src/features/editor/panelPortal.ts`
+- **Archivos modificados:**
+  - `frontend/src/features/editor/Editor.tsx`
+  - `frontend/src/features/editor/Palette.tsx`
+  - `frontend/src/features/editor/editor.css`
+  - `frontend/src/features/simulation/SimulationPanel.tsx`
+  - `frontend/src/features/simulation/simulation.css`
+  - `frontend/src/features/mqtt/MqttPanel.tsx`
+  - `frontend/src/features/mqtt/mqtt.css`
+  - `frontend/vitest.config.ts`
+  - `entregas/entrega-6-20-octubre/PLAN_IMPLEMENTACION_ENTREGA_20.md`
+  - `entregas/entrega-6-20-octubre/REGISTRO_CAMBIOS.md`
+- **Archivos de otros integrantes tocados:** ninguno. En particular, `frontend/src/App.tsx` no se modificó; el panel MQTT existente se reubica mediante portal.
+- **Commit o rama:** rama `mqtt-pico`; cambios locales todavía sin commit ni push.
+- **Cómo se probó:**
+  - Pruebas frontend, desde `frontend/`: `npm run test:run` → **16 archivos y 99 pruebas aprobadas**.
+  - Linter: `npm run lint` → **aprobado sin errores**.
+  - TypeScript y build de producción: `npm run build` → **exit code 0**. Vite solo informó las advertencias preexistentes de Pyodide externalizado y tamaño del bundle.
+  - Pruebas focales nuevas: apertura/cambio/cierre de paneles, un único panel activo y habilitación/deshabilitación de Paso, Ejecutar, Reiniciar y Detener según motor Local o sesión Pico.
+- **Resultado obtenido:**
+  - Con paleta y dock cerrados, el canvas ocupa toda el área de trabajo bajo la topbar.
+  - Importación, exportación, autosave, undo/redo, edición de propiedades/código, simulación local/remota y MQTT conservan sus rutas existentes.
+  - Los controles dispersos quedan centralizados sin crear un segundo cliente MQTT ni una segunda suscripción.
+  - Persona 5 dispone de un contenedor estable para participantes y puede conservar la instancia MQTT montada desde `App.tsx`.
+- **Evidencia:** suite completa de 99 pruebas, lint y build aprobados en la consola de trabajo; pruebas focales en `frontend/src/features/editor/PanelDock.test.tsx`.
+- **Impacto sobre otros integrantes:**
+  - **Persona 5:** puede montar la lista de participantes en `#hiles-collaboration-slot` o `[data-collaboration-slot]`; el panel MQTT se inserta en `#hiles-mqtt-panel-slot` sin cambios en `App.tsx`.
+  - **Integración:** `Editor` conserva los stores, importación/exportación y contratos de ejecución existentes; no cambia el formato JSON ni la IR v2.
+- **Riesgos o pendientes:**
+  - Falta inspeccionar manualmente la interfaz en cada resolución exacta de escritorio usada en la demo. La automatización del navegador se detuvo porque no pudo verificar con seguridad la URL de Brave; por eso esa casilla permanece abierta en el plan.
+  - Los breakpoints responsivos están implementados, pero no sustituyen la evidencia visual pendiente.
+- **Reversión, si aplica:** eliminar los cinco archivos creados, restaurar los ocho archivos funcionales modificados y revertir esta entrada y las casillas de Persona 4 en el plan. No hay migraciones persistentes ni cambios de formato JSON.
+
 ## Confirmación de responsables
 
 - [x] Persona 1 — Nombre: Kevin Rincón
 - [x] Persona 2 — Nombre: Ivan Felipe Prado Blanco
 - [x] Persona 3 — Nombre: Juan Ramos
-- [ ] Persona 4 — Nombre:
+- [x] Persona 4 — Nombre: Juan David Romero
 - [ ] Persona 5 — Nombre:
 
 ## Control de integración
@@ -344,7 +400,7 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
 - [x] Persona 1 registra contrato y runtime autónomo; integración IR v2 y prueba física continúan pendientes.
 - [x] Persona 2 registra protocolo web y URL.
 - [x] Persona 3 registra motor v2, semáforos y sensores; integración en `main.py` y prueba física continúan pendientes.
-- [ ] Persona 4 registra UI/UX.
+- [x] Persona 4 registra UI/UX; queda pendiente únicamente la comprobación visual en las resoluciones exactas de la demo.
 - [ ] Persona 5 registra colaboración e integración.
 - [ ] Todos los integrantes registraron sus cambios y pruebas.
 - [ ] La entrada de cierre coincide con los resultados reales.
