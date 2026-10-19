@@ -36,6 +36,7 @@ import type {
   ServicioInyectable,
   ValorRuntime,
 } from './tipos';
+import { ejecutarPython, type EntradasRuntime } from './EjecutorCodigo';
 import { evaluarExpresionIr } from '../services/ir/expresiones';
 import type {
   IrEstadoElementoV2,
@@ -47,7 +48,9 @@ import type {
 } from '../services/ir/tiposIrV2';
 import {
   ErrorPythonPerfilIrV2,
-  ejecutarCodigoPythonPerfilV2,
+  normalizarEntradasPython,
+  normalizarSalidasPython,
+  validarCodigoPythonPerfilV2,
 } from '../services/ir/validadorIrV2';
 
 export interface OpcionesMotor {
@@ -717,6 +720,7 @@ export class MotorSimulacion {
 
     const valorRuntime = valor as unknown as ValorRuntime;
     elemento.establecerValor(valorRuntime);
+    this.bus.registrarMuestraService(servicioId, valorRuntime);
     const mensaje = `${this.nombreDe(servicioId)} recibió ${
       typeof valor === 'object' ? JSON.stringify(valor) : String(valor)
     }.`;
@@ -787,48 +791,36 @@ export class MotorSimulacion {
         ).trim();
         const entradasTipadas = meta?.entradasTipadas ?? [];
         const salidasTipadas = meta?.salidasTipadas ?? [];
-        const usaWorkerMock =
-          typeof globalThis.Worker === 'function' &&
-          salidasTipadas.length <= 1 &&
-          !/^\s*def\s+calcular\b/m.test(codigo);
-
-        if (usaWorkerMock) {
-          salidasCalculadas = await ejecutorAsyncPorDefecto(
-            elementoId,
-            elemento,
+        try {
+          validarCodigoPythonPerfilV2(codigo, entradasTipadas, salidasTipadas);
+          const entradasActuales = this.entradasPorNodo.get(elementoId) ?? {};
+          const entradasNormalizadas = normalizarEntradasPython(
+            entradasActuales,
+            entradasTipadas,
           );
-          const errInterno = elemento.obtenerEstado().error;
-          if (errInterno) {
-            this.erroresNodos.set(elementoId, errInterno);
-          } else {
-            this.erroresNodos.delete(elementoId);
+          const resultadoBruto = await ejecutarPython(codigo, {
+            ...entradasActuales,
+            ...(entradasNormalizadas as unknown as EntradasRuntime),
+          });
+          const salidasDict = normalizarSalidasPython(
+            resultadoBruto,
+            salidasTipadas,
+          );
+          salidasCalculadas = new Map();
+          for (const [puertoId, val] of Object.entries(salidasDict)) {
+            salidasCalculadas.set(puertoId, val as ValorRuntime);
           }
-        } else {
-          try {
-            const entradasActuales =
-              this.entradasPorNodo.get(elementoId) ?? {};
-            const salidasDict = ejecutarCodigoPythonPerfilV2(
-              codigo,
-              entradasActuales,
-              entradasTipadas,
-              salidasTipadas,
-            );
-            salidasCalculadas = new Map();
-            for (const [puertoId, val] of Object.entries(salidasDict)) {
-              salidasCalculadas.set(puertoId, val as ValorRuntime);
-            }
-            this.erroresNodos.delete(elementoId);
-          } catch (err) {
-            const codigoError =
-              err instanceof ErrorPythonPerfilIrV2
-                ? err.codigo
-                : 'PYTHON_EJECUCION_ERROR';
-            this.erroresNodos.set(elementoId, codigoError);
-            throw new Error(
-              `${codigoError}: ${err instanceof Error ? err.message : String(err)}`,
-              { cause: err },
-            );
-          }
+          this.erroresNodos.delete(elementoId);
+        } catch (err) {
+          const codigoError =
+            err instanceof ErrorPythonPerfilIrV2
+              ? err.codigo
+              : 'PYTHON_EJECUCION_ERROR';
+          this.erroresNodos.set(elementoId, codigoError);
+          throw new Error(
+            `${codigoError}: ${err instanceof Error ? err.message : String(err)}`,
+            { cause: err },
+          );
         }
       }
     } else {

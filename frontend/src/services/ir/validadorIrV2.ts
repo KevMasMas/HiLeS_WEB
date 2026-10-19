@@ -1,3 +1,4 @@
+import { MQTT_MAX_PAYLOAD_BYTES } from '../mqtt/config';
 import { profundidadExpresion } from './expresiones';
 import {
   IR_MAX_CONEXIONES,
@@ -6,6 +7,13 @@ import {
   IR_PUERTO_CONDICION,
   type IrModeloV1,
 } from './tiposIr';
+
+/** Margen reservado para el sobre MQTT (`modelo/cargar`: ids, versión, etc.). */
+export const IR_MARGEN_SOBRE_MQTT_BYTES_V2 = 1024;
+
+/** Tamaño máximo permitido para el JSON serializado de un modelo IR v2 dentro del límite MQTT de 32 KiB. */
+export const IR_MAX_MODELO_BYTES_V2 =
+  MQTT_MAX_PAYLOAD_BYTES - IR_MARGEN_SOBRE_MQTT_BYTES_V2;
 import {
   IR_LIMITES_CANALES_V2,
   IR_LIMITES_PYTHON_V2,
@@ -900,250 +908,51 @@ export function validarCodigoPythonPerfilV2(
   };
 }
 
-function traducirExpresionPythonAJs(expr: string): string {
-  const segmentos: Array<{ esCadena: boolean; texto: string }> = [];
-  let i = 0;
-  const n = expr.length;
-  let buffer = '';
-
-  while (i < n) {
-    const ch = expr[i];
-    if (ch === '"' || ch === "'") {
-      if (buffer) {
-        segmentos.push({ esCadena: false, texto: buffer });
-        buffer = '';
-      }
-      const quote = ch;
-      let strToken = ch;
-      i += 1;
-      while (i < n) {
-        if (expr[i] === '\\' && i + 1 < n) {
-          strToken += expr[i] + expr[i + 1];
-          i += 2;
-          continue;
-        }
-        strToken += expr[i];
-        if (expr[i] === quote) {
-          i += 1;
-          break;
-        }
-        i += 1;
-      }
-      segmentos.push({ esCadena: true, texto: strToken });
-      continue;
-    }
-    buffer += ch;
-    i += 1;
-  }
-  if (buffer) {
-    segmentos.push({ esCadena: false, texto: buffer });
-  }
-
-  const transformado = segmentos
-    .map((seg) => {
-      if (seg.esCadena) {
-        return seg.texto;
-      }
-      return seg.texto
-        .replace(/\bTrue\b/g, 'true')
-        .replace(/\bFalse\b/g, 'false')
-        .replace(/\bNone\b/g, 'null')
-        .replace(/\bis\s+not\b/g, '!==')
-        .replace(/\bis\b/g, '===')
-        .replace(/\band\b/g, '&&')
-        .replace(/\bor\b/g, '||')
-        .replace(/\bnot\b/g, '!')
-        .replace(/\bif\b/g, '/**PY_IF**/')
-        .replace(/\belse\b/g, '/**PY_ELSE**/')
-        .replace(/\/\//g, '/**INTDIV**/');
-    })
-    .join('');
-
-  let conTernario = transformado;
-  const regexTernario =
-    /^(.+?)\s*\/\*\*PY_IF\*\*\/\s*(.+?)\s*\/\*\*PY_ELSE\*\*\/\s*(.+)$/;
-  let iter = 0;
-  while (regexTernario.test(conTernario) && iter < 8) {
-    conTernario = conTernario.replace(regexTernario, '(($2) ? ($1) : ($3))');
-    iter += 1;
-  }
-
-  return conTernario.replace(
-    /([A-Za-z0-9_\]})]+)\s*\/\*\*INTDIV\*\*\/\s*([A-Za-z0-9_[({+-]+)/g,
-    'Math.floor(($1) / ($2))',
-  );
-}
-
-function compilarCuerpoFuncionPythonAJs(
-  lineas: string[],
-  parametrosPredeclarados: Iterable<string> = [],
-): string {
-  interface LineaIndentada {
-    indent: number;
-    texto: string;
-  }
-
-  const cuerpo: LineaIndentada[] = [];
-  for (let i = 1; i < lineas.length; i += 1) {
-    const raw = lineas[i];
-    const sinComentario = raw.replace(/#.*$/, '');
-    if (sinComentario.trim().length === 0) {
-      continue;
-    }
-    const matchIndent = sinComentario.match(/^(\s*)(.*)$/);
-    const espacios = matchIndent ? matchIndent[1].replace(/\t/g, '    ').length : 0;
-    const texto = matchIndent ? matchIndent[2].trim() : sinComentario.trim();
-    cuerpo.push({ indent: espacios, texto });
-  }
-
-  if (cuerpo.length === 0) {
-    throw new ErrorPythonPerfilIrV2(
-      'PYTHON_COMPILACION_ERROR',
-      'La función calcular() no contiene sentencias ejecutables.',
-    );
-  }
-
-  const pilaIndent: number[] = [cuerpo[0].indent];
-  const jsLines: string[] = [];
-  const variablesDeclaradas = new Set<string>(parametrosPredeclarados);
-
-  for (let idx = 0; idx < cuerpo.length; idx += 1) {
-    const { indent, texto } = cuerpo[idx];
-
-    while (pilaIndent.length > 1 && indent < pilaIndent[pilaIndent.length - 1]) {
-      pilaIndent.pop();
-      jsLines.push('}');
-    }
-
+export function normalizarEntradasPython(
+  valoresEntrada: Record<string, unknown>,
+  definicionEntradas: IrPuertoTipadoV2[],
+): Record<string, IrValorRuntimeV2> {
+  const entradasNormalizadas: Record<string, IrValorRuntimeV2> = {};
+  for (const descriptor of definicionEntradas) {
+    let bruto: unknown;
+    let presente = false;
     if (
-      indent < pilaIndent[pilaIndent.length - 1] ||
-      (indent > pilaIndent[pilaIndent.length - 1] &&
-        !jsLines[jsLines.length - 1]?.endsWith('{'))
+      descriptor.variable in valoresEntrada &&
+      valoresEntrada[descriptor.variable] !== undefined &&
+      valoresEntrada[descriptor.variable] !== null
     ) {
-      throw new ErrorPythonPerfilIrV2(
-        'PYTHON_COMPILACION_ERROR',
-        `Indentación inválida cerca de '${texto}'.`,
+      bruto = valoresEntrada[descriptor.variable];
+      presente = true;
+    } else if (
+      descriptor.puerto in valoresEntrada &&
+      valoresEntrada[descriptor.puerto] !== undefined &&
+      valoresEntrada[descriptor.puerto] !== null
+    ) {
+      bruto = valoresEntrada[descriptor.puerto];
+      presente = true;
+    }
+
+    if (!presente) {
+      continue;
+    }
+
+    try {
+      entradasNormalizadas[descriptor.variable] = validarValorRuntimeIrV2(
+        bruto,
+        descriptor.tipo_dato,
+        { coerce: true },
       );
-    }
-
-    if (/^if\s+(.+):$/.test(texto)) {
-      const m = texto.match(/^if\s+(.+):$/)!;
-      jsLines.push(`if (${traducirExpresionPythonAJs(m[1])}) {`);
-      const sig = cuerpo[idx + 1];
-      if (!sig || sig.indent <= indent) {
-        throw new ErrorPythonPerfilIrV2(
-          'PYTHON_COMPILACION_ERROR',
-          'Bloque if sin cuerpo indentado.',
-        );
+    } catch (err) {
+      if (err instanceof ErrorValorRuntimeIrV2) {
+        throw new ErrorPythonPerfilIrV2(err.codigo, err.message);
       }
-      pilaIndent.push(sig.indent);
-      continue;
+      throw err;
     }
-
-    if (/^elif\s+(.+):$/.test(texto)) {
-      const m = texto.match(/^elif\s+(.+):$/)!;
-      if (jsLines[jsLines.length - 1] === '}') {
-        jsLines.pop();
-      } else {
-        throw new ErrorPythonPerfilIrV2(
-          'PYTHON_COMPILACION_ERROR',
-          'elif sin bloque if previo.',
-        );
-      }
-      jsLines.push(`} else if (${traducirExpresionPythonAJs(m[1])}) {`);
-      const sig = cuerpo[idx + 1];
-      if (!sig || sig.indent <= indent) {
-        throw new ErrorPythonPerfilIrV2(
-          'PYTHON_COMPILACION_ERROR',
-          'Bloque elif sin cuerpo indentado.',
-        );
-      }
-      pilaIndent.push(sig.indent);
-      continue;
-    }
-
-    if (/^else\s*:$/.test(texto)) {
-      if (jsLines[jsLines.length - 1] === '}') {
-        jsLines.pop();
-      } else {
-        throw new ErrorPythonPerfilIrV2(
-          'PYTHON_COMPILACION_ERROR',
-          'else sin bloque if/elif previo.',
-        );
-      }
-      jsLines.push('} else {');
-      const sig = cuerpo[idx + 1];
-      if (!sig || sig.indent <= indent) {
-        throw new ErrorPythonPerfilIrV2(
-          'PYTHON_COMPILACION_ERROR',
-          'Bloque else sin cuerpo indentado.',
-        );
-      }
-      pilaIndent.push(sig.indent);
-      continue;
-    }
-
-    if (/^pass$/.test(texto)) {
-      jsLines.push('/* pass */');
-      continue;
-    }
-
-    if (/^return(?:\s+(.*))?$/.test(texto)) {
-      const m = texto.match(/^return(?:\s+(.*))?$/)!;
-      const exprRet = m[1] ? traducirExpresionPythonAJs(m[1].trim()) : 'null';
-      jsLines.push(`return (${exprRet});`);
-      continue;
-    }
-
-    const matchAug = texto.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*(\+=|-=|\*=|\/=|%=)\s*(.+)$/);
-    if (matchAug) {
-      const varName = matchAug[1];
-      const op = matchAug[2];
-      const rhs = traducirExpresionPythonAJs(matchAug[3]);
-      if (!variablesDeclaradas.has(varName)) {
-        throw new ErrorPythonPerfilIrV2(
-          'PYTHON_EJECUCION_ERROR',
-          `Variable '${varName}' usada antes de asignarse.`,
-        );
-      }
-      jsLines.push(`${varName} ${op} (${rhs});`);
-      continue;
-    }
-
-    const matchAssign = texto.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?!=)(.+)$/);
-    if (matchAssign) {
-      const varName = matchAssign[1];
-      if (!esIdentificadorPythonValido(varName) || PYTHON_FORBIDDEN_WORDS.has(varName)) {
-        throw new ErrorPythonPerfilIrV2(
-          'PYTHON_PERFIL_PROHIBIDO',
-          `Nombre de variable '${varName}' no permitido.`,
-        );
-      }
-      const rhs = traducirExpresionPythonAJs(matchAssign[2]);
-      if (variablesDeclaradas.has(varName)) {
-        jsLines.push(`${varName} = (${rhs});`);
-      } else {
-        variablesDeclaradas.add(varName);
-        jsLines.push(`let ${varName} = (${rhs});`);
-      }
-      continue;
-    }
-
-    throw new ErrorPythonPerfilIrV2(
-      'PYTHON_PERFIL_PROHIBIDO',
-      `Sentencia no soportada en perfil Python: '${texto}'.`,
-    );
   }
-
-  while (pilaIndent.length > 1) {
-    pilaIndent.pop();
-    jsLines.push('}');
-  }
-
-  return jsLines.join('\n');
+  return entradasNormalizadas;
 }
 
-function normalizarSalidasPython(
+export function normalizarSalidasPython(
   resultadoBruto: unknown,
   salidas: IrPuertoTipadoV2[],
 ): Record<string, IrValorRuntimeV2> {
@@ -1211,162 +1020,6 @@ function normalizarSalidasPython(
   }
 
   return resultadoPorPuerto;
-}
-
-export function ejecutarCodigoPythonPerfilV2(
-  codigo: string,
-  valoresEntrada: Record<string, unknown>,
-  definicionEntradas: IrPuertoTipadoV2[],
-  definicionSalidas: IrPuertoTipadoV2[],
-): Record<string, IrValorRuntimeV2> {
-  const analisis = validarCodigoPythonPerfilV2(
-    codigo,
-    definicionEntradas,
-    definicionSalidas,
-  );
-
-  const entradasNormalizadas: Record<string, IrValorRuntimeV2> = {};
-  const entradasPresentes: Record<string, IrValorRuntimeV2> = {};
-  for (const descriptor of definicionEntradas) {
-    let bruto: unknown;
-    let estabaPresente = false;
-    if (
-      descriptor.variable in valoresEntrada &&
-      valoresEntrada[descriptor.variable] !== undefined &&
-      valoresEntrada[descriptor.variable] !== null
-    ) {
-      bruto = valoresEntrada[descriptor.variable];
-      estabaPresente = true;
-    } else if (
-      descriptor.puerto in valoresEntrada &&
-      valoresEntrada[descriptor.puerto] !== undefined &&
-      valoresEntrada[descriptor.puerto] !== null
-    ) {
-      bruto = valoresEntrada[descriptor.puerto];
-      estabaPresente = true;
-    } else {
-      bruto = valorPorDefectoParaTipoIrV2(descriptor.tipo_dato);
-    }
-
-    if (!estabaPresente) {
-      entradasNormalizadas[descriptor.variable] = valorPorDefectoParaTipoIrV2(
-        descriptor.tipo_dato,
-      );
-    } else {
-      try {
-        const valorValidado = validarValorRuntimeIrV2(
-          bruto,
-          descriptor.tipo_dato,
-          { coerce: true },
-        );
-        entradasNormalizadas[descriptor.variable] = valorValidado;
-        entradasPresentes[descriptor.variable] = valorValidado;
-        entradasPresentes[descriptor.puerto] = valorValidado;
-      } catch (err) {
-        if (err instanceof ErrorValorRuntimeIrV2) {
-          throw new ErrorPythonPerfilIrV2(err.codigo, err.message);
-        }
-        throw err;
-      }
-    }
-  }
-
-  const builtinsSeguros = {
-    abs: (x: number) => Math.abs(Number(x)),
-    bool: (x: unknown) => {
-      if (Array.isArray(x)) return x.length > 0;
-      if (esObjetoPlano(x)) return Object.keys(x).length > 0;
-      return Boolean(x);
-    },
-    float: (x: unknown) => {
-      const n = Number(x);
-      if (Number.isNaN(n)) {
-        throw new Error('float() inválido');
-      }
-      return n;
-    },
-    int: (x: unknown) => {
-      const n = typeof x === 'string' ? Number.parseInt(x, 10) : Math.trunc(Number(x));
-      if (Number.isNaN(n)) {
-        throw new Error('int() inválido');
-      }
-      return n;
-    },
-    len: (x: unknown) => {
-      if (typeof x === 'string' || Array.isArray(x)) return x.length;
-      if (esObjetoPlano(x)) return Object.keys(x).length;
-      throw new Error('len() requiere lista, cadena o dict');
-    },
-    max: (...args: unknown[]) => {
-      const lista = args.length === 1 && Array.isArray(args[0]) ? args[0] : args;
-      if (lista.length === 0) throw new Error('max() sobre secuencia vacía');
-      return Math.max(...lista.map((v) => Number(v)));
-    },
-    min: (...args: unknown[]) => {
-      const lista = args.length === 1 && Array.isArray(args[0]) ? args[0] : args;
-      if (lista.length === 0) throw new Error('min() sobre secuencia vacía');
-      return Math.min(...lista.map((v) => Number(v)));
-    },
-    round: (x: number, ndigits?: number) => {
-      const num = Number(x);
-      if (ndigits === undefined) return Math.round(num);
-      const factor = 10 ** Number(ndigits);
-      return Math.round(num * factor) / factor;
-    },
-    str: (x: unknown) => (x === null ? 'None' : String(x)),
-    sum: (iterable: unknown, start = 0) => {
-      if (!Array.isArray(iterable)) throw new Error('sum() requiere una lista');
-      return iterable.reduce((acc: number, item) => acc + Number(item), Number(start));
-    },
-  };
-
-  const inputsWrapper = {
-    ...entradasNormalizadas,
-    get: (clave: string, defecto: unknown = null) =>
-      Object.prototype.hasOwnProperty.call(entradasPresentes, clave)
-        ? entradasPresentes[clave]
-        : defecto,
-  };
-
-  const nombresParam = Object.keys(entradasNormalizadas);
-  const nombresBuiltin = Object.keys(builtinsSeguros);
-
-  let cuerpoJs: string;
-  if (analisis.modo === 'expression') {
-    const lineaExpr = codigo
-      .split(/\r?\n/)
-      .map((l) => l.replace(/#.*$/, '').trim())
-      .find((l) => l.length > 0)!;
-    cuerpoJs = `return (${traducirExpresionPythonAJs(lineaExpr)});`;
-  } else {
-    const lineas = codigo.split(/\r?\n/);
-    cuerpoJs = compilarCuerpoFuncionPythonAJs(lineas, nombresParam);
-  }
-
-  let resultadoBruto: unknown;
-  try {
-    const fn = new Function(
-      ...nombresBuiltin,
-      'inputs',
-      ...nombresParam,
-      `"use strict";\n${cuerpoJs}`,
-    );
-    resultadoBruto = fn(
-      ...nombresBuiltin.map((k) => builtinsSeguros[k as keyof typeof builtinsSeguros]),
-      inputsWrapper,
-      ...nombresParam.map((k) => entradasNormalizadas[k]),
-    );
-  } catch (err) {
-    if (err instanceof ErrorPythonPerfilIrV2) {
-      throw err;
-    }
-    throw new ErrorPythonPerfilIrV2(
-      'PYTHON_EJECUCION_ERROR',
-      `Error ejecutando bloque Python: ${err instanceof Error ? err.message : String(err)}`,
-    );
-  }
-
-  return normalizarSalidasPython(resultadoBruto, definicionSalidas);
 }
 
 /**
@@ -2856,6 +2509,17 @@ export function validarModeloIrV2(
     elementos: elementosValidados,
     conexiones: conexionesValidadas,
   };
+
+  const bytesModelo = contarBytesUtf8(JSON.stringify(modeloValidado));
+  if (bytesModelo > IR_MAX_MODELO_BYTES_V2) {
+    errores.push({
+      codigo: 'IR_LIMITE_EXCEDIDO',
+      severidad: 'error',
+      mensaje: `El modelo IR v2 compilado ocupa ${bytesModelo} bytes y supera el tamaño máximo permitido para publicación MQTT (${IR_MAX_MODELO_BYTES_V2} bytes útiles dentro del límite de ${MQTT_MAX_PAYLOAD_BYTES} bytes).`,
+      ruta: 'modelo',
+    });
+    return responder(null);
+  }
 
   return responder(modeloValidado);
 }

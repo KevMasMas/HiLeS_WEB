@@ -14,6 +14,7 @@ import {
   type MensajeSimulacionEstado,
   type ModeloEjecutableMqtt,
   type ValorMensajeMqtt,
+  type ValorMensajeMqttV2,
 } from './messages';
 import {
   construirTopicosProyectoV2,
@@ -85,9 +86,20 @@ export class RemoteExecutionClient {
   private sesion: SesionRemota | null = null;
   private topicosProyecto: TopicosProyectoV2 | null = null;
 
-  constructor(mqtt: ClienteMqttRemoto, idFactory: () => string = crearIdMensaje) {
+  constructor(
+    mqtt: ClienteMqttRemoto,
+    idFactory: () => string = crearIdMensaje,
+    opciones?: { projectId?: string },
+  ) {
     this.mqtt = mqtt;
     this.idFactory = idFactory;
+    if (opciones?.projectId) {
+      this.topicosProyecto = construirTopicosProyectoV2(opciones.projectId);
+    }
+  }
+
+  public obtenerTopicosProyecto(): TopicosProyectoV2 | null {
+    return this.topicosProyecto ? { ...this.topicosProyecto } : null;
   }
 
   public start(): void {
@@ -176,6 +188,10 @@ export class RemoteExecutionClient {
     });
   }
 
+  public cargarModeloIrV2(modelo: ModeloEjecutableMqtt): boolean {
+    return this.cargarModelo(modelo, { irVersion: 2 });
+  }
+
   public enviarComando(accion: AccionSimulacion): boolean {
     const sesion = this.requerirSesion();
     const topic = this.topicosProyecto?.simulacionComando ?? MQTT_TOPICS.SIMULACION_COMANDO;
@@ -187,7 +203,7 @@ export class RemoteExecutionClient {
     });
   }
 
-  public establecerEntrada(servicioId: string, valor: ValorMensajeMqtt): boolean {
+  public establecerEntrada(servicioId: string, valor: ValorMensajeMqtt | ValorMensajeMqttV2): boolean {
     const sesion = this.requerirSesion();
     const topic = this.topicosProyecto?.simulacionEntradaEstablecer ?? MQTT_TOPICS.ENTRADA_ESTABLECER;
     return this.mqtt.publish(topic, {

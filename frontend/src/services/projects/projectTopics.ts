@@ -1,11 +1,12 @@
 import { esProjectIdValido, normalizarProjectId } from './projectUrl';
 
-export const PREFIJO_PROYECTOS_V2_POR_DEFECTO = 'hiles/v2/proyectos';
+export const PREFIJO_PROYECTOS_V2_POR_DEFECTO = 'udfjc/hiles/v2/projects';
 
 export type SufijoTopicoProyectoV2 =
-  | 'edicion/estado'
-  | 'edicion/operacion'
-  | 'edicion/presencia'
+  | 'document/snapshot'
+  | 'document/ops'
+  | 'presence'
+  | 'cursor'
   | 'simulacion/modelo/cargar'
   | 'simulacion/modelo/confirmacion'
   | 'simulacion/comando'
@@ -19,9 +20,18 @@ export type CanalTopicoProyectoV2 = SufijoTopicoProyectoV2;
 export interface TopicosProyectoV2 {
   projectId: string;
   base: string;
+  documentSnapshot: string;
+  documentOps: string;
+  presence: string;
+  cursor: string;
+  /** Alias hacia `documentSnapshot` (`udfjc/hiles/v2/projects/<projectId>/document/snapshot`). */
   edicionEstado: string;
+  /** Alias hacia `documentOps` (`udfjc/hiles/v2/projects/<projectId>/document/ops`). */
   edicionOperacion: string;
+  /** Alias hacia `presence` (`udfjc/hiles/v2/projects/<projectId>/presence`). */
   edicionPresencia: string;
+  /** Alias hacia `cursor` (`udfjc/hiles/v2/projects/<projectId>/cursor`). */
+  edicionCursor: string;
   simulacionModeloCargar: string;
   simulacionModeloConfirmacion: string;
   simulacionComando: string;
@@ -40,9 +50,10 @@ export const POLITICAS_PUBLICACION_PROYECTO_V2: Record<
   SufijoTopicoProyectoV2,
   PoliticaPublicacionProyectoV2
 > = {
-  'edicion/estado': { qos: 1, retain: true },
-  'edicion/operacion': { qos: 1, retain: false },
-  'edicion/presencia': { qos: 0, retain: false },
+  'document/snapshot': { qos: 1, retain: true },
+  'document/ops': { qos: 1, retain: false },
+  presence: { qos: 1, retain: true },
+  cursor: { qos: 0, retain: false },
   'simulacion/modelo/cargar': { qos: 1, retain: true },
   'simulacion/modelo/confirmacion': { qos: 1, retain: false },
   'simulacion/comando': { qos: 1, retain: false },
@@ -64,7 +75,7 @@ function normalizarPrefijoProyectos(
 }
 
 /**
- * Construye todos los tópicos dinámicos del protocolo por proyecto v2 (`hiles/v2/proyectos/<project_id>/...`).
+ * Construye todos los tópicos dinámicos del protocolo por proyecto v2 (`udfjc/hiles/v2/projects/<projectId>/...`).
  */
 export function construirTopicosProyectoV2(
   projectIdRaw: string,
@@ -73,13 +84,22 @@ export function construirTopicosProyectoV2(
   const projectId = normalizarProjectId(projectIdRaw);
   const prefijoLimpio = normalizarPrefijoProyectos(prefijo);
   const base = `${prefijoLimpio}/${projectId}`;
+  const documentSnapshot = `${base}/document/snapshot`;
+  const documentOps = `${base}/document/ops`;
+  const presence = `${base}/presence`;
+  const cursor = `${base}/cursor`;
 
   return {
     projectId,
     base,
-    edicionEstado: `${base}/edicion/estado`,
-    edicionOperacion: `${base}/edicion/operacion`,
-    edicionPresencia: `${base}/edicion/presencia`,
+    documentSnapshot,
+    documentOps,
+    presence,
+    cursor,
+    edicionEstado: documentSnapshot,
+    edicionOperacion: documentOps,
+    edicionPresencia: presence,
+    edicionCursor: cursor,
     simulacionModeloCargar: `${base}/simulacion/modelo/cargar`,
     simulacionModeloConfirmacion: `${base}/simulacion/modelo/confirmacion`,
     simulacionComando: `${base}/simulacion/comando`,
@@ -144,3 +164,40 @@ export function obtenerPoliticaTopicoProyectoV2(
     }
   );
 }
+
+/**
+ * Resuelve la política QoS/retain tanto a partir de un topic completo de proyecto v2
+ * como de un sufijo directo (`document/snapshot`, `document/ops`, `presence`, `cursor`).
+ */
+export function resolverPoliticaTopicoProyectoV2(
+  topicOSufijo: string,
+  prefijo: string = PREFIJO_PROYECTOS_V2_POR_DEFECTO,
+): PoliticaPublicacionProyectoV2 | null {
+  if (SUFIJOS_VALIDOS.has(topicOSufijo)) {
+    return POLITICAS_PUBLICACION_PROYECTO_V2[topicOSufijo as SufijoTopicoProyectoV2];
+  }
+  const parseado = parsearTopicoProyectoV2(topicOSufijo, prefijo);
+  if (!parseado) return null;
+  return POLITICAS_PUBLICACION_PROYECTO_V2[parseado.sufijo];
+}
+
+export function normalizarIdProyectoV2(
+  entrada: string,
+): { ok: true; projectId: string } | { ok: false; error: string } {
+  if (typeof entrada !== 'string' || !entrada.trim()) {
+    return { ok: false, error: 'El identificador de proyecto no puede estar vacío.' };
+  }
+  const limpio = entrada.trim();
+  if (esProjectIdValido(limpio)) {
+    return { ok: true, projectId: limpio };
+  }
+  const normalizado = normalizarProjectId(limpio, '');
+  if (esProjectIdValido(normalizado)) {
+    return { ok: true, projectId: normalizado };
+  }
+  return {
+    ok: false,
+    error: 'El identificador de proyecto debe tener entre 3 y 64 caracteres [a-z0-9_-].',
+  };
+}
+

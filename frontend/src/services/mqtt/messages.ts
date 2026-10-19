@@ -206,35 +206,54 @@ const error = (topic: string, detalle: string): ResultadoValidacionMensaje => ({
 const validarId = (topic: string, payload: Record<string, unknown>): ResultadoValidacionMensaje | null =>
   esTexto(payload.id_mensaje) ? null : error(topic, 'id_mensaje debe ser un texto no vacío');
 
+const MAPA_SUFIJO_SIMULACION_PROYECTO_A_TOPIC: Partial<Record<string, MqttTopic>> = {
+  'simulacion/modelo/cargar': MQTT_TOPICS.MODELO_CARGAR,
+  'simulacion/modelo/confirmacion': MQTT_TOPICS.MODELO_CONFIRMACION,
+  'simulacion/comando': MQTT_TOPICS.SIMULACION_COMANDO,
+  'simulacion/entrada/establecer': MQTT_TOPICS.ENTRADA_ESTABLECER,
+  'simulacion/estado': MQTT_TOPICS.SIMULACION_ESTADO,
+  'simulacion/salida': MQTT_TOPICS.SALIDA,
+  error: MQTT_TOPICS.ERROR,
+};
+
 /**
  * Valida el contrato del mensaje según el topic antes de entregarlo a la UI o
  * al motor HiLeS. Los errores están redactados para poder mostrarlos al usuario.
  */
 export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoValidacionMensaje => {
   const topicoProyectoV2 = parsearTopicoProyectoV2(topic);
+  let topicEsquema: MqttTopic;
+
   if (topicoProyectoV2) {
-    if (!esObjeto(payload)) return error(topic, 'el contenido debe ser un objeto JSON');
-    if (calcularTamanoJson(payload) > MQTT_MAX_PAYLOAD_BYTES) {
-      return error(topic, `el contenido supera el límite de ${MQTT_MAX_PAYLOAD_BYTES} bytes`);
+    const topicSimulacionEquivalente = MAPA_SUFIJO_SIMULACION_PROYECTO_A_TOPIC[topicoProyectoV2.sufijo];
+    if (topicSimulacionEquivalente) {
+      topicEsquema = topicSimulacionEquivalente;
+    } else {
+      if (!esObjeto(payload)) return error(topic, 'el contenido debe ser un objeto JSON');
+      if (calcularTamanoJson(payload) > MQTT_MAX_PAYLOAD_BYTES) {
+        return error(topic, `el contenido supera el límite de ${MQTT_MAX_PAYLOAD_BYTES} bytes`);
+      }
+      const validacionV2 = validarMensajeProyectoPorSufijo(topicoProyectoV2.sufijo, payload);
+      if (!validacionV2.ok || !validacionV2.mensaje) {
+        return error(topic, validacionV2.error ?? 'mensaje de proyecto inválido');
+      }
+      return {
+        valido: true,
+        topic: topic as MqttTopic,
+        mensaje: validacionV2.mensaje,
+      };
     }
-    const validacionV2 = validarMensajeProyectoPorSufijo(topicoProyectoV2.sufijo, payload);
-    if (!validacionV2.ok || !validacionV2.mensaje) {
-      return error(topic, validacionV2.error ?? 'mensaje de proyecto inválido');
-    }
-    return {
-      valido: true,
-      topic: topic as MqttTopic,
-      mensaje: validacionV2.mensaje,
-    };
+  } else {
+    if (!TOPICS_CONOCIDOS.has(topic)) return error(topic, 'el topic no pertenece al contrato MQTT de HiLeS');
+    topicEsquema = topic as MqttTopic;
   }
 
-  if (!TOPICS_CONOCIDOS.has(topic)) return error(topic, 'el topic no pertenece al contrato MQTT de HiLeS');
   if (!esObjeto(payload)) return error(topic, 'el contenido debe ser un objeto JSON');
   if (calcularTamanoJson(payload) > MQTT_MAX_PAYLOAD_BYTES) {
     return error(topic, `el contenido supera el límite de ${MQTT_MAX_PAYLOAD_BYTES} bytes`);
   }
 
-  switch (topic as MqttTopic) {
+  switch (topicEsquema) {
     case MQTT_TOPICS.LED_COMANDO: {
       const idError = validarId(topic, payload);
       if (idError) return idError;

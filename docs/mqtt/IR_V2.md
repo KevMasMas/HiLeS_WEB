@@ -5,7 +5,7 @@ Compatibilidad hacia atrás: modelos `ir_version: 1` son aceptados y migrados au
 Contrato de proyectos asociado: [`PROTOCOLO_PROYECTOS_V2.md`](PROTOCOLO_PROYECTOS_V2.md)  
 Implementaciones de referencia:
 - TypeScript (Web): [`frontend/src/services/ir/`](../../frontend/src/services/ir/) (`tiposIrV2.ts`, `validadorIrV2.ts`, `compiladorIrV2.ts`)
-- Python / MicroPython (Pico): [`iot/src/ir/`](../../iot/src/ir/) (`runtime_values.py`, `python_executor.py`)
+- Python / MicroPython (Pico): [`firmware/pico/hiles/`](../../firmware/pico/hiles/) (`runtime_values.py`, `python_executor.py`)
 
 ---
 
@@ -16,8 +16,8 @@ La **IR v2** amplía la IR v1 para soportar en ambos motores (`MotorSimulacion` 
 1. **Bloques ejecutables completos:** `service`, `functional_block` (en modo `"python"` restringido o `"expresion"` AST), `sample`, `hold`, `place` y `transition`.
 2. **Tipos de datos extendidos (`IrTipoDatoV2`):** `"boolean"`, `"integer"`, `"real"`, `"string"`, `"vector"` (lista finita de números) y `"custom"` (estructura JSON anidada acotada).
 3. **Canales diferenciados:**
-   - `"cch"` (Continuous Channel): retiene la última muestra disponible.
-   - `"dch"` (Discrete Channel): cola FIFO con capacidad acotada (`DEFAULT_DCH_QUEUE_CAPACITY = 8`, `MAX_DCH_QUEUE_CAPACITY = 32`), consumo de **1 evento por paso por puerto** y reporte explícito de desbordamiento (`DCH_COLA_DESBORDADA`).
+   - `"cch"` (Continuous Channel): retiene la última muestra disponible; cuando tiene `retardo_ms > 0`, solo programa o reemplaza una entrega diferida cuando el valor emitido cambia respecto al último valor publicado en esa conexión.
+   - `"dch"` (Discrete Channel): cola FIFO con capacidad acotada (`DEFAULT_DCH_QUEUE_CAPACITY = 8`, `MAX_DCH_QUEUE_CAPACITY = 32`), consumo de **1 evento por paso por puerto** y reporte explícito de desbordamiento (`DCH_COLA_DESBORDADA`). Un `service` conectado a un canal `dch` solo emite eventos discretos cuando recibe una nueva muestra inyectada (`inyectarEntrada`), sin re-encolar su valor retenido en pasos posteriores sin inyección.
    - `"lch"` (Logical Channel): pulso booleano de **un solo paso** (`true` en el paso de emisión, limpiado automáticamente al finalizar el paso).
    - `"arco"`: arco de red de Petri (`place → transition` o `transition → place`) con `peso >= 1`.
 4. **Retardos no bloqueantes (`retardo_ms`):** soportados en elementos (`service`, `functional_block`, `sample`, `hold`, `transition`) y en conexiones de canal (`cch`, `dch`, `lch`), gobernados por reloj lógico monotónico sin bloquear el bucle principal (`sleep`).
@@ -31,7 +31,8 @@ La **IR v2** amplía la IR v1 para soportar en ambos motores (`MotorSimulacion` 
 |---|---|---:|---|
 | Modelo | `elementos.length` | `64` | `IR_LIMITE_EXCEDIDO` |
 | Modelo | `conexiones.length` | `128` | `IR_LIMITE_EXCEDIDO` |
-| Expresión AST | Profundidad máxima | `8` | `IR_LIMITE_EXCEDIDO` |
+| Modelo | Tamaño total JSON serializado (`IR_MAX_MODELO_BYTES_V2`) | `31744` bytes (presupuesto MQTT `32768` bytes) | `IR_LIMITE_EXCEDIDO` |
+| Expresión AST | Profundidad máxima (`IR_MAX_PROFUNDIDAD_AST_V2`) | `16` | `IR_LIMITE_EXCEDIDO` |
 | Valores runtime | `MAX_VALUE_DEPTH` (`custom`) | `6` | `VALOR_LIMITE_EXCEDIDO` |
 | Valores runtime | `MAX_CONTAINER_ITEMS` (`custom`) | `64` | `VALOR_LIMITE_EXCEDIDO` |
 | Valores runtime | `MAX_VECTOR_LENGTH` (`vector`) | `32` | `VALOR_LIMITE_EXCEDIDO` |

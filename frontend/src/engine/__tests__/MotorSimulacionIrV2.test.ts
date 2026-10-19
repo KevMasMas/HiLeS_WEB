@@ -1,14 +1,40 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { MotorSimulacion } from '../MotorSimulacion';
 import { extraerElementosEstadoIrV2, type IrModeloV2 } from '../../services/ir';
+import type { RuntimeValue } from '../../types/hiles';
+
+const WorkerOriginal = globalThis.Worker;
+
+class MockPyodideWorker {
+  onmessage: ((evento: MessageEvent<{ ok: boolean; value?: RuntimeValue; error?: string }>) => void) | null = null;
+  onerror: ((evento: ErrorEvent) => void) | null = null;
+
+  terminate(): void {}
+
+  postMessage(mensaje: { codigo: string; inputs: Record<string, RuntimeValue> }): void {
+    queueMicrotask(() => {
+      const entrada = Number(mensaje.inputs.x ?? 0);
+      this.onmessage?.({
+        data: {
+          ok: true,
+          value: entrada * 2,
+        },
+      } as MessageEvent<{ ok: boolean; value?: RuntimeValue; error?: string }>);
+    });
+  }
+}
+
+afterEach(() => {
+  Object.assign(globalThis, { Worker: WorkerOriginal });
+});
 
 describe('MotorSimulacion con IR v2: canales diferenciados, desbordamiento DCH y retardos', () => {
-  it('consume exactamente 1 evento DCH por paso y reporta DCH_COLA_DESBORDADA al superar capacidad_cola', async () => {
+  it('recorre la ruta real Service → conexión DCH → BusObserver → Hold sin repetir muestras no inyectadas y reporta DCH_COLA_DESBORDADA', async () => {
     const modelo: IrModeloV2 = {
       ir_version: 2,
       modelo_id: 'dch-fifo-overflow',
       version: 1,
-      nombre: 'Cola DCH FIFO y overflow',
+      nombre: 'Cola DCH FIFO y overflow por ruta real Service -> Hold',
       metadata: {
         documento_schema_version: 2,
         compilado_en: '2026-10-18T12:00:00.000Z',
@@ -58,15 +84,12 @@ describe('MotorSimulacion con IR v2: canales diferenciados, desbordamiento DCH y
     const motor = new MotorSimulacion();
     motor.construirDesdeIrV2(modelo);
 
-    // Encolamos directamente 3 eventos en la conexión DCH de capacidad 2 antes de consumir
-    const bus = motor.obtenerBus();
-    bus.encolarEventoDch('hold-1', 'in', 10, 2);
-    bus.encolarEventoDch('hold-1', 'in', 20, 2);
-    bus.encolarEventoDch('hold-1', 'in', 30, 2);
+    // Inyectamos 3 muestras reales en el Service antes del paso 1 (capacidad_cola = 2)
+    expect(motor.inyectarEntrada('srv-eventos', 10).exito).toBe(true);
+    expect(motor.inyectarEntrada('srv-eventos', 20).exito).toBe(true);
+    expect(motor.inyectarEntrada('srv-eventos', 30).exito).toBe(true);
 
-    expect(bus.obtenerEstadoColaDch('hold-1', 'in')?.desbordada).toBe(true);
-
-    // Paso 1: consume el primer evento FIFO (10), queda 1 en cola (20)
+    // Paso 1: Service publica las 3 muestras por DCH -> entran 10 y 20, 30 desborda, Hold consume 10
     await motor.paso();
     expect(
       motor
@@ -82,7 +105,7 @@ describe('MotorSimulacion con IR v2: canales diferenciados, desbordamiento DCH y
       cola_desbordada: true,
     });
 
-    // Paso 2: consume el segundo evento FIFO (20), cola queda en 0
+    // Paso 2 (sin nueva inyección): Service NO vuelve a emitir 30 por DCH; Hold consume el segundo evento FIFO (20)
     await motor.paso();
     const estado2 = extraerElementosEstadoIrV2(modelo, motor);
     expect(estado2['hold-1']).toMatchObject({
@@ -93,7 +116,7 @@ describe('MotorSimulacion con IR v2: canales diferenciados, desbordamiento DCH y
     });
     expect(estado2['hold-1']?.cola_dch).toBeUndefined();
 
-    // Paso 3: sin nuevos eventos, el pulso LCH baja a false pero CCH retiene 20
+    // Paso 3 (sin nueva inyección): el Service mantiene su valor pero NO genera eventos DCH repetidos
     await motor.paso();
     const estado3 = extraerElementosEstadoIrV2(modelo, motor);
     expect(estado3['hold-1']).toMatchObject({
@@ -101,6 +124,93 @@ describe('MotorSimulacion con IR v2: canales diferenciados, desbordamiento DCH y
       salida: 20,
       evento_pendiente: false,
     });
+
+    // Paso 4 (sin nueva inyección): sigue sin generar eventos espurios
+    await motor.paso();
+    const estado4 = extraerElementosEstadoIrV2(modelo, motor);
+    expect(estado4['hold-1']).toMatchObject({
+      valor_retenido: 20,
+      salida: 20,
+      evento_pendiente: false,
+    });
+  });
+
+  it('estabiliza Service constante → CCH con retardo → Functional Block sin reprogramar el mismo valor indefinidamente', async () => {
+    Object.assign(globalThis, { Worker: MockPyodideWorker });
+    const modelo: IrModeloV2 = {
+      ir_version: 2,
+      modelo_id: 'cch-retardo-estable',
+      version: 1,
+      nombre: 'Service constante por CCH con retardo hacia Functional Block',
+      metadata: {
+        documento_schema_version: 2,
+        compilado_en: '2026-10-18T12:00:00.000Z',
+        bloque_raiz_id: null,
+      },
+      entradas_externas: [
+        {
+          elemento_id: 'srv-const',
+          nombre: 'Entrada constante',
+          puerto_salida: 'out',
+          tipo_dato: 'integer',
+        },
+      ],
+      elementos: [
+        {
+          id: 'srv-const',
+          tipo: 'service',
+          nombre: 'Entrada constante',
+          tipo_dato: 'integer',
+          salidas: ['out'],
+          entradas: [],
+        },
+        {
+          id: 'fb-doble',
+          tipo: 'functional_block',
+          nombre: 'Duplicador',
+          habilitado: true,
+          lenguaje: 'python',
+          codigo: 'def calcular(x):\n    return x * 2',
+          entradas: [{ puerto: 'in', variable: 'x', tipo_dato: 'integer' }],
+          salidas: [{ puerto: 'out', variable: 'y', tipo_dato: 'integer' }],
+        },
+      ],
+      conexiones: [
+        {
+          id: 'cch-delay',
+          tipo: 'cch',
+          origen: 'srv-const',
+          puerto_origen: 'out',
+          destino: 'fb-doble',
+          puerto_destino: 'in',
+          retardo_ms: 100,
+        },
+      ],
+    };
+
+    const motor = new MotorSimulacion();
+    motor.construirDesdeIrV2(modelo);
+    motor.inyectarEntrada('srv-const', 7);
+
+    // t = 0: programa entrega CCH para t = 100
+    await motor.paso(0);
+    expect(motor.obtenerBus().tieneEntregasDiferidasPendientes()).toBe(true);
+
+    // t = 50: el valor del Service sigue siendo 7 -> NO debe reprogramar para t = 150
+    await motor.paso(50);
+    expect(motor.obtenerBus().tieneEntregasDiferidasPendientes()).toBe(true);
+
+    // t = 100: vence la entrega original de t = 100 y ya no quedan entregas pendientes
+    await motor.paso(50);
+    expect(motor.obtenerBus().tieneEntregasDiferidasPendientes()).toBe(false);
+    expect(extraerElementosEstadoIrV2(modelo, motor)['fb-doble']).toMatchObject({
+      salida: 14,
+    });
+
+    // Ejecutar hasta estabilizar converge sin agotar maxPasos
+    const resultadoEjecucion = await motor.ejecutar(10);
+    expect(resultadoEjecucion.estabilizado).toBe(true);
+    expect(resultadoEjecucion.pasosEjecutados).toBeLessThan(10);
   });
 
   it('cancela el temporizador de una transición con retardo_ms si pierde habilitación antes de vencer y limpia en reset', async () => {

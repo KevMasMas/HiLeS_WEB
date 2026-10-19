@@ -20,10 +20,17 @@ export interface MqttValidationError {
   rawPayload: string;
 }
 export type MqttValidationErrorHandler = (validationError: MqttValidationError) => void;
+export interface MqttWillMessage {
+  topic: string;
+  payload: unknown;
+  qos?: 0 | 1;
+  retain?: boolean;
+}
 
 class MqttBrowserClient implements TransporteMqttProyectoV2 {
   private client: BrowserMqttClient | null = null;
   private status: MqttConnectionStatus = 'DISCONNECTED';
+  private willMessage: MqttWillMessage | null = null;
   private readonly statusListeners = new Set<MqttStatusHandler>();
   private readonly messageListeners = new Set<MqttMessageHandler>();
   private readonly rawMessageListeners = new Set<MqttRawMessageHandler>();
@@ -33,6 +40,14 @@ class MqttBrowserClient implements TransporteMqttProyectoV2 {
 
   public getStatus(): MqttConnectionStatus {
     return this.status;
+  }
+
+  public setWillMessage(will: MqttWillMessage | null): void {
+    this.willMessage = will ? { ...will } : null;
+  }
+
+  public getWillMessage(): MqttWillMessage | null {
+    return this.willMessage ? { ...this.willMessage } : null;
   }
 
   public onStatusChange(listener: MqttStatusHandler): () => void {
@@ -88,6 +103,16 @@ class MqttBrowserClient implements TransporteMqttProyectoV2 {
       protocolVersion: 4,
       username: config.username,
       password: config.password,
+      ...(this.willMessage
+        ? {
+            will: {
+              topic: this.willMessage.topic,
+              payload: JSON.stringify(this.willMessage.payload),
+              qos: this.willMessage.qos ?? 1,
+              retain: this.willMessage.retain ?? true,
+            },
+          }
+        : {}),
     };
 
     this.notifyStatus('CONNECTING');

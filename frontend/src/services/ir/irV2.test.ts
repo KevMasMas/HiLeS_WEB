@@ -1,22 +1,24 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   isModelDocument,
   migrateV1toV2,
   type HilesModelDocument,
 } from '../../domain/modelDocument';
 import { MotorSimulacion } from '../../engine/MotorSimulacion';
-import { HilesElementType } from '../../types/hiles';
+import { HilesElementType, type RuntimeValue } from '../../types/hiles';
 import {
   compilarDocumentoAIr,
   compilarModeloEditorAIrV2,
-  ejecutarCodigoPythonPerfilV2,
   ErrorPythonPerfilIrV2,
   ErrorValorRuntimeIrV2,
   extraerElementosEstadoIrV2,
   IR_LIMITES_VALORES_V2,
+  IR_MAX_MODELO_BYTES_V2,
   migrarIrV1AV2,
+  normalizarEntradasPython,
+  normalizarSalidasPython,
   validarCodigoPythonPerfilV2,
   validarModeloIrV2,
   validarValorRuntimeIrV2,
@@ -32,6 +34,39 @@ const RUTA_VECTORES_V2 = resolve(
   'mqtt',
   'vectores_ir_v2',
 );
+
+const WorkerOriginal = globalThis.Worker;
+
+class MockPyodideWorker {
+  onmessage: ((evento: MessageEvent<{ ok: boolean; value?: RuntimeValue; error?: string }>) => void) | null = null;
+  onerror: ((evento: ErrorEvent) => void) | null = null;
+
+  terminate(): void {}
+
+  postMessage(mensaje: { codigo: string; inputs: Record<string, RuntimeValue> }): void {
+    queueMicrotask(() => {
+      const carriles = Array.isArray(mensaje.inputs.carriles)
+        ? (mensaje.inputs.carriles as number[])
+        : [];
+      const total = carriles.reduce((acc, n) => acc + n, 0);
+      const pico = carriles.length > 0 ? Math.max(...carriles) : 0;
+      const alerta = total >= 10;
+      this.onmessage?.({
+        data: {
+          ok: true,
+          value: {
+            resumen: { total, pico },
+            alerta,
+          },
+        },
+      } as unknown as MessageEvent<{ ok: boolean; value?: RuntimeValue; error?: string }>);
+    });
+  }
+}
+
+afterEach(() => {
+  Object.assign(globalThis, { Worker: WorkerOriginal });
+});
 
 const cargarDocumento = (nombreArchivo: string): HilesModelDocument => {
   const contenido: unknown = JSON.parse(
@@ -79,7 +114,7 @@ describe('Validación de valores runtime IR v2 (vector y custom)', () => {
   });
 });
 
-describe('Perfil Python restringido de IR v2', () => {
+describe('Perfil Python restringido de IR v2 (validación y normalización de E/S)', () => {
   const entradas = [
     { puerto: 'in-1', variable: 'vehiculos', tipo_dato: 'vector' as const },
     { puerto: 'in-2', variable: 'umbral', tipo_dato: 'integer' as const },
@@ -88,31 +123,49 @@ describe('Perfil Python restringido de IR v2', () => {
     { puerto: 'out-1', variable: 'alerta', tipo_dato: 'boolean' as const },
   ];
 
-  it('valida y ejecuta tanto modo expresión como modo función calcular(...)', () => {
-    const exprRes = ejecutarCodigoPythonPerfilV2(
-      'sum(vehiculos) >= umbral',
-      { vehiculos: [3, 4, 2], umbral: 8 },
-      entradas,
-      salidas,
-    );
-    expect(exprRes).toEqual({ 'out-1': true });
+  it('valida tanto modo expresión como modo función calcular(...) y normaliza entradas/salidas sin rellenar faltantes', () => {
+    expect(
+      validarCodigoPythonPerfilV2('sum(vehiculos) >= umbral', entradas, salidas),
+    ).toMatchObject({
+      modo: 'expression',
+    });
 
-    const fnRes = ejecutarCodigoPythonPerfilV2(
-      [
-        'def calcular(**inputs):',
-        "    vehiculos = inputs.get('vehiculos', [])",
-        "    umbral = inputs.get('umbral', 10)",
-        '    total = sum(vehiculos)',
-        '    if total >= umbral:',
-        '        return True',
-        '    else:',
-        '        return False',
-      ].join('\n'),
-      { vehiculos: [1, 2, 1], umbral: 8 },
-      entradas,
-      salidas,
-    );
-    expect(fnRes).toEqual({ 'out-1': false });
+    expect(
+      validarCodigoPythonPerfilV2(
+        [
+          'def calcular(**inputs):',
+          "    vehiculos = inputs.get('vehiculos', [])",
+          "    umbral = inputs.get('umbral', 10)",
+          '    total = sum(vehiculos)',
+          '    if total >= umbral:',
+          '        return True',
+          '    else:',
+          '        return False',
+        ].join('\n'),
+        entradas,
+        salidas,
+      ),
+    ).toMatchObject({
+      modo: 'function',
+      aceptaKwargs: true,
+    });
+
+    expect(
+      normalizarEntradasPython({ vehiculos: [3, 4, 2], umbral: 8 }, entradas),
+    ).toEqual({
+      vehiculos: [3, 4, 2],
+      umbral: 8,
+    });
+
+    expect(
+      normalizarEntradasPython({ vehiculos: [3, 4, 2] }, entradas),
+    ).toEqual({
+      vehiculos: [3, 4, 2],
+    });
+
+    expect(normalizarSalidasPython(true, salidas)).toEqual({
+      'out-1': true,
+    });
   });
 
   it('rechaza imports, bucles, lambdas y atributos prohibidos con PYTHON_PERFIL_PROHIBIDO', () => {
@@ -188,6 +241,42 @@ describe('Compilador HilesModelDocument → IR v2 y migración IR v1 → IR v2',
     expect(validado.modelo?.elementos).toHaveLength(v1.ir.elementos.length);
     expect(validado.modelo?.conexiones).toHaveLength(v1.ir.conexiones.length);
   });
+
+  it('rechaza un modelo IR v2 cuyo JSON serializado supera el presupuesto MQTT de 32 KiB con IR_LIMITE_EXCEDIDO', () => {
+    const codigoLargoPermitido = `def calcular(x):\n    texto = '${'a'.repeat(1750)}'\n    return x`;
+    const elementosPesados = Array.from({ length: 18 }, (_, idx) => ({
+      id: `fb-pesado-${idx + 1}`,
+      tipo: 'functional_block' as const,
+      nombre: `Bloque pesado ${idx + 1} - ${'X'.repeat(120)}`,
+      habilitado: true,
+      lenguaje: 'python' as const,
+      codigo: codigoLargoPermitido,
+      entradas: [{ puerto: 'in-1', variable: 'x', tipo_dato: 'integer' as const }],
+      salidas: [{ puerto: 'out-1', variable: 'y', tipo_dato: 'integer' as const }],
+    }));
+
+    const modeloGrande = {
+      ir_version: 2,
+      modelo_id: 'modelo-sobre-32kib',
+      version: 1,
+      nombre: 'Modelo que supera el presupuesto total MQTT',
+      metadata: {
+        documento_schema_version: 2,
+        compilado_en: '2026-10-18T12:00:00.000Z',
+        bloque_raiz_id: null,
+      },
+      entradas_externas: [],
+      elementos: elementosPesados,
+      conexiones: [],
+    };
+
+    const bytes = new TextEncoder().encode(JSON.stringify(modeloGrande)).byteLength;
+    expect(bytes).toBeGreaterThan(IR_MAX_MODELO_BYTES_V2);
+
+    const resultado = validarModeloIrV2(modeloGrande);
+    expect(resultado.valido).toBe(false);
+    expect(resultado.errores.some((e) => e.codigo === 'IR_LIMITE_EXCEDIDO')).toBe(true);
+  });
 });
 
 describe('Vectores compartidos docs/mqtt/vectores_ir_v2', () => {
@@ -225,6 +314,7 @@ describe('Vectores compartidos docs/mqtt/vectores_ir_v2', () => {
   });
 
   it('reproduce paso a paso todos los vectores en ejecucion/ con MotorSimulacion', async () => {
+    Object.assign(globalThis, { Worker: MockPyodideWorker });
     const rutaEjecucion = resolve(RUTA_VECTORES_V2, 'ejecucion');
     const archivos = readdirSync(rutaEjecucion).filter((f) =>
       f.endsWith('.json'),
@@ -259,7 +349,7 @@ describe('Vectores compartidos docs/mqtt/vectores_ir_v2', () => {
         await motor.paso(paso.avance_tiempo_ms ?? 0);
         expect(
           extraerElementosEstadoIrV2(vector.modelo, motor),
-          `${archivo} paso ${indice + 1}`,
+          `${archivo} (paso ${indice + 1})`,
         ).toEqual(paso.elementos_esperados);
       }
     }

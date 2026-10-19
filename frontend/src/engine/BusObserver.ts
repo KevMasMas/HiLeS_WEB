@@ -87,12 +87,44 @@ export class BusObserver {
     string,
     { destinoId: string; puertoDestinoId: string; destino: IElementoHiLeS }
   >();
+  private readonly ultimoValorCchPorSuscripcion = new Map<
+    string,
+    ValorRuntime
+  >();
+  private readonly muestrasServicePorOrigen = new Map<string, ValorRuntime[]>();
   private entregasDiferidas: EntregaDiferidaCanal[] = [];
   private elementosRef: ReadonlyMap<string, IElementoHiLeS> = new Map();
   private relojActualMs = 0;
 
   private clavePuerto(destinoId: string, puertoDestinoId: string): string {
     return `${destinoId}::${puertoDestinoId}`;
+  }
+
+  private sonValoresIguales(
+    a: ValorRuntime | undefined,
+    b: ValorRuntime | undefined,
+  ): boolean {
+    if (Object.is(a, b)) return true;
+    if (
+      typeof a === 'object' &&
+      a !== null &&
+      typeof b === 'object' &&
+      b !== null
+    ) {
+      try {
+        return JSON.stringify(a) === JSON.stringify(b);
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  }
+
+  /** Registra una muestra discreta producida explícitamente en un Service durante el paso actual. */
+  registrarMuestraService(servicioId: string, valor: ValorRuntime): void {
+    const lista = this.muestrasServicePorOrigen.get(servicioId) ?? [];
+    lista.push(valor);
+    this.muestrasServicePorOrigen.set(servicioId, lista);
   }
 
   /** Actualiza la referencia de tiempo lógico del bus sin bloquear. */
@@ -156,17 +188,16 @@ export class BusObserver {
   }
 
   /**
-   * Limpia los pulsos LCH transitorios al concluir el paso de simulación.
+   * Limpia los pulsos LCH transitorios y las muestras discretas ya emitidas al concluir el paso.
    */
   finalizarPaso(): void {
     this.pulsosLchActivos.forEach(({ destino, puertoDestinoId }) => {
-      // Si el destino es una Transition cuya condición fue activada por un pulso LCH,
-      // al terminar el paso el pulso desaparece hasta que llegue un nuevo evento LCH.
       if (destino.tipo === 'TRANSITION') {
         destino.recibirEntrada(puertoDestinoId, false);
       }
     });
     this.pulsosLchActivos.clear();
+    this.muestrasServicePorOrigen.clear();
   }
 
   /**
@@ -242,6 +273,17 @@ export class BusObserver {
     return false;
   }
 
+  private consumirPrimerEventoPendienteDch(
+    estadoCola: EstadoColaDch,
+    destino: IElementoHiLeS,
+  ): void {
+    if (!estadoCola.consumidoEnPaso && estadoCola.cola.length > 0) {
+      const siguiente = estadoCola.cola.shift()!;
+      estadoCola.consumidoEnPaso = true;
+      destino.recibirEntrada(estadoCola.puertoDestinoId, siguiente);
+    }
+  }
+
   private entregarEnDestino(
     tipoCanal: 'cch' | 'dch' | 'lch',
     destinoId: string,
@@ -250,28 +292,12 @@ export class BusObserver {
     valor: ValorRuntime,
   ): void {
     if (tipoCanal === 'dch') {
-      const clave = this.clavePuerto(destinoId, puertoDestinoId);
-      let estadoCola = this.colasDch.get(clave);
-      if (!estadoCola) {
-        estadoCola = {
-          destinoId,
-          puertoDestinoId,
-          capacidad: CAPACIDAD_COLA_DCH_POR_DEFECTO,
-          cola: [],
-          desbordada: false,
-          consumidoEnPaso: false,
-        };
-        this.colasDch.set(clave, estadoCola);
-      }
-
-      if (!estadoCola.consumidoEnPaso && estadoCola.cola.length === 0) {
-        estadoCola.consumidoEnPaso = true;
-        destino.recibirEntrada(puertoDestinoId, valor);
-      } else if (estadoCola.cola.length >= estadoCola.capacidad) {
-        estadoCola.desbordada = true;
-      } else {
-        estadoCola.cola.push(valor);
-      }
+      const estadoCola = this.encolarEventoDch(
+        destinoId,
+        puertoDestinoId,
+        valor,
+      );
+      this.consumirPrimerEventoPendienteDch(estadoCola, destino);
       return;
     }
 
@@ -385,6 +411,99 @@ export class BusObserver {
       const idSuscripcion = `${arista.id}-${arista.target}-${puertoDestinoId}`;
       const observadorAdaptado: IObservadorNodo = {
         alRecibirValor: (pDestinoId, valor) => {
+          const origenEl = this.elementosRef.get(arista.source);
+          if (
+            origenEl?.tipo === 'SERVICE' &&
+            (tipoCanal === 'dch' || tipoCanal === 'lch')
+          ) {
+            const muestras = this.muestrasServicePorOrigen.get(arista.source);
+            if (!muestras || muestras.length === 0) {
+              return;
+            }
+            if (retardoMs > 0) {
+              for (const muestra of muestras) {
+                this.entregasDiferidas.push({
+                  idSuscripcion,
+                  aristaId: arista.id,
+                  origenId: arista.source,
+                  puertoOrigenId,
+                  destinoId: arista.target,
+                  puertoDestinoId: pDestinoId,
+                  tipoCanal,
+                  valor: muestra,
+                  venceEnMs: this.relojActualMs + retardoMs,
+                });
+              }
+              return;
+            }
+            if (tipoCanal === 'dch') {
+              let estadoCola: EstadoColaDch | undefined;
+              for (const muestra of muestras) {
+                estadoCola = this.encolarEventoDch(
+                  arista.target,
+                  pDestinoId,
+                  muestra,
+                  capacidadCola,
+                );
+              }
+              if (estadoCola) {
+                this.consumirPrimerEventoPendienteDch(estadoCola, destino);
+              }
+              return;
+            }
+            for (const muestra of muestras) {
+              this.entregarEnDestino(
+                tipoCanal,
+                arista.target,
+                pDestinoId,
+                destino,
+                muestra,
+              );
+            }
+            return;
+          }
+
+          if (tipoCanal === 'cch') {
+            const teniaValor =
+              this.ultimoValorCchPorSuscripcion.has(idSuscripcion);
+            const valorPrevio =
+              this.ultimoValorCchPorSuscripcion.get(idSuscripcion);
+            const sinCambio =
+              teniaValor && this.sonValoresIguales(valorPrevio, valor);
+            this.ultimoValorCchPorSuscripcion.set(idSuscripcion, valor);
+
+            if (retardoMs > 0) {
+              if (sinCambio) {
+                return;
+              }
+              // Reemplazar entrega pendiente anterior en este CCH para no acumular copias
+              this.entregasDiferidas = this.entregasDiferidas.filter(
+                (e) => e.idSuscripcion !== idSuscripcion,
+              );
+              this.entregasDiferidas.push({
+                idSuscripcion,
+                aristaId: arista.id,
+                origenId: arista.source,
+                puertoOrigenId,
+                destinoId: arista.target,
+                puertoDestinoId: pDestinoId,
+                tipoCanal,
+                valor,
+                venceEnMs: this.relojActualMs + retardoMs,
+              });
+              return;
+            }
+
+            this.entregarEnDestino(
+              tipoCanal,
+              arista.target,
+              pDestinoId,
+              destino,
+              valor,
+            );
+            return;
+          }
+
           if (retardoMs > 0) {
             this.entregasDiferidas.push({
               idSuscripcion,
@@ -421,6 +540,8 @@ export class BusObserver {
       cola.consumidoEnPaso = false;
     });
     this.pulsosLchActivos.clear();
+    this.ultimoValorCchPorSuscripcion.clear();
+    this.muestrasServicePorOrigen.clear();
     this.entregasDiferidas = [];
     this.relojActualMs = 0;
   }
@@ -431,6 +552,8 @@ export class BusObserver {
     this.sujetos.clear();
     this.colasDch.clear();
     this.pulsosLchActivos.clear();
+    this.ultimoValorCchPorSuscripcion.clear();
+    this.muestrasServicePorOrigen.clear();
     this.entregasDiferidas = [];
     this.relojActualMs = 0;
   }

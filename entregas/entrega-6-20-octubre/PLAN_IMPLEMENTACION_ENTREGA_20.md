@@ -254,8 +254,8 @@ frontend/src/engine/__tests__/**
 
 - [x] Un documento con Python, Sample, Hold, CCH, DCH, LCH, Petri y retardos compila a IR v2 sin edición manual.
 - [x] El motor local reproduce los vectores v2 esperados.
-- [x] Abrir `?project=demo` solicita el snapshot de `demo` y nunca aplica mensajes de otro proyecto.
-- [x] Persona 3 y Persona 5 recibieron contratos y fixtures aprobados.
+- [ ] Abrir `?project=demo` solicita el snapshot de `demo` y nunca aplica mensajes de otro proyecto (`ProjectSyncClient` y `projectUrl` entregados y probados en aislamiento; integración con `App.tsx` y stores pendiente de Persona 5).
+- [ ] Persona 3 y Persona 5 recibieron contratos y fixtures aprobados.
 
 ---
 
@@ -318,7 +318,7 @@ docs/traffic/MATRIZ_CONFLICTOS.md
 #### Inputs recibidos
 
 - [x] Persona 1: `PythonExecutor`, valores, límites y errores.
-- [x] Persona 2: IR v2 congelada, semántica de canales/retardos y vectores.
+- [ ] Persona 2: IR v2 congelada, semántica de canales/retardos y vectores.
 
 #### Entregable y criterio de cierre
 
@@ -373,7 +373,7 @@ frontend/src/features/editor/*.test.tsx
 
 #### Inputs recibidos
 
-- [x] Persona 2: identidad y estado del proyecto.
+- [ ] Persona 2: identidad y estado del proyecto.
 - [ ] Persona 3: estados observables que deben mostrarse.
 
 #### Entregable y criterio de cierre
@@ -441,7 +441,7 @@ entregas/entrega-6-20-octubre/GUIA_DEMO.md
 #### Inputs recibidos
 
 - [x] Persona 1: ejecutor y Watchdog aprobados.
-- [x] Persona 2: `ProjectSyncClient`, IR v2, topics y fixtures aprobados.
+- [ ] Persona 2: `ProjectSyncClient`, IR v2, topics y fixtures aprobados.
 - [ ] Persona 3: motor remoto y demo distribuido aprobados.
 - [ ] Persona 4: shell visual y contenedor de colaboración aprobados.
 
