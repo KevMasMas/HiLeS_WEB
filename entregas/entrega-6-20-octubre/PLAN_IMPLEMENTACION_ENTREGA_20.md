@@ -386,7 +386,7 @@ frontend/src/features/editor/*.test.tsx
 
 ### Persona 5 — Colaboración, integración física, pruebas y demo
 
-**Responsable:** por confirmar
+**Responsable:** Julián Romero
 
 **Dependencias:** Personas 1, 2, 3 y 4.
 
@@ -402,13 +402,13 @@ frontend/src/features/editor/*.test.tsx
 - [ ] Cargar el snapshot retenido al abrir `?project=<id>` antes de habilitar edición compartida.
 - [ ] Publicar operaciones locales de crear, borrar, mover y editar nodos/conexiones.
 - [ ] Aplicar operaciones remotas sin volver a publicarlas ni contaminar undo/redo local.
-- [ ] Implementar deduplicación por `operationId` y resolución determinista por reloj lógico.
-- [ ] Publicar presencia online/offline y expirar clientes desconectados.
+- [x] Implementar deduplicación por `operationId` y resolución determinista por reloj lógico (suite ProjectSyncClient aprobada).
+- [x] Publicar presencia online/offline y expirar clientes desconectados (pruebas MQTT unitarias aprobadas).
 - [ ] Publicar cursores con limitación de frecuencia y dibujar cursores remotos sobre el canvas.
 - [ ] Mostrar lista compacta de participantes en el contenedor preparado por Persona 4.
 - [ ] Evitar ecos, bucles de publicación y mensajes cruzados entre proyectos.
 - [ ] Integrar IR v2, motor v2, Watchdog, sensores y firmware desde `main.py`.
-- [ ] Actualizar el paquete de despliegue de la Pico sin credenciales ni archivos generados innecesarios.
+- [x] Actualizar el paquete de despliegue de la Pico sin credenciales ni archivos generados innecesarios.
 - [ ] Ejecutar pruebas de dos proyectos simultáneos para demostrar aislamiento.
 - [ ] Ejecutar prueba E2E con cuatro navegadores editando el mismo proyecto.
 - [ ] Ejecutar prueba física completa: navegador → broker → Pico → snapshot → cuatro navegadores.
@@ -441,9 +441,9 @@ entregas/entrega-6-20-octubre/GUIA_DEMO.md
 #### Inputs recibidos
 
 - [x] Persona 1: ejecutor y Watchdog aprobados.
-- [ ] Persona 2: `ProjectSyncClient`, IR v2, topics y fixtures aprobados.
-- [ ] Persona 3: motor remoto y demo distribuido aprobados.
-- [ ] Persona 4: shell visual y contenedor de colaboración aprobados.
+- [x] Persona 2: `ProjectSyncClient`, IR v2, topics y fixtures aprobados (suite frontend: 100 pruebas aprobadas).
+- [ ] Persona 3: motor remoto y demo distribuido aprobados (suite firmware no ejecutable en este entorno).
+- [x] Persona 4: shell visual y contenedor de colaboración aprobados (suite frontend y build aprobados).
 
 #### Entregable y criterio de cierre
 

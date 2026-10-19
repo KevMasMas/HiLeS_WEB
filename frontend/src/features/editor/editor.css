@@ -65,6 +65,12 @@
 }
 
 .react-flow__node-hilesNode { transition: opacity .18s ease, filter .18s ease; }
+.collab-participants { display: flex; align-items: center; gap: 3px; padding: 2px 5px; }
+.project-sync-loading { position: absolute; z-index: 60; inset: 0; display: grid; place-items: center; background: rgba(248,250,252,.88); color: #334155; font-size: 14px; font-weight: 700; }
+.collab-avatar { display: grid; place-items: center; width: 21px; height: 21px; border: 2px solid white; border-radius: 50%; color: white; font-size: 10px; font-weight: 800; box-shadow: 0 1px 4px #0f172a33; }
+.collab-participants small { margin-left: 3px; color: #475569; font-size: 10px; font-weight: 800; }
+.collab-cursor { position: absolute; z-index: 20; pointer-events: none; font-size: 18px; filter: drop-shadow(0 1px 1px white); }
+.collab-cursor small { display: block; margin: -2px 0 0 10px; padding: 2px 5px; border-radius: 4px; color: white; font: 700 9px/1.2 system-ui; white-space: nowrap; }
 /* Edges are allowed to traverse structural blocks and the full flow viewport. */
 .react-flow__edges, .react-flow__edge { overflow: visible; }
 .hiles-edge-hit-target { pointer-events: stroke; cursor: crosshair; }

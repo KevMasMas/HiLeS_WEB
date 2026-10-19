@@ -64,6 +64,7 @@ interface EditorState {
   loadAutosave: () => void;
   exportModel: () => string;
   importModel: (json: string) => void;
+  applyRemoteDocument: (document: import('../domain/modelDocument').HilesModelDocument) => void;
 }
 
 interface ModelSnapshot { nodes: HilesNode[]; edges: HilesEdge[] }
@@ -441,6 +442,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     } catch (error) {
       set({ connectionError: error instanceof Error ? error.message : 'The selected file is not a valid HiLeS JSON model.' });
     }
+  },
+  applyRemoteDocument: (model) => {
+    if (!isModelDocument(model) || validateModelDocument(model).length) return;
+    const nodes = model.allElements.map((element) => ({
+      id: element.id, type: 'hilesNode', position: { x: element.layout.x, y: element.layout.y },
+      ...(element.parentId ? { parentId: element.parentId, extent: 'parent' as const, expandParent: true } : {}),
+      ...(element.layout.width || element.layout.height ? { style: { width: element.layout.width, height: element.layout.height } } : {}),
+      data: { hilesType: element.type, name: element.name, ports: element.ports, properties: element.properties },
+    })) as HilesNode[];
+    const state = get();
+    set({ nodes: nodes.map(normalizeNode), edges: model.connections.map(normalizeEdge), selectedElementId: null, selectedConnectionId: null, connectionError: null, statusMessage: 'Shared project synchronized' });
+    // Remote convergence must not erase or add local undo/redo history.
+    set({ past: state.past, future: state.future, canUndo: state.canUndo, canRedo: state.canRedo });
   },
   loadAutosave: () => {
     if (autosaveLoaded) return;

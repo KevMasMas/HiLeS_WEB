@@ -1,8 +1,10 @@
 # Guía de demostración — entrega del 20 de octubre
 
-**Responsable del ensayo:** Persona 5, nombre por confirmar.
+**Responsable del ensayo:** Julián Romero (Persona 5).
 
 **Duración objetivo:** 8 a 12 minutos.
+
+> Estado de validación al 19 de octubre de 2026: la suite del frontend, el build, el lint y la generación/validación del ZIP de despliegue se comprobaron en escritorio. No se ejecutó la demo con broker, cuatro navegadores ni Pico física; todas las evidencias físicas de esta guía siguen pendientes y no deben presentarse como realizadas.
 
 ## 1. Propósito
 

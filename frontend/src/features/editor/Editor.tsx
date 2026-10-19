@@ -6,6 +6,8 @@ import { Palette } from './Palette';
 import { PanelDock } from './PanelDock';
 import { TopBar } from './TopBar';
 import { getNextDockPanel, type DockPanel } from './panelState';
+import { Participants } from '../collaboration/Participants';
+import { useProjectStore } from '../../stores/useProjectStore';
 import './editor.css';
 
 export const Editor: React.FC = () => {
@@ -29,11 +31,14 @@ export const Editor: React.FC = () => {
   const [projectId, setProjectId] = useState(() => asegurarProjectIdEnUrl());
   const [projectDraft, setProjectDraft] = useState(projectId);
   const [fileName, setFileName] = useState('Untitled model');
+  const projectReady = useProjectStore((state) => state.ready);
 
   useEffect(() => {
     loadAutosave();
     setPaletteOpen(false);
   }, [loadAutosave, setPaletteOpen]);
+
+  useEffect(() => useProjectStore.getState().start(projectId), [projectId]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -110,12 +115,14 @@ export const Editor: React.FC = () => {
         onTogglePalette={() => setPaletteOpen(!paletteOpen)}
         onTogglePanel={togglePanel}
       />
+      <Participants />
       <input ref={importInput} type="file" accept="application/json,.json" onChange={uploadJson} hidden />
 
       <main className="editor-workspace">
         <Canvas />
         <Palette />
         <PanelDock activePanel={activePanel} onPanelChange={setActivePanel} />
+        {!projectReady && <div className="project-sync-loading" role="status">Connecting to project and loading its retained snapshot…</div>}
       </main>
     </div>
   );

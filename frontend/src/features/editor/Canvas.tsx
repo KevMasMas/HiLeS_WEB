@@ -8,6 +8,7 @@ import { getConnectionValidation, useEditorStore } from '../../stores/useEditorS
 import { HilesNode } from './CustomNodes';
 import { HilesEdge } from './HilesEdge';
 import { HilesConnectionType, HilesElementType, type HilesNodeData } from '../../types/hiles';
+import { getProjectSyncClient, useProjectStore } from '../../stores/useProjectStore';
 
 const nodeTypes = { hilesNode: HilesNode };
 const edgeTypes = { hilesEdge: HilesEdge };
@@ -42,6 +43,7 @@ const CanvasInner: React.FC = () => {
   const [zoom, setZoom] = useState(1);
   const [isRightPanning, setIsRightPanning] = useState(false);
   const { screenToFlowPosition, getViewport, setViewport } = useReactFlow();
+  const cursors = useProjectStore((state) => state.cursors);
   const store = useEditorStore();
   const { nodes, edges, activeConnectionType } = store;
 
@@ -171,6 +173,20 @@ const CanvasInner: React.FC = () => {
     window.addEventListener('keydown', removeSelection);
     return () => window.removeEventListener('keydown', removeSelection);
   }, [store]);
+  useEffect(() => {
+    const element = reactFlowWrapper.current;
+    if (!element) return;
+    let last = 0;
+    const move = (event: PointerEvent) => {
+      const now = performance.now();
+      if (now - last < 60) return;
+      last = now;
+      const point = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      getProjectSyncClient()?.publicarCursor(point.x, point.y, 'canvas');
+    };
+    element.addEventListener('pointermove', move);
+    return () => element.removeEventListener('pointermove', move);
+  }, [screenToFlowPosition]);
 
   return (
     <div
@@ -197,6 +213,12 @@ const CanvasInner: React.FC = () => {
         <Controls />
         <MiniMap pannable zoomable nodeColor={(node) => node.data.hilesType === HilesElementType.STRUCTURAL_BLOCK ? '#94a3b8' : '#2563eb'} />
       </ReactFlow>
+      {cursors.map((cursor) => {
+        const viewport = getViewport();
+        return <div key={cursor.clientId} className="collab-cursor" style={{ left: viewport.x + cursor.x * viewport.zoom, top: viewport.y + cursor.y * viewport.zoom, color: cursor.color }}>
+          <span>➤</span><small style={{ background: cursor.color }}>{cursor.usuario}</small>
+        </div>;
+      })}
       <div style={styles.zoomHint}>{zoom < DETAIL_ZOOM ? 'Summary view · Zoom in to reveal internal logic' : 'Detailed view · Internal elements are visible'}</div>
       {store.connectionError && <button style={styles.error} onClick={store.clearConnectionError}>⚠ {store.connectionError} <strong>×</strong></button>}
     </div>

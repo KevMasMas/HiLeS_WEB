@@ -420,6 +420,21 @@ describe('projectTopics y projectMessages: contrato congelado udfjc/hiles/v2/pro
 });
 
 describe('ProjectSyncClient: operaciones incrementales, cursores, presencia retenida con Last Will y TTL', () => {
+  it('ignora snapshots publicados en el namespace de otro proyecto', () => {
+    const transporte = new TransporteMqttValidado();
+    const cliente = new ProjectSyncClient({ projectId: 'proyecto-a', mqtt: transporte, clientId: 'nav-a' });
+    const recibidos: HilesModelDocument[] = [];
+    cliente.onRemoteDocument((evento) => recibidos.push(evento.documento));
+    cliente.conectar();
+    const documento: HilesModelDocument = { schemaVersion: 2, metadata: { savedAt: '2026-10-19T00:00:00.000Z' }, network: { topology: null, protocol: null, nodes: [] }, allElements: [], relationNode: [], connections: [] };
+    const snapshot = crearMensajeEdicionEstado({ idMensaje: 'snapshot-b', operationId: 'snapshot-b', projectId: 'proyecto-b', clientId: 'nav-b', clock: 1, revision: 1, actualizadoEn: '2026-10-19T00:00:00.000Z', documento });
+
+    expect(transporte.recibirDesdeBroker('udfjc/hiles/v2/projects/proyecto-b/document/snapshot', snapshot)).toBe(true);
+    expect(recibidos).toEqual([]);
+    expect(cliente.obtenerDocumentoActual()).toBeNull();
+    cliente.desconectar();
+  });
+
   it('publica operaciones incrementales en document/ops sin duplicar snapshot y fusiona cambios concurrentes', () => {
     vi.useFakeTimers();
     try {

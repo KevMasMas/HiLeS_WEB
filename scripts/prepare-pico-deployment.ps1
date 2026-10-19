@@ -51,7 +51,8 @@ try {
     )
     try {
         foreach ($file in $files) {
-            $entryName = [System.IO.Path]::GetRelativePath($sourceRoot, $file.FullName).Replace('\', '/')
+            $sourcePrefix = $sourceRoot.TrimEnd('\') + '\'
+            $entryName = $file.FullName.Substring($sourcePrefix.Length).Replace('\', '/')
             [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
                 $archive,
                 $file.FullName,
