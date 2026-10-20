@@ -17,7 +17,12 @@ const identity = () => {
   const key = 'hiles_collab_identity_v1';
   try {
     const prior = sessionStorage.getItem(key);
-    if (prior) return JSON.parse(prior) as { clientId: string; name: string };
+    if (prior) {
+      const parsed = JSON.parse(prior) as { clientId?: unknown; name?: unknown };
+      if (typeof parsed.clientId === 'string' && parsed.clientId.trim() && typeof parsed.name === 'string' && parsed.name.trim()) {
+        return { clientId: parsed.clientId, name: parsed.name };
+      }
+    }
     const value = { clientId: `web-${crypto.randomUUID()}`, name: `Editor ${Math.floor(Math.random() * 900 + 100)}` };
     sessionStorage.setItem(key, JSON.stringify(value));
     return value;
@@ -46,11 +51,12 @@ export const useProjectStore = create<ProjectState>((set) => ({
     const stopPresence = client.onPresenceChange((collaborators) => { if (active === client) set({ collaborators }); });
     const stopCursor = client.onRemoteCursor((cursors) => { if (active === client) set({ cursors }); });
     let unsubscribeEditor: (() => void) | undefined;
-    let readyTimer: ReturnType<typeof setTimeout>;
+    let readyTimer: ReturnType<typeof setTimeout> | null = null;
     const stopStatus = mqttClient.onStatusChange((status) => {
-      if (status !== 'CONNECTED' || active !== client || unsubscribeEditor) return;
+      if (status !== 'CONNECTED' || active !== client || unsubscribeEditor || readyTimer !== null) return;
       // Give retained snapshot delivery a turn before observing/publishing local edits.
       readyTimer = setTimeout(() => {
+        readyTimer = null;
         if (active !== client) return;
         set({ ready: true });
         const editor = useEditorStore.getState();
@@ -65,7 +71,7 @@ export const useProjectStore = create<ProjectState>((set) => ({
     client.conectar();
     return () => {
       if (active === client) active = null;
-      clearTimeout(readyTimer);
+      if (readyTimer !== null) clearTimeout(readyTimer);
       unsubscribeEditor?.(); stopDoc(); stopPresence(); stopCursor(); stopStatus();
       client.desconectar();
       set({ ready: false, collaborators: [], cursors: [], clientId: null });

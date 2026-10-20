@@ -84,6 +84,7 @@ def build_default_application(config=None, clock=None, machine_module=None,
         node,
         period_ms=getattr(config, "ENGINE_PERIOD_MS", 20),
         step_interval_ms=getattr(config, "ENGINE_STEP_INTERVAL_MS", 1000),
+        queue_size=getattr(config, "ENGINE_QUEUE_SIZE", 32),
     )
 
     def handle_led_command(payload):
@@ -143,10 +144,11 @@ def build_default_application(config=None, clock=None, machine_module=None,
                                        period_ms=getattr(config, "SENSOR_PERIOD_MS", 50))
             for sentido, source in sensor_sources.items()
         }
-    if len(sensor_tasks) == 4:
+    sentidos_requeridos = ("norte", "sur", "este", "oeste")
+    if all(sentido in sensor_tasks for sentido in sentidos_requeridos):
         traffic_task = TrafficControllerTask(
             scheduler,
-            {sentido: sensor_tasks[sentido] for sentido in ("norte", "sur", "este", "oeste")},
+            {sentido: sensor_tasks[sentido] for sentido in sentidos_requeridos},
             outputs=traffic_outputs,
             period_ms=getattr(config, "TRAFFIC_PERIOD_MS", 100),
             on_engine_input=engine_task.submit_local_input,

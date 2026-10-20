@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useProjectStore } from '../../stores/useProjectStore';
 
 export const Participants: React.FC = () => {
-  const collaborators = useProjectStore((state) => state.collaborators.filter((person) => person.conectado));
+  const allCollaborators = useProjectStore((state) => state.collaborators);
+  const collaborators = useMemo(
+    () => allCollaborators.filter((person) => person.conectado),
+    [allCollaborators],
+  );
   const slot = typeof document === 'undefined' ? null : document.querySelector<HTMLElement>('[data-collaboration-slot]');
   if (!slot) return null;
   return createPortal(<div className="collab-participants" title={collaborators.map((person) => person.usuario).join(', ') || 'Only you'} aria-label={`${collaborators.length + 1} collaborators online`}>

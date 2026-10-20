@@ -256,6 +256,19 @@ class EngineTaskV2Tests(unittest.TestCase):
         self.assertIs(self.task.engine, activo)
         self.assertEqual(self.task.version, 1)
 
+    def test_invalid_python_signature_keeps_previous_model(self):
+        _, vector = load_v2("ejecucion")[0]
+        self.load(vector["modelo"])
+        activo = self.task.engine
+
+        invalido = python_model("def calcular(x):\n    return x")
+        invalido["elementos"][1]["codigo"] = "def calcular(z):\n    return z"
+        confirmacion = self.load(invalido, version=2, id_mensaje="firma-mala")
+        self.assertFalse(confirmacion["aceptado"])
+        self.assertEqual(confirmacion["codigo"], "PYTHON_CODIGO_INVALIDO")
+        self.assertIs(self.task.engine, activo)
+        self.assertEqual(self.task.version, 1)
+
     def test_profile_violation_is_rejected_before_compiling(self):
         _, invalido = load_v2("modelos/invalidos")[0]
         confirmacion = self.load(invalido["modelo"], id_mensaje="import")

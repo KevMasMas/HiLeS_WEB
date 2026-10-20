@@ -396,18 +396,6 @@ export const calcularOperacionesEntreDocumentos = (
     }
   }
 
-  if (
-    operaciones.length === 0 &&
-    JSON.stringify(anterior.metadata) !== JSON.stringify(siguiente.metadata)
-  ) {
-    operaciones.push({
-      kind: 'document.patch',
-      changes: {
-        metadata: clonarProfundo(siguiente.metadata),
-      },
-    });
-  }
-
   return operaciones;
 };
 

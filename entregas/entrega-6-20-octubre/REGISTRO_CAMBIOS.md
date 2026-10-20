@@ -387,22 +387,76 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
   - Los breakpoints responsivos están implementados, pero no sustituyen la evidencia visual pendiente.
 - **Reversión, si aplica:** eliminar los cinco archivos creados, restaurar los ocho archivos funcionales modificados y revertir esta entrada y las casillas de Persona 4 en el plan. No hay migraciones persistentes ni cambios de formato JSON.
 
+### [2026-10-19 18:52] — Responsable: revisión de integración Personas 3, 4 y 5
+
+- **Estado:** [x] Correcciones de código y regresión de escritorio/broker terminadas. [!] La prueba con Raspberry Pi Pico W y GPIO reales continúa pendiente porque Windows no detectó placa, volumen RP2/PICO ni puerto serial.
+- **Actividad del plan:** auditoría cruzada de motor MicroPython v2, semáforos, composición del firmware, topbar/paneles, sincronización de proyecto, presencia, cursores y paquete final.
+- **Correcciones de Persona 3:**
+  1. `firmware/pico/hiles/model_v2.py` valida antes de activar un modelo los límites de entradas/salidas, tipos, identificadores, duplicados y parámetros de `calcular(...)`. Un bloque con una firma que no corresponde a sus entradas ya no llega a reemplazar el motor activo.
+  2. `firmware/tests/test_hiles_model_v2.py` y `firmware/tests/test_hiles_engine_v2.py` cubren firma incorrecta, tipo inválido, puerto repetido, exceso de entradas y conservación transaccional del modelo anterior.
+  3. Se confirmó que `TrafficControllerTask`, sensores y GPIO continúan aislados en `devices/` y `platform/`: el motor HiLeS general no contiene una dependencia obligatoria del ejemplo vial.
+- **Correcciones de Persona 4:**
+  1. `frontend/src/App.tsx` dejó de envolver `MqttPanel` en el contenedor flotante legado. El portal del dock ya no deja una tarjeta blanca vacía encima del canvas.
+  2. Se verificaron visualmente topbar, canvas y dock a 1366×768 y 1920×1080, incluyendo Simulación y MQTT, sin superposición crítica.
+  3. La revisión visual descubrió el fallo de arranque `Maximum update depth exceeded`; se corrigió en `Participants.tsx` seleccionando la referencia estable del store y filtrando participantes con `useMemo`.
+- **Correcciones de Persona 5:**
+  1. `main.py` compone `EngineTaskV2` con `ENGINE_QUEUE_SIZE=32`, Watchdog y semáforos únicamente cuando existen los cuatro sensores requeridos. Esto evita desbordar la cola inicial y evita `KeyError` por configuraciones parciales o con claves incorrectas.
+  2. `config_local.example.py` documenta cola, Watchdog, periodos y mapas GPIO opcionales sin convertir el demo de semáforos en requisito del motor general.
+  3. El modo remoto usa `?project=<id>` como `modelo_id` predeterminado; el panel de simulación conserva la edición manual sin un efecto React que produzca renders encadenados.
+  4. `useProjectStore.ts` valida la identidad recuperada de `sessionStorage` y evita programar varios temporizadores de preparación ante eventos `CONNECTED` repetidos.
+  5. `projectMessages.ts` dejó de publicar una operación cuando lo único que cambió fue `metadata.savedAt`; seleccionar o renderizar un nodo ya no se presenta como edición colaborativa.
+  6. Se agregó `useProjectStore.test.ts` para comprobar snapshot retenido antes de editar, supresión de eco, publicación posterior de cambios locales y reconexiones repetidas.
+  7. Se creó `scripts/test-project-collaboration.mjs`: conecta cuatro clientes al proyecto A y uno al B, comprueba operación única, aislamiento, snapshot retenido para un cliente tardío, presencia y cursor, y limpia sus tópicos de prueba.
+  8. Se regeneró `output/hiles-pico-w-deploy.zip` con 34 archivos. Después de actualizar la guía de replicación y el `LEEME_PRIMERO.md` incluido, el paquete vigente tiene SHA-256 `1813BF4584FC33F1198D57CE169DA13D696240DDC07A98450A16FA6D86B04C60`.
+- **Pruebas ejecutadas y resultado:**
+  - Firmware: `python -m unittest discover -s firmware/tests -p 'test_*.py'` → **174 pruebas aprobadas**.
+  - Frontend: `vitest run` → **17 archivos y 103 pruebas aprobadas**.
+  - ESLint → **aprobado sin errores**.
+  - TypeScript + Vite → **build aprobado**; permanecen únicamente las advertencias conocidas de Pyodide externalizado y chunk principal mayor de 500 kB.
+  - `scripts/test-project-collaboration.mjs` → `PROJECT_COLLABORATION_OK`: cuatro clientes, snapshot retenido, presencia, cursor y aislamiento A/B aprobados sobre el broker configurado.
+  - `scripts/test-mqtt-four-clients.mjs` → `MQTT_CUATRO_CLIENTES_OK: 4 de 4`.
+  - Navegadores reales: cuatro identidades visibles; el cambio temporal `Sensor E2E sincronizado` apareció en el cuarto navegador, se restauró a `Sensor de vehículos`, y la presencia pasó de 4 a 1 al cerrar tres clientes.
+  - Generador del demo distribuido → 18 elementos y 12 conexiones, sin diferencias contra los JSON versionados.
+- **Archivos creados:**
+  - `frontend/src/stores/useProjectStore.test.ts`
+  - `scripts/test-project-collaboration.mjs`
+- **Archivos corregidos:**
+  - `firmware/pico/hiles/model_v2.py`
+  - `firmware/pico/main.py`
+  - `firmware/pico/config_local.example.py`
+  - `firmware/tests/test_hiles_model_v2.py`
+  - `firmware/tests/test_hiles_engine_v2.py`
+  - `firmware/tests/test_mqtt_transport.py`
+  - `frontend/src/App.tsx`
+  - `frontend/src/features/collaboration/Participants.tsx`
+  - `frontend/src/features/simulation/SimulationPanel.tsx`
+  - `frontend/src/services/projects/projectMessages.ts`
+  - `frontend/src/services/projects/projectSync.test.ts`
+  - `frontend/src/stores/useProjectStore.ts`
+  - `frontend/src/stores/useRemoteExecutionStore.ts`
+  - plan, guía, ZIP y checksum de esta entrega.
+- **Riesgos o pendientes reales:**
+  - Falta copiar el ZIP a una Pico W, crear `config_local.py` en la placa y ejecutar navegador → broker → Pico → snapshot.
+  - Falta medir memoria libre, duración de los bloques y Watchdog sobre MicroPython real.
+  - Falta repetir Sample/Hold, DCH, retardos y las cuatro FSM con GPIO/sensores reales. Las pruebas actuales de esas piezas son de escritorio con reloj, transporte y `machine` simulados.
+- **Reversión, si aplica:** revertir únicamente esta entrada y los archivos enumerados. El script colaborativo usa identificadores de proyecto únicos y limpia de forma best-effort los snapshots/presencias retenidos que crea.
+
 ## Confirmación de responsables
 
 - [x] Persona 1 — Nombre: Kevin Rincón
 - [x] Persona 2 — Nombre: Ivan Felipe Prado Blanco
 - [x] Persona 3 — Nombre: Juan Ramos
 - [x] Persona 4 — Nombre: Juan David Romero
-- [ ] Persona 5 — Nombre:
+- [x] Persona 5 — Nombre: Julián Romero
 
 ## Control de integración
 
 - [x] Persona 1 registra contrato y runtime autónomo; integración IR v2 y prueba física continúan pendientes.
 - [x] Persona 2 registra protocolo web y URL.
-- [x] Persona 3 registra motor v2, semáforos y sensores; integración en `main.py` y prueba física continúan pendientes.
-- [x] Persona 4 registra UI/UX; queda pendiente únicamente la comprobación visual en las resoluciones exactas de la demo.
-- [ ] Persona 5 registra colaboración e integración.
-- [ ] Todos los integrantes registraron sus cambios y pruebas.
-- [ ] La entrada de cierre coincide con los resultados reales.
-- [ ] No hay casillas cerradas sin prueba o evidencia.
+- [x] Persona 3 registra motor v2, semáforos y sensores; integración en `main.py` aprobada y prueba física pendiente.
+- [x] Persona 4 registra UI/UX y la comprobación visual a 1366×768 y 1920×1080.
+- [x] Persona 5 registra colaboración e integración.
+- [x] Todos los integrantes registraron sus cambios y pruebas de escritorio disponibles.
+- [x] La entrada de cierre coincide con los resultados reales y declara la Pico física como pendiente.
+- [x] No hay casillas cerradas sin prueba o evidencia; las casillas dependientes de hardware permanecen abiertas.
 

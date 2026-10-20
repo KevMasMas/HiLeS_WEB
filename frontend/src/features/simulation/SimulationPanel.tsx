@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRemoteExecutionStore } from '../../stores/useRemoteExecutionStore';
 import { useSimulationStore } from '../../stores/useSimulationStore';
+import { useProjectStore } from '../../stores/useProjectStore';
 import './simulation.css';
 
 export const SimulationPanel: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
@@ -9,7 +10,8 @@ export const SimulationPanel: React.FC<{ embedded?: boolean }> = ({ embedded = f
   const [numericValue, setNumericValue] = useState('');
   const [textValue, setTextValue] = useState('');
   const remote = useRemoteExecutionStore();
-  const [modeloId, setModeloId] = useState(remote.modeloId);
+  const projectId = useProjectStore((state) => state.projectId);
+  const [modeloEditado, setModeloEditado] = useState<string | null>(null);
   const [version, setVersion] = useState(String(remote.version));
   const {
     modoEjecucion,
@@ -26,6 +28,7 @@ export const SimulationPanel: React.FC<{ embedded?: boolean }> = ({ embedded = f
   } = useSimulationStore();
 
   const esPico = modoEjecucion === 'pico';
+  const modeloId = modeloEditado ?? projectId ?? remote.modeloId;
   const selectedService = servicios.find((service) => service.id === selectedServiceId) ?? servicios[0];
   const recentEvents = eventos.slice().reverse().slice(0, 10);
 
@@ -76,13 +79,12 @@ export const SimulationPanel: React.FC<{ embedded?: boolean }> = ({ embedded = f
           {esPico && (
             <div className="simulation-panel__remote">
               <p className="simulation-panel__intro">
-                Todos los navegadores que usen el mismo modelo y versión aplicarán el estado oficial publicado por la Pico.
-                El enlace comparte la sesión, no el diagrama: importa el mismo archivo JSON en cada navegador.
+                Los navegadores con el mismo proyecto comparten el diagrama; al usar el mismo modelo y versión también aplican el estado oficial publicado por la Pico.
               </p>
               <div className="simulation-panel__session">
                 <label>
                   <span>Modelo</span>
-                  <input value={modeloId} onChange={(event) => setModeloId(event.target.value)} />
+                  <input value={modeloId} onChange={(event) => setModeloEditado(event.target.value)} />
                 </label>
                 <label>
                   <span>Versión</span>

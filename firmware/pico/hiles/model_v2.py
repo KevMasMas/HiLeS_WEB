@@ -34,7 +34,16 @@ from .model import (
     es_texto,
     validate_ir_v1,
 )
-from .python_executor import PythonExecutorError, validate_python_source
+from .python_executor import (
+    FORBIDDEN_WORDS,
+    MAX_INPUTS,
+    MAX_OUTPUTS,
+    PYTHON_CODIGO_INVALIDO,
+    PYTHON_COMPILACION_ERROR,
+    PYTHON_PERFIL_PROHIBIDO,
+    PythonExecutorError,
+    validate_python_source,
+)
 from .runtime_values import RuntimeValueError, validate_runtime_value
 
 IR_VERSION_V2 = 2
@@ -150,6 +159,133 @@ def _normalizar_puertos(lista, prefijo):
     return resultado
 
 
+def _es_identificador_python(valor):
+    if not isinstance(valor, str) or not valor:
+        return False
+    primero = valor[0]
+    if not (primero == "_" or "a" <= primero <= "z" or "A" <= primero <= "Z"):
+        return False
+    for caracter in valor[1:]:
+        if not (
+            caracter == "_"
+            or caracter.isdigit()
+            or "a" <= caracter <= "z"
+            or "A" <= caracter <= "Z"
+        ):
+            return False
+    return True
+
+
+def _validar_firma_python(codigo, entradas, salidas, elemento_id):
+    """Replica la validación de puertos y parámetros del contrato web v2."""
+
+    if len(entradas) > MAX_INPUTS or len(salidas) > MAX_OUTPUTS:
+        _falla(
+            PYTHON_CODIGO_INVALIDO,
+            "Bloque funcional '{}': se permiten máximo {} entradas y {} salidas.".format(
+                elemento_id, MAX_INPUTS, MAX_OUTPUTS
+            ),
+            elemento_id,
+        )
+
+    for etiqueta, descriptores in (("entrada", entradas), ("salida", salidas)):
+        puertos = set()
+        variables = set()
+        for descriptor in descriptores:
+            puerto = descriptor["puerto"]
+            variable = descriptor["variable"]
+            tipo_dato = descriptor["tipo_dato"]
+            if (
+                not _es_identificador_python(variable)
+                or variable in FORBIDDEN_WORDS
+                or variable.startswith("__")
+            ):
+                _falla(
+                    PYTHON_CODIGO_INVALIDO,
+                    "Bloque funcional '{}': variable '{}' de {} no permitida.".format(
+                        elemento_id, variable, etiqueta
+                    ),
+                    elemento_id,
+                )
+            if tipo_dato not in TIPOS_DATO_V2:
+                _falla(
+                    PYTHON_CODIGO_INVALIDO,
+                    "Bloque funcional '{}': tipo_dato '{}' inválido en {}.".format(
+                        elemento_id, tipo_dato, etiqueta
+                    ),
+                    elemento_id,
+                )
+            if puerto in puertos or variable in variables:
+                repetido = puerto if puerto in puertos else variable
+                _falla(
+                    PYTHON_CODIGO_INVALIDO,
+                    "Bloque funcional '{}': identificador duplicado '{}' en {}.".format(
+                        elemento_id, repetido, etiqueta
+                    ),
+                    elemento_id,
+                )
+            puertos.add(puerto)
+            variables.add(variable)
+
+    modo = validate_python_source(codigo)
+    if modo != "function":
+        return
+
+    lineas = [
+        linea.strip()
+        for linea in codigo.splitlines()
+        if linea.strip() and not linea.lstrip().startswith("#")
+    ]
+    cabecera = lineas[0] if lineas else ""
+    prefijo = "def calcular("
+    if not cabecera.startswith(prefijo) or not cabecera.endswith(":"):
+        _falla(
+            PYTHON_COMPILACION_ERROR,
+            "Bloque funcional '{}': firma inválida de calcular().".format(elemento_id),
+            elemento_id,
+        )
+    cierre = cabecera.rfind(")")
+    if cierre < len(prefijo) or cabecera[cierre + 1:].strip() != ":":
+        _falla(
+            PYTHON_COMPILACION_ERROR,
+            "Bloque funcional '{}': firma inválida de calcular().".format(elemento_id),
+            elemento_id,
+        )
+
+    declaradas = set(item["variable"] for item in entradas)
+    parametros = cabecera[len(prefijo):cierre].strip()
+    kwargs_encontrado = False
+    if parametros:
+        for parametro in parametros.split(","):
+            parametro = parametro.strip()
+            if parametro.startswith("**"):
+                nombre = parametro[2:].strip()
+                if kwargs_encontrado or not _es_identificador_python(nombre):
+                    _falla(
+                        PYTHON_PERFIL_PROHIBIDO,
+                        "Bloque funcional '{}': firma **kwargs inválida.".format(elemento_id),
+                        elemento_id,
+                    )
+                kwargs_encontrado = True
+                continue
+            if parametro.startswith("*") or "=" in parametro or not _es_identificador_python(parametro):
+                _falla(
+                    PYTHON_PERFIL_PROHIBIDO,
+                    "Bloque funcional '{}': parámetro '{}' no permitido.".format(
+                        elemento_id, parametro
+                    ),
+                    elemento_id,
+                )
+            if parametro not in declaradas:
+                _falla(
+                    PYTHON_CODIGO_INVALIDO,
+                    "Bloque funcional '{}': el parámetro '{}' no corresponde a una entrada declarada.".format(
+                        elemento_id, parametro
+                    ),
+                    elemento_id,
+                )
+
+
 def _copiar_retardo(origen, destino):
     if "retardo_ms" in origen and es_numero(origen["retardo_ms"]):
         destino["retardo_ms"] = int(origen["retardo_ms"])
@@ -225,7 +361,7 @@ def _validar_functional_block(el, elemento_id, nombre):
     if es_python:
         codigo = el.get("codigo")
         try:
-            validate_python_source(codigo)
+            _validar_firma_python(codigo, entradas, salidas, elemento_id)
         except PythonExecutorError as error:
             _falla(error.codigo, "Bloque funcional '{}': {}".format(elemento_id, error.mensaje), elemento_id)
         resultado["codigo"] = codigo

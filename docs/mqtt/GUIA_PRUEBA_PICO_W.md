@@ -23,15 +23,18 @@ el runtime general HiLeS; no contiene contraseñas ni un `config_local.py` real.
    especialmente al puerto `1883` usado por la Pico. El navegador utiliza
    `9001` por WebSockets.
 
-Con `frontend/.env.local` configurado, se puede comprobar el reparto real del
-broker a cuatro clientes WebSocket antes de conectar la placa:
+Desde la raíz del repositorio, con `frontend/.env.local` configurado, se puede
+comprobar el reparto real del broker y la colaboración antes de conectar la
+placa:
 
 ```powershell
 node .\scripts\test-mqtt-four-clients.mjs
+node .\scripts\test-project-collaboration.mjs
 ```
 
-Debe informar `MQTT_CUATRO_CLIENTES_OK`. La publicación de esta prueba no es
-retenida y no reemplaza el estado oficial guardado en Mosquitto.
+Ambos deben finalizar con `MQTT_CUATRO_CLIENTES_OK` y
+`PROJECT_COLLABORATION_OK`. Estas órdenes requieren el repositorio completo;
+no se ejecutan dentro de la carpeta extraída del ZIP.
 
 ## 2. Preparar MicroPython
 
@@ -72,6 +75,10 @@ retenida y no reemplaza el estado oficial guardado en Mosquitto.
    MQTT_CONNECT_TIMEOUT_SECONDS = 2
    ENGINE_PERIOD_MS = 20
    ENGINE_STEP_INTERVAL_MS = 1000
+   ENGINE_QUEUE_SIZE = 32
+   WATCHDOG_PERIOD_MS = 5000
+   SENSOR_PERIOD_MS = 50
+   TRAFFIC_PERIOD_MS = 100
    ```
 
 4. En Thonny, crear en la raíz de la Pico la siguiente estructura y subir los
@@ -88,18 +95,29 @@ retenida y no reemplaza el estado oficial guardado en Mosquitto.
    │   └── task.py
    ├── devices/
    │   ├── __init__.py
-   │   └── led_task.py
+   │   ├── led_task.py
+   │   ├── traffic_controller.py
+   │   ├── vehicle_sensor_task.py
+   │   └── watchdog_task.py
    ├── hiles/
    │   ├── __init__.py
+   │   ├── channels.py
    │   ├── elements.py
+   │   ├── elements_v2.py
    │   ├── engine.py
    │   ├── engine_task.py
+   │   ├── engine_task_v2.py
+   │   ├── engine_v2.py
    │   ├── expressions.py
-   │   └── model.py
+   │   ├── model.py
+   │   ├── model_v2.py
+   │   ├── python_executor.py
+   │   └── runtime_values.py
    ├── platform/
    │   ├── __init__.py
    │   ├── hardware.py
    │   ├── mqtt_client.py
+   │   ├── traffic_io.py
    │   └── wifi.py
    └── pubsub/
        ├── __init__.py
@@ -166,9 +184,12 @@ comprobar el comportamiento idempotente esperado por QoS 1.
 
 ## 6. Prueba completa con los cuatro navegadores
 
-1. Iniciar el frontend y abrir cuatro ventanas o navegadores.
-2. Importar en los cuatro `output/demo-4-semaforos-inteligentes.json`.
-3. En todos seleccionar `Pico / MQTT`, modelo `cruce-01`, versión `1`, y
+1. Iniciar el frontend y abrir cuatro ventanas con el mismo enlace
+   `?project=entrega20-equipo1`.
+2. Importar solo en el primer navegador
+   `output/demo-4-semaforos-distribuidos.json`; los demás deben recibir el
+   snapshot compartido.
+3. En todos seleccionar `Pico / MQTT`, el mismo modelo y versión `1`, y
    verificar `Sesión: ACTIVA` y `MQTT: CONNECTED`.
 4. En un solo navegador pulsar **Compilar y cargar circuito en la Pico**.
 5. Esperar `Modelo: Aceptado`, `Secuencia: 0` y `Estado: LISTA` en los cuatro.
@@ -182,13 +203,13 @@ comprobar el comportamiento idempotente esperado por QoS 1.
 10. Probar un comando desde otro navegador: la respuesta de la Pico debe
     actualizar los cuatro canvas, porque todos observan la misma sesión.
 
-Mover, crear o borrar bloques no se sincroniza. Si se modifica el diagrama,
-hay que exportar/importar el mismo JSON en los cuatro navegadores antes de
-volver a compilar y cargar.
+Mover, crear, editar o borrar elementos se sincroniza por el namespace del
+`projectId`. Solo un navegador debe compilar y cargar cada versión del modelo;
+los cuatro reciben el estado oficial publicado por la Pico.
 
 ## 7. Evidencia mínima de la prueba
 
-Registrar en `entregas/entrega-5-13-octubre/REGISTRO_CAMBIOS.md`:
+Registrar en `entregas/entrega-6-20-octubre/REGISTRO_CAMBIOS.md`:
 
 - versión de MicroPython y método usado para instalar `umqtt.simple`;
 - red e IPv4 utilizadas, sin contraseñas;

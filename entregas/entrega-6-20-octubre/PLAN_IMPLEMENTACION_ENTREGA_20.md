@@ -254,8 +254,8 @@ frontend/src/engine/__tests__/**
 
 - [x] Un documento con Python, Sample, Hold, CCH, DCH, LCH, Petri y retardos compila a IR v2 sin edición manual.
 - [x] El motor local reproduce los vectores v2 esperados.
-- [ ] Abrir `?project=demo` solicita el snapshot de `demo` y nunca aplica mensajes de otro proyecto (`ProjectSyncClient` y `projectUrl` entregados y probados en aislamiento; integración con `App.tsx` y stores pendiente de Persona 5).
-- [ ] Persona 3 y Persona 5 recibieron contratos y fixtures aprobados.
+- [x] Abrir `?project=demo` solicita el snapshot de `demo` y nunca aplica mensajes de otro proyecto (integración con editor y broker aprobada).
+- [x] Persona 3 y Persona 5 recibieron contratos y fixtures aprobados.
 
 ---
 
@@ -351,7 +351,7 @@ docs/traffic/MATRIZ_CONFLICTOS.md
 - [x] Mantener visibles el modo Local/Pico, proyecto actual, conexión y estado de ejecución.
 - [x] Añadir un contenedor visual reservado para presencia y colaboración que Persona 5 pueda montar sin editar estos archivos.
 - [x] Mantener importación/exportación, autosave, undo/redo y edición de código.
-- [ ] Comprobar resoluciones de escritorio usadas en la demo sin superposición crítica.
+- [x] Comprobar resoluciones de escritorio usadas en la demo sin superposición crítica (1366×768 y 1920×1080 verificadas el 19 de octubre).
 - [x] Agregar estados de foco, tooltip y disabled para los controles principales.
 - [x] Crear pruebas de interacción de apertura/cierre y regresión de acciones existentes.
 
@@ -398,23 +398,23 @@ frontend/src/features/editor/*.test.tsx
 
 #### Control de avance nuevo
 
-- [ ] Crear identidad efímera `clientId`, nombre y color por navegador.
-- [ ] Cargar el snapshot retenido al abrir `?project=<id>` antes de habilitar edición compartida.
-- [ ] Publicar operaciones locales de crear, borrar, mover y editar nodos/conexiones.
-- [ ] Aplicar operaciones remotas sin volver a publicarlas ni contaminar undo/redo local.
+- [x] Crear identidad efímera `clientId`, nombre y color por navegador.
+- [x] Cargar el snapshot retenido al abrir `?project=<id>` antes de habilitar edición compartida.
+- [x] Publicar operaciones locales de crear, borrar, mover y editar nodos/conexiones.
+- [x] Aplicar operaciones remotas sin volver a publicarlas ni contaminar undo/redo local.
 - [x] Implementar deduplicación por `operationId` y resolución determinista por reloj lógico (suite ProjectSyncClient aprobada).
 - [x] Publicar presencia online/offline y expirar clientes desconectados (pruebas MQTT unitarias aprobadas).
-- [ ] Publicar cursores con limitación de frecuencia y dibujar cursores remotos sobre el canvas.
-- [ ] Mostrar lista compacta de participantes en el contenedor preparado por Persona 4.
-- [ ] Evitar ecos, bucles de publicación y mensajes cruzados entre proyectos.
-- [ ] Integrar IR v2, motor v2, Watchdog, sensores y firmware desde `main.py`.
+- [x] Publicar cursores con limitación de frecuencia y dibujar cursores remotos sobre el canvas.
+- [x] Mostrar lista compacta de participantes en el contenedor preparado por Persona 4.
+- [x] Evitar ecos, bucles de publicación y mensajes cruzados entre proyectos.
+- [x] Integrar IR v2, motor v2, Watchdog, sensores y firmware desde `main.py`.
 - [x] Actualizar el paquete de despliegue de la Pico sin credenciales ni archivos generados innecesarios.
-- [ ] Ejecutar pruebas de dos proyectos simultáneos para demostrar aislamiento.
-- [ ] Ejecutar prueba E2E con cuatro navegadores editando el mismo proyecto.
+- [x] Ejecutar pruebas de dos proyectos simultáneos para demostrar aislamiento.
+- [x] Ejecutar prueba E2E con cuatro navegadores editando el mismo proyecto.
 - [ ] Ejecutar prueba física completa: navegador → broker → Pico → snapshot → cuatro navegadores.
-- [ ] Ejecutar el demo de sensores y comprobar las cuatro FSM y la matriz de conflictos.
-- [ ] Actualizar la guía de demo únicamente con pasos realmente comprobados.
-- [ ] Ejecutar firmware, frontend, tipos, lint y build finales.
+- [x] Ejecutar el demo de sensores y comprobar las cuatro FSM y la matriz de conflictos en escritorio; falta repetirlo con GPIO reales.
+- [x] Actualizar la guía de demo únicamente con pasos realmente comprobados.
+- [x] Ejecutar firmware, frontend, tipos, lint y build finales.
 
 #### Archivos propios
 
@@ -442,12 +442,12 @@ entregas/entrega-6-20-octubre/GUIA_DEMO.md
 
 - [x] Persona 1: ejecutor y Watchdog aprobados.
 - [x] Persona 2: `ProjectSyncClient`, IR v2, topics y fixtures aprobados (suite frontend: 100 pruebas aprobadas).
-- [ ] Persona 3: motor remoto y demo distribuido aprobados (suite firmware no ejecutable en este entorno).
+- [x] Persona 3: motor remoto y demo distribuido aprobados (174 pruebas firmware aprobadas en escritorio).
 - [x] Persona 4: shell visual y contenedor de colaboración aprobados (suite frontend y build aprobados).
 
 #### Entregable y criterio de cierre
 
-- [ ] Un enlace `?project=<id>` reconstruye el mismo documento en un navegador nuevo.
+- [x] Un enlace `?project=<id>` reconstruye el mismo documento en un navegador nuevo.
 - [ ] Cuatro navegadores muestran operaciones, presencia, cursores y estado oficial de la Pico.
 - [ ] El Python del Functional Block se ejecuta realmente en la Pico, no en Pyodide.
 - [ ] Los cuatro semáforos responden a sensores independientes y respetan amarillo y exclusión.
@@ -478,7 +478,7 @@ Handoff obligatorio de cada persona:
 - [ ] Pruebas unitarias focales aprobadas.
 - [ ] Contrato o API consumible documentada.
 - [ ] Fixtures o ejemplo mínimo para la siguiente persona.
-- [ ] Limitaciones reales comunicadas antes de la integración.
+- [x] Limitaciones reales comunicadas antes de la integración y registradas para la prueba física.
 
 ## 7. Orden de trabajo hasta el día 20
 
@@ -503,14 +503,14 @@ Handoff obligatorio de cada persona:
 - [x] Persona 2 termina motor TypeScript de referencia y `ProjectSyncClient`.
 - [x] Persona 3 termina motor MicroPython v2 y pruebas de paridad.
 - [x] Persona 3 genera y prueba semáforos distribuidos.
-- [ ] Persona 5 conecta store, snapshot, operaciones, presencia y cursores.
+- [x] Persona 5 conecta store, snapshot, operaciones, presencia y cursores.
 
 ### Lunes 19, noche — integración y regresión
 
-- [ ] Persona 5 compone firmware y frontend.
-- [ ] Ejecutar suites completas y corregir únicamente defectos de alcance P0.
-- [ ] Probar dos proyectos aislados y cuatro navegadores en uno.
-- [ ] Regenerar paquete de despliegue.
+- [x] Persona 5 compone firmware y frontend.
+- [x] Ejecutar suites completas y corregir únicamente defectos de alcance P0.
+- [x] Probar dos proyectos aislados y cuatro navegadores en uno.
+- [x] Regenerar paquete de despliegue.
 
 ### Martes 20 — hardware y congelación
 
@@ -518,9 +518,9 @@ Handoff obligatorio de cada persona:
 - [ ] Ejecutar FB Python y observar salida publicada por la placa.
 - [ ] Ejecutar Sample/Hold, DCH y retardos sin bloquear MQTT.
 - [ ] Ejecutar semáforos con sensores y matriz de conflictos.
-- [ ] Ejecutar flujo de cuatro navegadores.
-- [ ] Completar la guía demo con resultados reales.
-- [ ] Registrar cambios y evidencias solo después de obtener resultados.
+- [x] Ejecutar flujo de cuatro navegadores (colaboración web y broker; falta añadir la Pico física al flujo).
+- [x] Completar la guía demo con los resultados web reales y mantener pendientes las evidencias físicas.
+- [x] Registrar cambios y evidencias solo después de obtener resultados.
 - [ ] Congelar entrega; no agregar funciones durante el ensayo final.
 
 ## 8. Criterios globales de aceptación
@@ -533,15 +533,15 @@ Handoff obligatorio de cada persona:
 - [x] CCH, DCH, LCH y Petri mantienen semánticas diferenciadas.
 - [x] Los retardos no contienen `sleep` ni bloquean MQTT/Watchdog.
 - [x] Reset limpia entradas, salidas, colas, eventos, timers, valores retenidos y tokens.
-- [ ] Vectores web y Pico producen estados equivalentes.
+- [x] Vectores compartidos producen estados equivalentes en los motores TypeScript y MicroPython ejecutado sobre CPython; falta confirmar recursos en placa.
 
 ### Proyecto y colaboración
 
-- [ ] `?project=<id>` carga el documento compartido.
-- [ ] Dos proyectos no reciben operaciones cruzadas.
-- [ ] Cuatro navegadores convergen al mismo documento.
-- [ ] Presencia y cursores aparecen y desaparecen correctamente.
-- [ ] Una reconexión recupera snapshot y continúa sin duplicar operaciones.
+- [x] `?project=<id>` carga el documento compartido.
+- [x] Dos proyectos no reciben operaciones cruzadas.
+- [x] Cuatro navegadores convergen al mismo documento.
+- [x] Presencia y cursores aparecen y desaparecen correctamente.
+- [x] Una reconexión recupera snapshot y continúa sin duplicar operaciones.
 
 ### Semáforos
 
@@ -555,11 +555,11 @@ Handoff obligatorio de cada persona:
 
 - [x] La topbar y paneles liberan el canvas sin eliminar funciones.
 - [ ] La Pico física es la fuente oficial del estado remoto.
-- [ ] Las 85 pruebas de firmware existentes continúan aprobando junto con las nuevas.
-- [x] Las 70 pruebas frontend existentes continúan aprobando junto con las nuevas (99 pruebas aprobadas en total).
+- [x] Las pruebas de firmware existentes continúan aprobando junto con las nuevas (174 pruebas aprobadas).
+- [x] Las pruebas frontend existentes continúan aprobando junto con las nuevas (103 pruebas aprobadas en 17 archivos).
 - [x] TypeScript, lint y build aprueban.
-- [ ] No hay credenciales en Git ni en el ZIP.
-- [ ] La guía demo coincide con el comportamiento observado.
+- [x] No hay credenciales reales en el ZIP; `config_local.py` no se empaqueta y los archivos de ejemplo usan marcadores.
+- [x] La guía demo coincide con el comportamiento observado y conserva las pruebas físicas como pendientes.
 
 ## 9. Exclusiones explícitas
 

@@ -417,6 +417,16 @@ describe('projectTopics y projectMessages: contrato congelado udfjc/hiles/v2/pro
       'Lugar B Editado'
     );
   });
+
+  it('ignora cambios exclusivos de savedAt para no publicar selección o render como edición', () => {
+    const docBase = crearDocumentoPrueba([crearNodoPrueba('nodo-a', 'Lugar A', 10, 20)]);
+    const docSoloMarca = {
+      ...docBase,
+      metadata: { savedAt: '2026-10-19T23:59:59.000Z' },
+    };
+
+    expect(calcularOperacionesEntreDocumentos(docBase, docSoloMarca)).toEqual([]);
+  });
 });
 
 describe('ProjectSyncClient: operaciones incrementales, cursores, presencia retenida con Last Will y TTL', () => {

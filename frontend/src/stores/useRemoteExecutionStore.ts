@@ -16,7 +16,7 @@ const parametrosIniciales = (): { modeloId: string; version: number } => {
   const params = new URLSearchParams(window.location.search);
   const version = Number(params.get('version'));
   return {
-    modeloId: params.get('modelo')?.trim() || 'cruce-01',
+    modeloId: params.get('modelo')?.trim() || params.get('project')?.trim() || 'cruce-01',
     version: Number.isInteger(version) && version > 0 ? version : 1,
   };
 };

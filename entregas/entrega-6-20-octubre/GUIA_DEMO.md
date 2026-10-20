@@ -4,7 +4,7 @@
 
 **Duración objetivo:** 8 a 12 minutos.
 
-> Estado de validación al 19 de octubre de 2026: la suite del frontend, el build, el lint y la generación/validación del ZIP de despliegue se comprobaron en escritorio. No se ejecutó la demo con broker, cuatro navegadores ni Pico física; todas las evidencias físicas de esta guía siguen pendientes y no deben presentarse como realizadas.
+> Estado de validación al 19 de octubre de 2026: se aprobaron las suites de firmware y frontend, TypeScript, lint, build, ZIP de despliegue, broker, aislamiento entre proyectos y cuatro navegadores reales con snapshot, edición, presencia y cursores. La Pico física no fue detectada por Windows; todas las evidencias que dependen de la placa o de GPIO reales siguen pendientes y no deben presentarse como realizadas.
 
 ## 1. Propósito
 
@@ -159,9 +159,9 @@ Resultado esperado:
 
 | Evidencia | Responsable | Resultado |
 |---|---|---|
-| Cuatro navegadores con el mismo proyecto | Persona 5 | Pendiente |
-| Presencia y cursores | Persona 5 | Pendiente |
-| Cambio de canvas sincronizado | Persona 5 | Pendiente |
+| Cuatro navegadores con el mismo proyecto | Persona 5 | Aprobado en navegador y broker el 19/10 |
+| Presencia y cursores | Persona 5 | Aprobado: 4 → 1 participantes al cerrar clientes |
+| Cambio de canvas sincronizado | Persona 5 | Aprobado: edición visible en el cuarto navegador y restaurada |
 | Confirmación de modelo por la Pico | Personas 1 y 2 | Pendiente |
 | Resultado Python remoto | Persona 1 | Pendiente |
 | Rechazo de código bloqueante | Persona 1 | Pendiente |
@@ -169,11 +169,27 @@ Resultado esperado:
 | Petri/LCH y retardos no bloqueantes | Personas 1 y 3 | Pendiente |
 | Paridad TypeScript/MicroPython | Personas 2, 3 y 5 | Pendiente |
 | Ciclo de cuatro semáforos | Persona 3 | Pendiente |
-| Vista final de TopBar y canvas | Persona 4 | Pendiente |
+| Vista final de TopBar y canvas | Persona 4 | Aprobada a 1366×768 y 1920×1080 |
 | Memoria y duración máxima | Personas 1 y 5 | Pendiente |
-| Suites y build | Persona 5 | Pendiente |
+| Suites y build | Persona 5 | 174 firmware + 103 frontend; lint, tipos y build aprobados |
 
 Los comandos, resultados, capturas disponibles y pendientes se registran en `REGISTRO_CAMBIOS.md`.
+
+Comandos repetibles ya aprobados:
+
+```powershell
+# Desde la raíz: broker real, cuatro clientes, snapshot retenido y aislamiento A/B.
+node scripts/test-project-collaboration.mjs
+node scripts/test-mqtt-four-clients.mjs
+
+# Firmware de escritorio.
+python -m unittest discover -s firmware/tests -p 'test_*.py'
+
+# Desde frontend/.
+npm run test:run
+npm run lint
+npm run build
+```
 
 ## 5. Plan de contingencia
 
@@ -206,8 +222,8 @@ Los comandos, resultados, capturas disponibles y pendientes se registran en `REG
 
 - [ ] La Pico es la fuente oficial de la ejecución remota.
 - [ ] La presentación diferencia Pyodide local de MicroPython remoto.
-- [ ] Los cuatro clientes abren el mismo proyecto.
-- [ ] La presencia se actualiza y expira correctamente.
+- [x] Los cuatro clientes abren el mismo proyecto.
+- [x] La presencia se actualiza y expira correctamente.
 - [ ] El código Python válido produce la salida esperada.
 - [ ] El código prohibido se rechaza sin bloquear la Pico.
 - [ ] `Service`, Functional Block, `Sample`, `Hold`, `Place` y `Transition` ejecutan en la Pico.
@@ -218,6 +234,6 @@ Los comandos, resultados, capturas disponibles y pendientes se registran en `REG
 - [ ] Los vectores TypeScript y MicroPython coinciden.
 - [ ] Los semáforos cumplen verde → amarillo → rojo.
 - [ ] No aparecen verdes conflictivos.
-- [ ] Las pruebas automáticas están registradas.
-- [ ] Las limitaciones reales se declaran sin presentar pendientes como terminados.
+- [x] Las pruebas automáticas están registradas.
+- [x] Las limitaciones reales se declaran sin presentar pendientes como terminados.
 

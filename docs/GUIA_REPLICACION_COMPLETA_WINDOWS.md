@@ -1,206 +1,142 @@
-# Guía completa para replicar HiLeS en otro PC
+# Guía completa para replicar y probar HiLeS en otro PC
 
-Esta guía permite preparar desde cero un equipo con Windows 10 u 11 para:
+Esta guía reproduce la entrega del 20 de octubre en Windows 10/11 y valida:
 
-- descargar el repositorio;
-- ejecutar el editor y simulador web;
-- instalar y configurar Eclipse Mosquitto;
-- comunicar varios navegadores dentro de una red local;
-- instalar Thonny y MicroPython en una Raspberry Pi Pico W;
-- copiar a la Pico únicamente los archivos necesarios;
-- comprobar por etapas dónde falla una conexión.
-
-La guía describe la arquitectura actual del proyecto:
+- React/Vite accesible en la red local;
+- Mosquitto por TCP para la Pico y WebSockets para los navegadores;
+- proyecto compartido por `?project=<id>`, snapshot, edición, presencia y cursores;
+- ejecución local en Pyodide y ejecución remota de Functional Blocks Python en MicroPython;
+- scheduler, CCH, DCH, `Sample`, `Hold`, Petri/LCH, retardos y watchdog;
+- cuatro semáforos y, opcionalmente, sensores y luces GPIO reales.
 
 ```text
-Navegador web
-  │ MQTT sobre WebSockets: puerto 9001
-  ▼
-Mosquitto en el PC
-  ▲ MQTT sobre TCP: puerto 1883
-  │
-Raspberry Pi Pico W
+Navegadores ── MQTT/WebSocket :9001 ──┐
+                                      ├── Mosquitto en el PC
+Pico W ────── MQTT/TCP :1883 ─────────┘
+
+Vite en el PC ── HTTP :5173 ── navegadores de la LAN
 ```
 
-> Esta configuración está pensada para una red local de confianza. No se deben
-> publicar los puertos 1883, 9001 o 5173 directamente en Internet. Para conectar
-> redes diferentes será necesario desplegar un broker público con TLS (`wss://`),
-> certificados y permisos por topic.
+> Vite, React, lo visual, Pyodide local y el broker corren en el PC. En modo
+> **Pico / MQTT**, el código de los Functional Blocks se ejecuta en la Pico W.
+> La Pico no aloja la interfaz web.
 
-## 1. Datos que se deben decidir antes de comenzar
+> Esta configuración es para una LAN de confianza. No publicar 1883, 9001 o
+> 5173 en Internet sin TLS, ACL y una configuración de producción.
 
-En los ejemplos se usan estos valores ficticios:
+## 1. Requisitos y datos de la prueba
 
-| Dato | Ejemplo | Cómo obtenerlo |
+PC servidor:
+
+- Windows 10/11 de 64 bits, PowerShell, Git, Node.js 22 LTS, Python 3;
+- Eclipse Mosquitto 2.x y Thonny;
+- acceso de administrador para servicio y firewall.
+
+Hardware:
+
+- Raspberry Pi **Pico W**, cable USB de datos y red Wi-Fi común;
+- opcional: cuatro sensores digitales, doce LED, resistencias y protoboard.
+
+Definir antes de empezar:
+
+| Dato | Ejemplo | Nota |
 |---|---|---|
-| Red Wi-Fi | `LAB_HILES` | Nombre de la red a la que se conectarán PC y Pico |
-| IPv4 del PC broker | `192.168.1.50` | `ipconfig` en el PC que ejecutará Mosquitto |
-| Usuario MQTT | `hiles_demo` | Se crea durante la instalación de Mosquitto |
-| Contraseña MQTT | No se documenta | Se introduce de forma interactiva |
-| Identificador de la Pico | `pico01` | Debe ser único si se conectan varias placas |
+| SSID | `LAB_HILES` | Misma red para PC y Pico |
+| IPv4 del PC | `192.168.1.50` | Obtener con `ipconfig` |
+| Usuario MQTT | `hiles_demo` | Cuenta exclusiva del laboratorio |
+| ID de Pico | `pico01` | Mantenerlo en esta entrega |
+| Proyecto | `entrega20-equipo1` | 3–64 caracteres `[a-z0-9_-]` |
+| Modelo | `entrega20-equipo1` | Puede coincidir con el proyecto |
 
-Reglas importantes:
+`localhost` identifica el equipo donde se usa. La Pico y otros PCs deben usar
+la IPv4 real del PC servidor. `0.0.0.0` solo sirve para escuchar.
 
-- `localhost` y `127.0.0.1` significan “este mismo dispositivo”. Solo sirven
-  cuando el navegador y Mosquitto están en el mismo PC.
-- La Pico y los otros computadores deben usar la IPv4 real del PC broker, por
-  ejemplo `192.168.1.50`.
-- `0.0.0.0` se usa en la configuración del broker para escuchar por todas las
-  interfaces; nunca se utiliza como dirección de conexión.
-- La red debe permitir comunicación entre clientes. Algunas redes públicas,
-  universitarias o de invitados aplican aislamiento de dispositivos.
-- Para una demostración es preferible un router o punto de acceso conocido.
+Los sensores deben ser compatibles con 3,3 V. No aplicar 5 V a un GPIO. Para
+cargas reales se requieren drivers; los GPIO son para prototipos de bajo
+consumo.
 
-## 2. Instalar las herramientas del PC
+## 2. Instalar herramientas
 
-### 2.1 Git
+- Git: <https://git-scm.com/download/win>
+- Node.js LTS: <https://nodejs.org/en/download>
+- Python: <https://www.python.org/downloads/windows/>
+- Thonny: <https://thonny.org/>
+- Mosquitto: <https://mosquitto.org/download/>
 
-Instalar Git desde <https://git-scm.com/download/win>. Durante la instalación
-se pueden conservar las opciones predeterminadas.
-
-Cerrar y volver a abrir PowerShell, y comprobar:
+Instalar Mosquitto en `C:\Program Files\mosquitto` y permitir que registre el
+servicio. Abrir una terminal nueva y comprobar:
 
 ```powershell
 git --version
-```
-
-### 2.2 Node.js
-
-El proyecto se desarrolló con Node.js 22 LTS. Instalar una versión LTS desde
-<https://nodejs.org/en/download> y comprobar:
-
-```powershell
 node --version
 npm --version
+python --version
 ```
 
-Si `npm` apunta a una instalación antigua o inexistente, cerrar todas las
-terminales y abrir una nueva. Si continúa fallando, eliminar la instalación
-antigua de Node.js antes de reinstalar la versión LTS.
-
-### 2.3 Thonny
-
-Instalar Thonny desde <https://thonny.org/>. El instalador oficial para Windows
-incluye su propio Python; no hace falta instalar Python por separado para usar
-la Pico.
-
-### 2.4 Eclipse Mosquitto
-
-Descargar el instalador de 64 bits desde <https://mosquitto.org/download/>.
-Instalarlo en la ruta predeterminada:
-
-```text
-C:\Program Files\mosquitto
-```
-
-Durante la instalación, permitir que se registre como servicio de Windows. El
-instalador incluye el broker y los clientes `mosquitto_pub` y `mosquitto_sub`.
-
-## 3. Descargar el repositorio
-
-Abrir PowerShell en la carpeta donde se guardará el proyecto:
+## 3. Descargar la versión correcta
 
 ```powershell
 git clone https://github.com/KevMasMas/HiLeS_WEB.git
 Set-Location .\HiLeS_WEB
+git fetch --all --prune
 git switch mqtt-pico
+git pull --ff-only
 git status
 ```
 
-La implementación MQTT/Pico revisada está actualmente en la rama `mqtt-pico`.
-Cuando esta rama sea integrada a la rama principal, el comando `git switch
-mqtt-pico` dejará de ser necesario.
+La entrega está en `mqtt-pico` mientras no se fusione a la rama principal. En
+una instalación nueva, `git status` debe estar limpio. Nunca versionar
+`.env.local`, `config_local.py`, `passwords.txt` ni contraseñas.
 
-El resultado esperado de `git status` en una instalación nueva es un árbol de
-trabajo limpio.
+## 4. Validar el software antes del hardware
 
-## 4. Instalar y probar el frontend
-
-Desde la raíz del repositorio:
+Frontend:
 
 ```powershell
 Set-Location .\frontend
 npm ci
 npm run test:run
+npm run lint
 npm run build
+Set-Location ..
 ```
 
-`npm ci` usa exactamente las versiones registradas en `package-lock.json`.
-No se necesita PostgreSQL, Prisma ni un backend.
-
-Para probar solamente el editor y el motor local:
+Firmware con dobles de hardware:
 
 ```powershell
-npm run dev
+python -m unittest discover -s firmware/tests -p 'test_*.py'
 ```
 
-Abrir la dirección que imprime Vite, normalmente
-<http://localhost:5173/>. En este modo todavía no se necesita Mosquitto ni la
-Pico.
+Referencia de la revisión: 103 pruebas frontend y 174 de firmware, además de
+lint y build aprobados. Un número mayor es válido; ninguna prueba puede fallar.
+Estas suites no sustituyen la medición física de Wi-Fi, GPIO y memoria.
 
-Detener Vite con `Ctrl+C` antes de continuar.
+## 5. Preparar la red y Mosquitto
 
-## 5. Identificar la IPv4 correcta del PC broker
+Conectar el PC a la red de la Pico y ejecutar `ipconfig`. Anotar la IPv4 del
+adaptador activo, no la de VPN, WSL, Hyper-V o VirtualBox. Una red universitaria
+o de invitados puede aislar clientes; para la demo es preferible un router o
+punto de acceso conocido.
 
-El PC que ejecuta Mosquitto será el **PC broker**. Conectarlo a la misma red que
-usará la Pico y ejecutar:
+### 5.1 Usuario y configuración
 
-```powershell
-ipconfig
-```
-
-Buscar el adaptador Wi-Fi o Ethernet realmente conectado. Anotar su `Dirección
-IPv4`, por ejemplo:
-
-```text
-Dirección IPv4 . . . . . . . . . . : 192.168.1.50
-```
-
-No elegir direcciones de adaptadores desconectados, VPN, Hyper-V, VirtualBox o
-WSL. La dirección puede cambiar al reconectar el PC; se debe verificar antes de
-cada demostración.
-
-## 6. Configurar Mosquitto con usuario y WebSockets
-
-Los comandos de esta sección que administran el servicio y el Firewall deben
-ejecutarse en **PowerShell como administrador**.
-
-### 6.1 Crear el usuario MQTT
+En PowerShell como administrador:
 
 ```powershell
 Set-Location "C:\Program Files\mosquitto"
 .\mosquitto_passwd.exe -c passwords.txt hiles_demo
-```
-
-El programa solicitará la contraseña dos veces. No escribir la contraseña en
-un archivo del repositorio ni en una captura de pantalla.
-
-La opción `-c` crea un archivo nuevo y sobrescribe uno existente. Para agregar
-o actualizar otro usuario posteriormente, omitir `-c`:
-
-```powershell
-.\mosquitto_passwd.exe passwords.txt otro_usuario
-```
-
-Permitir que el servicio pueda leer el archivo:
-
-```powershell
 icacls .\passwords.txt /inheritance:e
 icacls .\passwords.txt /grant '*S-1-5-18:(R)'
-```
 
-### 6.2 Instalar la configuración de HiLeS
-
-Desde la raíz del repositorio, reemplazando la ruta si el proyecto está en otra
-carpeta:
-
-```powershell
 Copy-Item `
-  ".\infrastructure\mosquitto\mosquitto.conf.example" `
+  "RUTA_DEL_REPOSITORIO\infrastructure\mosquitto\mosquitto.conf.example" `
   "C:\Program Files\mosquitto\mosquitto.conf" -Force
 ```
 
-El archivo debe contener dos listeners:
+La contraseña se solicita interactivamente. `-c` sobrescribe el archivo; para
+actualizar o agregar otro usuario después, omitir `-c`.
+
+La configuración debe contener:
 
 ```conf
 listener 1883 0.0.0.0
@@ -214,13 +150,7 @@ allow_anonymous false
 password_file C:\Program Files\mosquitto\passwords.txt
 ```
 
-- `1883`: conexión TCP utilizada por la Pico y las herramientas de terminal.
-- `9001`: MQTT sobre WebSockets utilizado por los navegadores.
-- `allow_anonymous false`: obliga a usar usuario y contraseña.
-
-### 6.3 Validar la configuración antes de reiniciar el servicio
-
-Detener temporalmente el servicio y ejecutar Mosquitto en primer plano:
+### 5.2 Validar servicio y firewall
 
 ```powershell
 Stop-Service mosquitto
@@ -228,54 +158,31 @@ Stop-Service mosquitto
   -c "C:\Program Files\mosquitto\mosquitto.conf" -v
 ```
 
-Si aparecen los listeners 1883 y 9001 sin errores, detener el proceso con
-`Ctrl+C` y arrancar el servicio:
+Si aparecen ambos listeners, detener con `Ctrl+C` y ejecutar:
 
 ```powershell
 Start-Service mosquitto
 Get-Service mosquitto
-```
+Test-NetConnection localhost -Port 1883
+Test-NetConnection localhost -Port 9001
+netstat -ano | Select-String ':1883|:9001'
 
-El estado esperado es `Running`.
-
-### 6.4 Abrir solamente los puertos necesarios en el Firewall
-
-Estas reglas restringen el acceso a la subred local y al perfil privado:
-
-```powershell
-New-NetFirewallRule `
-  -DisplayName "HiLeS MQTT TCP 1883 LAN" `
+New-NetFirewallRule -DisplayName "HiLeS MQTT 1883 LAN" `
   -Direction Inbound -Protocol TCP -LocalPort 1883 `
   -RemoteAddress LocalSubnet -Profile Private -Action Allow
-
-New-NetFirewallRule `
-  -DisplayName "HiLeS MQTT WebSocket 9001 LAN" `
+New-NetFirewallRule -DisplayName "HiLeS MQTT WS 9001 LAN" `
   -Direction Inbound -Protocol TCP -LocalPort 9001 `
   -RemoteAddress LocalSubnet -Profile Private -Action Allow
-```
-
-El puerto 5173 solo es necesario si otros computadores abrirán el frontend
-servido por este PC:
-
-```powershell
-New-NetFirewallRule `
-  -DisplayName "HiLeS Vite 5173 LAN" `
+New-NetFirewallRule -DisplayName "HiLeS Vite 5173 LAN" `
   -Direction Inbound -Protocol TCP -LocalPort 5173 `
   -RemoteAddress LocalSubnet -Profile Private -Action Allow
 ```
 
-No crear reglas para el perfil público salvo que la red y sus riesgos estén
-claramente controlados.
+No abrir reglas en perfil público sin controlar la red.
 
-### 6.5 Comprobar listeners y publicación local
+### 5.3 Probar PUB/SUB TCP
 
-```powershell
-Test-NetConnection localhost -Port 1883
-Test-NetConnection localhost -Port 9001
-netstat -ano | Select-String ':1883|:9001'
-```
-
-Abrir una primera terminal:
+Terminal 1:
 
 ```powershell
 $usuario = Read-Host "Usuario MQTT"
@@ -285,7 +192,7 @@ $clave = Read-Host "Contraseña MQTT" -MaskInput
   -t "udfjc/hiles/prueba" -v
 ```
 
-Abrir una segunda terminal:
+Terminal 2:
 
 ```powershell
 $usuario = Read-Host "Usuario MQTT"
@@ -295,24 +202,17 @@ $clave = Read-Host "Contraseña MQTT" -MaskInput
   -t "udfjc/hiles/prueba" -m "mensaje-de-prueba"
 ```
 
-La primera terminal debe recibir:
+La primera terminal debe recibir el mensaje.
 
-```text
-udfjc/hiles/prueba mensaje-de-prueba
-```
-
-## 7. Configurar el frontend para MQTT
-
-En `frontend`, crear el archivo local a partir de la plantilla:
+## 6. Configurar y servir el frontend
 
 ```powershell
+Set-Location RUTA_DEL_REPOSITORIO\frontend
 Copy-Item .env.example .env.local
 notepad .env.local
 ```
 
-Si el frontend, Mosquitto y el navegador están en el mismo PC se puede usar
-`localhost`. Para que la misma configuración funcione desde otros equipos de
-la LAN, usar la IPv4 del PC broker:
+Usar la IPv4 del servidor para permitir otros equipos:
 
 ```env
 VITE_MQTT_HOST=192.168.1.50
@@ -323,119 +223,97 @@ VITE_MQTT_USERNAME=hiles_demo
 VITE_MQTT_PASSWORD=CONTRASENA_MQTT
 ```
 
-No agregar `.env.local` a Git. Las variables `VITE_` se incorporan al código
-que recibe el navegador, por lo que este usuario debe ser exclusivo del
-laboratorio y no debe reutilizar una contraseña personal.
-
-Reiniciar Vite después de cambiar el archivo:
+Las variables `VITE_` llegan al navegador: usar credenciales exclusivas de
+laboratorio. Verificar que el archivo local está ignorado e iniciar Vite:
 
 ```powershell
+git check-ignore -v .env.local
 npm run dev -- --host 0.0.0.0
 ```
 
-- En el PC broker: <http://localhost:5173/>.
-- En otro PC de la LAN: `http://192.168.1.50:5173/`.
+- Servidor: `http://localhost:5173/`.
+- Otro PC: `http://192.168.1.50:5173/`.
 
-Desde un segundo PC se pueden comprobar primero los puertos:
+Desde el segundo PC:
 
 ```powershell
 Test-NetConnection 192.168.1.50 -Port 5173
 Test-NetConnection 192.168.1.50 -Port 9001
 ```
 
-Si 5173 funciona pero 9001 no, el problema está en Mosquitto o el Firewall. Si
-ninguno funciona, revisar la IPv4, el perfil de red y el aislamiento de
-clientes.
+Si 5173 responde y 9001 no, revisar broker/firewall. Si ninguno responde,
+revisar IPv4, perfil de red y aislamiento de clientes.
 
-## 8. Preparar la Raspberry Pi Pico W
+## 7. Probar colaboración sin Pico
 
-### 8.1 Confirmar el modelo de placa
+Con `.env.local` y Mosquitto listos, desde la raíz:
 
-Debe ser una **Raspberry Pi Pico W**. La Pico sin la letra W no tiene Wi-Fi y no
-puede conectarse directamente al broker.
-
-### 8.2 Instalar MicroPython
-
-Para reproducir exactamente el entorno actualmente observado puede instalarse
-MicroPython 1.28.0. También se puede utilizar la versión estable más reciente,
-pero debe repetirse el ensayo completo después de actualizar.
-
-El firmware oficial de la Pico W está en:
-<https://micropython.org/download/RPI_PICO_W/>.
-
-Método con archivo UF2:
-
-1. Desconectar la Pico.
-2. Mantener presionado `BOOTSEL`.
-3. Conectar el cable USB de datos sin soltar `BOOTSEL`.
-4. Soltar el botón cuando aparezca la unidad `RPI-RP2`.
-5. Copiar el archivo `.uf2` de **Pico W**, no el de Pico normal.
-6. Esperar el reinicio automático de la placa.
-
-También se puede usar en Thonny `Run > Select interpreter` o `Tools > Options
-> Interpreter`, seleccionar `MicroPython (Raspberry Pi Pico)` y utilizar la
-opción de instalar o actualizar MicroPython.
-
-### 8.3 Seleccionar la Pico en Thonny
-
-1. Conectar la placa mediante un cable USB de datos.
-2. Abrir Thonny.
-3. Seleccionar `MicroPython (Raspberry Pi Pico)` como intérprete.
-4. Elegir el puerto USB detectado o dejar detección automática.
-5. Pulsar **Stop/Restart backend** si la consola no muestra el prompt `>>>`.
-
-La consola debe mostrar una línea semejante a:
-
-```text
-MicroPython v1.28.0 ...; Raspberry Pi Pico W with RP2040
+```powershell
+node .\scripts\test-mqtt-four-clients.mjs
+node .\scripts\test-project-collaboration.mjs
 ```
 
-Si Windows no detecta la placa, probar otro cable: muchos cables USB solo
-cargan y no transportan datos.
+Se espera:
 
-### 8.4 Instalar `umqtt.simple`
+```text
+MQTT_CUATRO_CLIENTES_OK: 4 de 4 recibieron el mismo estado JSON.
+PROJECT_COLLABORATION_OK: 4 clientes, snapshot retenido, presencia, cursor y aislamiento A/B aprobados.
+```
 
-En Thonny se puede usar `Tools > Manage packages`, buscar `umqtt.simple` e
-instalarlo en la Pico. Alternativamente, con la placa conectada a Internet,
-ejecutar en su consola:
+Los scripts no imprimen la contraseña.
+
+Prueba visual:
+
+1. Abrir `http://IP_DEL_PC:5173/?project=entrega20-equipo1`.
+2. En el primer navegador importar
+   `output/demo-4-semaforos-distribuidos.json`.
+3. Esperar el autoguardado y abrir la misma URL en otros tres navegadores,
+   perfiles o PCs.
+4. Confirmar cuatro identidades/colores en la TopBar.
+5. Mover cursor y bloque, y editar una propiedad.
+6. Confirmar una sola aplicación del cambio en los otros clientes.
+7. Cerrar una pestaña y confirmar que su presencia expira.
+8. Abrir `?project=entrega20-aislado` y comprobar el aislamiento.
+
+El snapshot retenido carga el diagrama en clientes nuevos. Usar un `projectId`
+nuevo para cada ensayo limpio evita recuperar un snapshot anterior.
+
+## 8. Preparar MicroPython en la Pico W
+
+Descargar el firmware estable para **Pico W** desde
+<https://micropython.org/download/RPI_PICO_W/>.
+
+1. Desconectar la placa y mantener `BOOTSEL`.
+2. Conectar el cable USB de datos.
+3. Al aparecer `RPI-RP2`, copiar el UF2 de Pico W.
+4. En Thonny seleccionar `MicroPython (Raspberry Pi Pico)` y su puerto.
+5. Confirmar el prompt `>>>` y que la consola identifica una Pico W.
+
+Instalar `umqtt.simple` desde el gestor de paquetes de Thonny o:
 
 ```python
 import mip
 mip.install("umqtt.simple")
-```
-
-Después verificar:
-
-```python
 from umqtt.simple import MQTTClient
 print("umqtt.simple disponible")
 ```
 
-## 9. Preparar exactamente los archivos que se subirán
+## 9. Generar y configurar el paquete de firmware
 
-Desde la raíz del repositorio ejecutar:
+Desde la raíz:
 
 ```powershell
 & .\scripts\prepare-pico-deployment.ps1
+Get-FileHash .\output\hiles-pico-w-deploy.zip -Algorithm SHA256
+Get-Content .\output\hiles-pico-w-deploy.sha256
 ```
 
-El script genera:
-
-```text
-output\hiles-pico-w-deploy.zip
-output\hiles-pico-w-deploy.sha256
-```
-
-El ZIP excluye credenciales, ejemplos, cachés y bytecode. Extraerlo en una
-carpeta temporal del PC.
-
-Copiar `config_local.example.py` como `config_local.py` en la carpeta extraída
-y completar únicamente el nuevo archivo:
+Los hashes deben coincidir. Extraer el ZIP, copiar
+`config_local.example.py` como `config_local.py` y editar solo la copia:
 
 ```python
 WIFI_SSID = "LAB_HILES"
 WIFI_PASSWORD = "CONTRASENA_WIFI"
-
 MQTT_HOST = "192.168.1.50"
 MQTT_PORT = 1883
 MQTT_USERNAME = "hiles_demo"
@@ -445,87 +323,61 @@ MQTT_CONNECT_TIMEOUT_SECONDS = 2
 
 ENGINE_PERIOD_MS = 20
 ENGINE_STEP_INTERVAL_MS = 1000
+ENGINE_QUEUE_SIZE = 32
+WATCHDOG_PERIOD_MS = 5000
+SENSOR_PERIOD_MS = 50
+TRAFFIC_PERIOD_MS = 100
 ```
 
-`MQTT_HOST` debe ser la IPv4 del PC broker. Nunca usar `localhost` en la Pico.
+`MQTT_HOST` nunca debe ser `localhost`. Los topics físicos de esta entrega
+conservan `pico01`, así que mantener ese `MQTT_CLIENT_ID`.
 
-Si se conectan varias placas, cada una debe usar un identificador MQTT único.
-La versión actual de los topics todavía está fijada a `pico01`, por lo que el
-soporte completo de varias Pico requiere el cambio de topics dinámicos previsto
-en la arquitectura futura.
+### GPIO opcional de semáforos
 
-## 10. Archivos exactos que se deben subir a la Pico
+Después de revisar el cableado, descomentar y ajustar:
 
-En la raíz de la Pico debe quedar esta estructura:
+```python
+TRAFFIC_SENSOR_PINS = {"norte": 2, "sur": 3, "este": 4, "oeste": 5}
+TRAFFIC_LIGHT_PINS = {
+    "norte": {"rojo": 6, "amarillo": 7, "verde": 8},
+    "sur": {"rojo": 9, "amarillo": 10, "verde": 11},
+    "este": {"rojo": 12, "amarillo": 13, "verde": 14},
+    "oeste": {"rojo": 15, "amarillo": 16, "verde": 17},
+}
+```
+
+Los sensores son activos en bajo con `PULL_UP`; un pulsador de prueba puede
+unir la entrada a GND. Las cuatro claves son obligatorias para crear el
+controlador vial. Si se omiten, el runtime HiLeS general funciona sin GPIO.
+
+## 10. Copiar el runtime completo
+
+La raíz de la Pico debe quedar así:
 
 ```text
 /
 ├── main.py
 ├── config_local.py
-├── core/
-│   ├── __init__.py
-│   ├── clock.py
-│   ├── scheduler.py
-│   └── task.py
-├── devices/
-│   ├── __init__.py
-│   └── led_task.py
-├── hiles/
-│   ├── __init__.py
-│   ├── elements.py
-│   ├── engine.py
-│   ├── engine_task.py
-│   ├── expressions.py
-│   └── model.py
-├── platform/
-│   ├── __init__.py
-│   ├── hardware.py
-│   ├── mqtt_client.py
-│   └── wifi.py
-└── pubsub/
-    ├── __init__.py
-    ├── mqtt_transport.py
-    ├── node.py
-    └── topics.py
+├── core/{__init__.py,clock.py,scheduler.py,task.py}
+├── devices/{__init__.py,led_task.py,traffic_controller.py,
+│            vehicle_sensor_task.py,watchdog_task.py}
+├── hiles/{__init__.py,channels.py,elements.py,elements_v2.py,engine.py,
+│          engine_task.py,engine_task_v2.py,engine_v2.py,expressions.py,
+│          model.py,model_v2.py,python_executor.py,runtime_values.py}
+├── platform/{__init__.py,hardware.py,mqtt_client.py,traffic_io.py,wifi.py}
+└── pubsub/{__init__.py,mqtt_transport.py,node.py,topics.py}
 ```
 
-La carpeta `umqtt` instalada en el paso anterior también aparecerá en la
-placa, pero no forma parte del ZIP del proyecto.
+En Thonny, activar `View > Files`, crear las cinco carpetas remotas y subir
+todos los `.py` respetando las rutas. Subir `config_local.py`, no la plantilla.
+No copiar tests, examples, `__pycache__`, `.pyc` ni el ZIP.
 
-No subir:
+Si existía una versión anterior, respaldarla y reemplazar todos los módulos
+como una unidad. No mezclar el runtime V1 antiguo con el V2 actual.
 
-- `config_local.example.py`;
-- `examples/`;
-- `firmware/tests/`;
-- `__pycache__/`;
-- archivos `.pyc`;
-- scripts experimentales o versiones antiguas del runtime.
+## 11. Primera ejecución física
 
-La placa observada durante el desarrollo contiene algunos programas
-experimentales antiguos. No son necesarios para HiLeS. Antes de borrar algo,
-hacer una copia de seguridad desde Thonny. Para una réplica limpia basta con
-asegurar que `main.py`, los cinco paquetes del proyecto y `config_local.py`
-coincidan con la estructura anterior.
-
-### Cómo subirlos con Thonny
-
-1. Activar `View > Files` si no aparece el panel de archivos.
-2. En **This computer**, abrir la carpeta extraída.
-3. En **Raspberry Pi Pico**, crear las carpetas `core`, `devices`, `hiles`,
-   `platform` y `pubsub`.
-4. Seleccionar cada archivo local, hacer clic derecho y elegir **Upload to /**
-   o la carpeta remota correspondiente.
-5. Subir `config_local.py` solamente después de editarlo.
-6. Abrir `/main.py` desde el panel de la Pico y comprobar que comienza con
-   “Punto de composición del firmware HiLeS”.
-
-No abrir ni mostrar `config_local.py` durante una grabación o presentación,
-porque contiene las dos contraseñas.
-
-## 11. Primera ejecución de la Pico
-
-Antes de reiniciar la placa, abrir en el PC broker un monitor de todos sus
-topics:
+Abrir un monitor antes de reiniciar:
 
 ```powershell
 $usuario = Read-Host "Usuario MQTT"
@@ -535,25 +387,19 @@ $clave = Read-Host "Contraseña MQTT" -MaskInput
   -t "udfjc/hiles/v1/equipo1/pico01/#" -v
 ```
 
-En Thonny pulsar `Ctrl+D` dentro de la consola o usar **Stop/Restart backend**.
-La salida esperada es:
+Pulsar `Ctrl+D` en Thonny. Se espera:
 
 ```text
 [HiLeS] Construyendo runtime cooperativo...
-[HiLeS] Tareas activas: mqtt, led, motor
+[HiLeS] Tareas activas: ...
 [HiLeS] Esperando Wi-Fi y MQTT; el scheduler sigue atendiendo tareas.
 [MQTT] Conectado a 192.168.1.50:1883
 ```
 
-El monitor del PC debe recibir:
+El monitor debe recibir `estado/conexion` con `"conectado":true` y luego
+telemetría del watchdog.
 
-```text
-udfjc/hiles/v1/equipo1/pico01/estado/conexion {"conectado":true,"dispositivo":"pico01"}
-```
-
-## 12. Prueba del LED antes de probar un modelo HiLeS
-
-Conservar `$usuario` y `$clave` en PowerShell:
+Probar LED y scheduler:
 
 ```powershell
 $mensaje = '{"accion":"titilar","id_mensaje":"prueba-led-1"}'
@@ -562,116 +408,148 @@ $mensaje | & "C:\Program Files\mosquitto\mosquitto_pub.exe" `
   -t "udfjc/hiles/v1/equipo1/pico01/led/comando" -s
 ```
 
-El LED integrado debe cambiar y el monitor debe recibir `led/estado`. Se usa
-`-s` para conservar correctamente las comillas del JSON al invocar un
-ejecutable desde PowerShell.
+El LED debe alternar sin detener MQTT o telemetría. Repetir el mismo mensaje
+permite comprobar deduplicación/idempotencia de QoS 1.
 
-Si esta prueba funciona, quedan validados Wi-Fi, autenticación, puerto 1883,
-topics, suscripción y publicación de la Pico.
+## 12. Ejecutar un modelo desde la interfaz
 
-## 13. Prueba completa desde el navegador
+`project` identifica el documento colaborativo; `modelo` y `version`
+identifican la sesión de la Pico. Pueden usar el mismo texto, pero no son el
+mismo concepto.
 
-1. Confirmar que Vite está ejecutándose con `npm run dev -- --host 0.0.0.0`.
-2. Abrir el frontend.
-3. Importar `output/demo-4-semaforos-inteligentes.json`.
-4. Seleccionar **Pico / MQTT**.
-5. Usar modelo `cruce-01` y versión `1`.
-6. Pulsar **Unirse** y esperar `MQTT: CONNECTED`.
-7. Pulsar **Compilar y cargar circuito en la Pico**.
-8. Esperar `Modelo: Aceptado`, secuencia `0` y estado `LISTA`.
-9. Enviar `1` al Service `Habilitar ciclo`.
-10. Pulsar **Paso** y comprobar que cambia el estado del canvas.
+1. Abrir cuatro veces
+   `http://IP_DEL_PC:5173/?project=entrega20-equipo1`.
+2. Importar el JSON solo en el primer navegador y esperar su sincronización.
+3. Abrir **Simulation** y seleccionar **Pico / MQTT**.
+4. Usar modelo `entrega20-equipo1`, versión `1` y pulsar **Unirse**.
+5. Esperar `MQTT CONNECTED`.
+6. En un navegador pulsar **Compilar y cargar circuito en la Pico**.
+7. Esperar `Modelo: Aceptado`, secuencia `0` y estado `LISTA`.
+8. Seleccionar un Service, enviar una entrada y pulsar **Step/Paso**.
+9. Confirmar la misma instantánea oficial en los cuatro navegadores.
+10. Probar **Run**, **Stop** y **Reset**.
 
-Para varios navegadores, todos deben importar el mismo JSON y unirse al mismo
-modelo y versión. El enlace comparte la identificación de sesión, pero no
-transfiere el diagrama visual.
+El enlace copiado puede contener `project`, `modelo` y `version`, pero nunca
+credenciales.
 
-## 14. Diagnóstico por capas
+## 13. Matriz obligatoria del motor físico
 
-No cambiar varias cosas a la vez. Comprobar en este orden:
+| Prueba | Procedimiento | Resultado esperado |
+|---|---|---|
+| Functional Block | `def calcular(carros): return carros >= 6` | `3 → False`, `8 → True` calculados en la Pico |
+| Rechazo seguro | Intentar `while True: pass` | Rechazo; MQTT y modelo válido siguen activos |
+| Firma | Entradas distintas de `calcular(...)` | Rechazo antes de activar el modelo |
+| CCH | Enviar valor continuo | El valor permanece disponible |
+| DCH | Generar varios eventos | Consumo único y FIFO |
+| Sample | Activar muestreo | Un evento solo al activarse |
+| Hold | Consumir evento | Conserva y publica el último valor por CCH |
+| Petri/LCH | Habilitar transición | Tokens atómicos con guarda/capacidad |
+| Retardos | Usar delay | No bloquea LED, MQTT ni watchdog |
+| Reinicio | Pulsar Reset | Limpia colas, eventos, timers, tokens y errores |
+| Watchdog | Observar telemetría | Métricas y memoria periódicas |
+| 4 clientes | Ejecutar desde uno | Misma secuencia oficial en todos |
 
-### A. Mosquitto no inicia
+El Python remoto es deliberadamente **acotado**: admite funciones de cálculo
+deterministas y tipos soportados; rechaza imports, acceso al sistema, recursión
+y construcciones peligrosas. Ejecuta la lógica HiLeS soportada, no cualquier
+programa Python irrestricto.
 
-```powershell
-Get-Service mosquitto
-& "C:\Program Files\mosquitto\mosquitto.exe" `
-  -c "C:\Program Files\mosquitto\mosquitto.conf" -v
-```
+## 14. Cuatro semáforos
 
-Revisar rutas, sintaxis, existencia de `passwords.txt` y permisos de lectura.
+Prueba visual/lógica:
 
-### B. La publicación local falla
+1. Importar `output/demo-4-semaforos-distribuidos.json`.
+2. Confirmar Norte, Sur, Este y Oeste con sensores propios.
+3. Cargar el modelo en la Pico e inyectar demandas.
+4. Verificar verde → amarillo → rojo.
+5. Verificar que direcciones conflictivas nunca estén verdes juntas.
+6. Confirmar que una demanda pendiente termina atendida.
+7. Simular un fallo y verificar retorno seguro a rojo.
 
-Revisar usuario y contraseña. Si aparece `Connection Refused: not authorised`,
-regenerar el usuario y reiniciar Mosquitto.
+Prueba GPIO, si se configuraron los pines:
 
-### C. Otro PC no llega al broker
+1. Reiniciar: todas las luces deben iniciar en rojo.
+2. Activar Norte llevando su sensor a GND.
+3. Observar verde, amarillo y rojo.
+4. Activar Este durante Norte y confirmar que espera el intervalo seguro.
+5. Repetir para Sur y Oeste.
+6. Probar la condición segura ante un fallo controlado.
 
-Desde el otro PC:
+No cambiar cableado con la placa energizada. Comprobar primero una salida y el
+GND común.
 
-```powershell
-Test-NetConnection 192.168.1.50 -Port 9001
-```
+## 15. Diagnóstico rápido
 
-Revisar IPv4, perfil privado del Firewall y aislamiento de clientes de la red.
+- **Mosquitto no inicia:** ejecutar `mosquitto.exe -c mosquitto.conf -v` con el
+  servicio detenido; revisar sintaxis, rutas, permisos y puertos ocupados.
+- **Otro PC no conecta:** probar 5173 y 9001 por separado, IPv4, firewall,
+  perfil privado y aislamiento de clientes.
+- **Thonny no detecta la Pico:** usar cable de datos, cerrar el puerto serie en
+  otras apps, reiniciar backend o reinstalar con `BOOTSEL`.
+- **Wi-Fi sí, MQTT no:** usar IP del PC y puerto 1883; revisar usuario,
+  contraseña, firewall y subred.
+- **Falta `umqtt`:** instalar `umqtt.simple` en la placa y reiniciar.
+- **La Pico no recibe el modelo:** observar
+  `udfjc/hiles/v1/equipo1/pico01/#`, verificar modo Pico y sesión activa.
+- **Modelo rechazado:** revisar `modelo/confirmacion` y `error`: tamaño, tipos,
+  puertos, firma `calcular`, conexiones y Python prohibido. El modelo válido
+  anterior debe conservarse.
+- **Reinicio o poca memoria:** reducir el modelo, registrar `gc.mem_free()`,
+  verificar que todo el runtime V2 fue copiado y observar el watchdog.
 
-### D. El navegador no conecta
+## 16. Evidencia de replicación
 
-- confirmar que `.env.local` usa la IPv4 correcta;
-- confirmar `VITE_MQTT_WS_PROTOCOL=ws` para el frontend HTTP local;
-- reiniciar Vite después de modificar `.env.local`;
-- revisar la consola del navegador;
-- comprobar el puerto 9001 independientemente.
+Guardar, sin secretos:
 
-### E. Thonny no detecta la Pico
+- rama y commit; versiones de Windows, Node, Mosquitto, Thonny y MicroPython;
+- IPv4/tipo de red; suites, lint, build y scripts MQTT;
+- salida serie, conexión Pico y aceptación/rechazo de modelos;
+- resultados de Python, Sample/Hold, canales, Petri y retardos;
+- memoria inicial/mínima y duración del ensayo;
+- ciclo e interbloqueo de semáforos; capturas o video necesarios.
 
-- usar un cable USB de datos;
-- cerrar otra aplicación que esté usando el puerto serie;
-- pulsar **Stop/Restart backend**;
-- reconectar manteniendo `BOOTSEL` si es necesario reinstalar MicroPython.
+No mostrar `.env.local`, `config_local.py`, `passwords.txt` ni contraseñas.
 
-### F. La Pico se conecta al Wi-Fi pero no a MQTT
+## 17. Checklist final
 
-- `MQTT_HOST` debe ser la IPv4 del PC, no `localhost`;
-- comprobar `MQTT_PORT = 1883`;
-- verificar usuario y contraseña MQTT;
-- comprobar que el PC y la Pico estén en la misma subred;
-- revisar el Firewall y el monitor verbose de Mosquitto.
+PC y red:
 
-### G. La Pico muestra `ImportError: no module named umqtt`
+- [ ] Rama correcta y árbol inicialmente limpio.
+- [ ] Frontend: tests, lint y build aprobados.
+- [ ] Firmware de escritorio aprobado.
+- [ ] Mosquitto `Running`; 1883/9001 y PUB/SUB aprobados.
+- [ ] Otro PC alcanza 5173/9001.
+- [ ] `.env.local` usa la IPv4 actual y está ignorado.
+- [ ] Ambos scripts de cuatro clientes aprobados.
+- [ ] URL compartida sincroniza snapshot, edición, presencia y cursores.
+- [ ] Otro proyecto permanece aislado.
 
-Instalar `umqtt.simple` en la memoria de la placa y reiniciarla.
+Pico:
 
-### H. El modelo es rechazado
+- [ ] Pico W, MicroPython y `umqtt.simple` listos.
+- [ ] Hash del ZIP verificado y runtime V2 completo copiado.
+- [ ] `config_local.py` correcto y fuera de Git.
+- [ ] Conexión, telemetría, LED y deduplicación aprobados.
+- [ ] Functional Block válido corre en MicroPython.
+- [ ] Código/firma inválidos se rechazan sin bloquear.
+- [ ] CCH, DCH, Sample, Hold, Petri/LCH y retardos aprobados.
+- [ ] Reset limpia estado temporal; cuatro navegadores convergen.
+- [ ] Memoria y duración registradas.
 
-El runtime MicroPython actual soporta en IR v1 `Service`, `Functional Block`,
-`Place` y `Transition`. Aún no ejecuta en la Pico todos los elementos admitidos
-por el motor web, como `Sample` y `Hold`.
+Semáforos:
 
-## 15. Lista final de verificación
+- [ ] Pines revisados antes de energizar.
+- [ ] Cuatro sensores detectados.
+- [ ] Cuatro FSM cumplen verde → amarillo → rojo.
+- [ ] No existen verdes conflictivos y no hay inanición.
+- [ ] Un fallo conduce a rojo.
 
-- [ ] `git status` no muestra archivos locales con contraseñas.
-- [ ] `npm ci`, pruebas y build terminan correctamente.
-- [ ] Mosquitto está `Running`.
-- [ ] Los puertos 1883 y 9001 escuchan.
-- [ ] PUB/SUB local funciona con autenticación.
-- [ ] Un segundo PC puede llegar a 5173 y 9001 si se necesita acceso LAN.
-- [ ] `.env.local` usa la IPv4 actual del broker.
-- [ ] La placa es Pico W y Thonny muestra el prompt `>>>`.
-- [ ] `umqtt.simple` se puede importar.
-- [ ] La estructura de archivos de la Pico coincide con esta guía.
-- [ ] `config_local.py` usa la misma red, IPv4 y credenciales MQTT.
-- [ ] El monitor recibe `estado/conexion` con `conectado: true`.
-- [ ] El comando del LED funciona.
-- [ ] La web muestra `MQTT: CONNECTED` y `Modelo: Aceptado`.
+## 18. Documentos relacionados
 
-## 16. Archivos relacionados del repositorio
-
-- `infrastructure/mosquitto/mosquitto.conf.example`: configuración del broker.
-- `infrastructure/mosquitto/README.md`: operaciones del servicio Mosquitto.
-- `frontend/.env.example`: plantilla de conexión del navegador.
-- `firmware/pico/config_local.example.py`: plantilla local de la Pico.
-- `scripts/prepare-pico-deployment.ps1`: genera y valida el paquete de firmware.
-- `docs/mqtt/GUIA_PRUEBA_PICO_W.md`: ensayo específico de la placa.
-- `docs/mqtt/CONTRATO_MENSAJES_MQTT.md`: topics y mensajes del protocolo.
-
+- `entregas/entrega-6-20-octubre/GUIA_DEMO.md`: presentación corta.
+- `entregas/entrega-6-20-octubre/PLAN_IMPLEMENTACION_ENTREGA_20.md`: alcance.
+- `entregas/entrega-6-20-octubre/REGISTRO_CAMBIOS.md`: resultados registrados.
+- `docs/mqtt/GUIA_PRUEBA_PICO_W.md`: despliegue resumido incluido como
+  `LEEME_PRIMERO.md` en el ZIP.
+- `docs/mqtt/CONTRATO_MENSAJES_MQTT.md`: contrato de mensajes.
+- `infrastructure/mosquitto/README.md`: operación del broker.

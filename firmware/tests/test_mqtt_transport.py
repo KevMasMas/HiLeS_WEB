@@ -4,6 +4,7 @@ import unittest
 from firmware.pico.core.scheduler import Scheduler
 from firmware.pico.devices.led_task import APAGADO, LedTask
 from firmware.pico.main import build_default_application
+from firmware.pico.hiles.engine_task_v2 import EngineTaskV2
 from firmware.pico.platform.mqtt_client import create_mqtt_client
 from firmware.pico.platform.wifi import WifiConnection
 from firmware.pico.pubsub import (
@@ -479,6 +480,9 @@ class DefaultApplicationTests(unittest.TestCase):
         self.assertEqual(snapshots[-1]["modelo_id"], "integracion-motor")
         self.assertEqual(snapshots[-1]["secuencia"], 0)
         self.assertIs(scheduler.components["engine"].engine is not None, True)
+        self.assertIsInstance(scheduler.components["engine"], EngineTaskV2)
+        self.assertEqual(scheduler.components["engine"].queue_size, 32)
+        self.assertIsNotNone(scheduler.components["watchdog"])
 
 
 if __name__ == "__main__":

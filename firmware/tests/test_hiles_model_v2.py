@@ -152,6 +152,35 @@ class AdditionalV2RulesTests(unittest.TestCase):
         validado = validate_ir_v2(modelo(base, [canal("c", "dato", "s", "s-out", "t", "condicion")]))
         self.assertEqual(validado["conexiones"][0]["tipo"], "cch")
 
+    def test_python_signature_is_rejected_before_activation(self):
+        def bloque(codigo="def calcular(x):\n    return x", entradas=None, salidas=None):
+            return {
+                "id": "fb", "tipo": "functional_block", "nombre": "fb",
+                "lenguaje": "python", "codigo": codigo,
+                "entradas": entradas if entradas is not None else [
+                    {"puerto": "in", "variable": "x", "tipo_dato": "integer"}
+                ],
+                "salidas": salidas if salidas is not None else [
+                    {"puerto": "out", "variable": "y", "tipo_dato": "integer"}
+                ],
+            }
+
+        casos = [
+            bloque(codigo="def calcular(z):\n    return z"),
+            bloque(salidas=[{"puerto": "out", "variable": "y", "tipo_dato": "desconocido"}]),
+            bloque(salidas=[
+                {"puerto": "out", "variable": "a", "tipo_dato": "integer"},
+                {"puerto": "out", "variable": "b", "tipo_dato": "integer"},
+            ]),
+            bloque(entradas=[
+                {"puerto": "in-{}".format(i), "variable": "x{}".format(i), "tipo_dato": "integer"}
+                for i in range(17)
+            ]),
+        ]
+        for caso in casos:
+            with self.subTest(caso=caso):
+                self.assert_code(modelo([caso]), "PYTHON_CODIGO_INVALIDO")
+
     def test_delayed_feedback_is_not_an_algebraic_cycle(self):
         def bloque(element_id):
             return {
