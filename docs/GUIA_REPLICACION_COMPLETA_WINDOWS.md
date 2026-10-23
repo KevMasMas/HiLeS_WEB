@@ -7,7 +7,7 @@ Esta guía reproduce la entrega del 20 de octubre en Windows 10/11 y valida:
 - proyecto compartido por `?project=<id>`, snapshot, edición, presencia y cursores;
 - ejecución local en Pyodide y ejecución remota de Functional Blocks Python en MicroPython;
 - scheduler, CCH, DCH, `Sample`, `Hold`, Petri/LCH, retardos y watchdog;
-- cuatro semáforos y, opcionalmente, sensores y luces GPIO reales.
+- un demo manual de cuatro semáforos construido con Services y Functional Blocks generales.
 
 ```text
 Navegadores ── MQTT/WebSocket :9001 ──┐
@@ -325,32 +325,21 @@ ENGINE_PERIOD_MS = 20
 ENGINE_STEP_INTERVAL_MS = 1000
 ENGINE_QUEUE_SIZE = 32
 WATCHDOG_PERIOD_MS = 5000
-SENSOR_PERIOD_MS = 50
-TRAFFIC_PERIOD_MS = 100
 ```
 
 `MQTT_HOST` nunca debe ser `localhost`. Los topics físicos de esta entrega
 conservan `pico01`, así que mantener ese `MQTT_CLIENT_ID`.
 
-### GPIO opcional de semáforos
-
-Después de revisar el cableado, descomentar y ajustar:
-
-```python
-TRAFFIC_SENSOR_PINS = {"norte": 2, "sur": 3, "este": 4, "oeste": 5}
-TRAFFIC_LIGHT_PINS = {
-    "norte": {"rojo": 6, "amarillo": 7, "verde": 8},
-    "sur": {"rojo": 9, "amarillo": 10, "verde": 11},
-    "este": {"rojo": 12, "amarillo": 13, "verde": 14},
-    "oeste": {"rojo": 15, "amarillo": 16, "verde": 17},
-}
-```
-
-Los sensores son activos en bajo con `PULL_UP`; un pulsador de prueba puede
-unir la entrada a GND. Las cuatro claves son obligatorias para crear el
-controlador vial. Si se omiten, el runtime HiLeS general funciona sin GPIO.
+No agregar configuración del dominio al firmware. En esta versión todas las
+entradas se envían manualmente a Services desde el editor. La conexión futura
+de hardware se hará mediante un adaptador genérico de entradas.
 
 ## 10. Copiar el runtime completo
+
+Si la placa conserva la versión vial anterior, eliminar únicamente
+`/devices/traffic_controller.py`, `/devices/vehicle_sensor_task.py` y
+`/platform/traffic_io.py` antes de copiar el paquete nuevo. Conservar
+`config_local.py` y sus credenciales locales.
 
 La raíz de la Pico debe quedar así:
 
@@ -359,12 +348,11 @@ La raíz de la Pico debe quedar así:
 ├── main.py
 ├── config_local.py
 ├── core/{__init__.py,clock.py,scheduler.py,task.py}
-├── devices/{__init__.py,led_task.py,traffic_controller.py,
-│            vehicle_sensor_task.py,watchdog_task.py}
+├── devices/{__init__.py,led_task.py,watchdog_task.py}
 ├── hiles/{__init__.py,channels.py,elements.py,elements_v2.py,engine.py,
 │          engine_task.py,engine_task_v2.py,engine_v2.py,expressions.py,
 │          model.py,model_v2.py,python_executor.py,runtime_values.py}
-├── platform/{__init__.py,hardware.py,mqtt_client.py,traffic_io.py,wifi.py}
+├── platform/{__init__.py,hardware.py,mqtt_client.py,wifi.py}
 └── pubsub/{__init__.py,mqtt_transport.py,node.py,topics.py}
 ```
 
@@ -454,29 +442,20 @@ deterministas y tipos soportados; rechaza imports, acceso al sistema, recursión
 y construcciones peligrosas. Ejecuta la lógica HiLeS soportada, no cualquier
 programa Python irrestricto.
 
-## 14. Cuatro semáforos
+## 14. Demo manual de cuatro semáforos
 
 Prueba visual/lógica:
 
 1. Importar `output/demo-4-semaforos-distribuidos.json`.
-2. Confirmar Norte, Sur, Este y Oeste con sensores propios.
-3. Cargar el modelo en la Pico e inyectar demandas.
-4. Verificar verde → amarillo → rojo.
-5. Verificar que direcciones conflictivas nunca estén verdes juntas.
-6. Confirmar que una demanda pendiente termina atendida.
-7. Simular un fallo y verificar retorno seguro a rojo.
+2. Cargarlo en la Pico como cualquier otro modelo.
+3. Inyectar manualmente cantidades enteras en los cuatro Services `Sensor`.
+4. Ejecutar un paso y observar las solicitudes calculadas en la Pico; todas las
+   luces comienzan en `rojo` sin otra entrada manual.
+5. Opcionalmente inyectar `amarillo` o `verde` en los Services `Luz` y observar
+   las lámparas.
+6. Introducir dos verdes conflictivos y comprobar `seguro = false`.
 
-Prueba GPIO, si se configuraron los pines:
-
-1. Reiniciar: todas las luces deben iniciar en rojo.
-2. Activar Norte llevando su sensor a GND.
-3. Observar verde, amarillo y rojo.
-4. Activar Este durante Norte y confirmar que espera el intervalo seguro.
-5. Repetir para Sur y Oeste.
-6. Probar la condición segura ante un fallo controlado.
-
-No cambiar cableado con la placa energizada. Comprobar primero una salida y el
-GND común.
+Este ensayo no usa GPIO ni una FSM vial oculta en el firmware.
 
 ## 15. Diagnóstico rápido
 
@@ -536,13 +515,13 @@ Pico:
 - [ ] Reset limpia estado temporal; cuatro navegadores convergen.
 - [ ] Memoria y duración registradas.
 
-Semáforos:
+Demo manual:
 
-- [ ] Pines revisados antes de energizar.
-- [ ] Cuatro sensores detectados.
-- [ ] Cuatro FSM cumplen verde → amarillo → rojo.
-- [ ] No existen verdes conflictivos y no hay inanición.
-- [ ] Un fallo conduce a rojo.
+- [ ] Cantidades enteras enviadas a los cuatro Services de entrada.
+- [ ] Colores enviados manualmente a los cuatro Services de luz.
+- [ ] Functional Blocks calculan lámparas y solicitudes en la Pico.
+- [ ] El bloque de seguridad detecta una combinación incompatible.
+- [ ] El firmware no contiene configuración ni módulos específicos del demo.
 
 ## 18. Documentos relacionados
 

@@ -183,6 +183,40 @@ describe('Perfil Python restringido de IR v2 (validación y normalización de E/
 });
 
 describe('Compilador HilesModelDocument → IR v2 y migración IR v1 → IR v2', () => {
+  it('compila el demo distribuido con contadores enteros de vehículos', () => {
+    const documento = cargarDocumento('demo-4-semaforos-distribuidos.json');
+    const compilado = compilarModeloEditorAIrV2(documento);
+    expect(compilado.ok).toBe(true);
+    expect(compilado.modelo).not.toBeNull();
+    if (!compilado.modelo) return;
+
+    const sensores = compilado.modelo.entradas_externas.filter((entrada) =>
+      entrada.elemento_id.startsWith('sensor-'),
+    );
+    expect(sensores).toHaveLength(4);
+    expect(sensores.every((sensor) => sensor.tipo_dato === 'integer')).toBe(true);
+    expect(sensores.every((sensor) => sensor.valor_inicial === 0)).toBe(true);
+    const luces = compilado.modelo.entradas_externas.filter((entrada) =>
+      entrada.elemento_id.startsWith('luz-'),
+    );
+    expect(luces).toHaveLength(4);
+    expect(luces.every((luz) => luz.valor_inicial === 'rojo')).toBe(true);
+    const lamparas = compilado.modelo.elementos.filter(
+      (elemento) => elemento.tipo === 'functional_block' && elemento.id.startsWith('lamparas-'),
+    );
+    expect(lamparas).toHaveLength(4);
+    expect(
+      lamparas.every(
+        (elemento) =>
+          elemento.tipo === 'functional_block' &&
+          elemento.entradas.some(
+            (entrada) =>
+              entrada.variable === 'vehiculos_esperando' && entrada.tipo_dato === 'integer',
+          ),
+      ),
+    ).toBe(true);
+  });
+
   it('compila demo-parqueadero-converters.json incluyendo Sample y Hold en IR v2', () => {
     const documento = cargarDocumento('demo-parqueadero-converters.json');
     const compilado = compilarModeloEditorAIrV2(documento);

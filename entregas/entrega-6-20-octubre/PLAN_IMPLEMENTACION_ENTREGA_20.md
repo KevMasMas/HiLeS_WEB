@@ -4,8 +4,8 @@
 
 **Equipo:** cinco personas
 
-**Estado:** planeación corregida después de auditar entregas anteriores, código actual y pruebas
-**Regla de avance:** una casilla se marca `[x]` únicamente cuando hay código terminado y prueba reproducible. Durante esta revisión no se agrega ninguna entrada al registro de cambios.
+**Estado:** implementación final ajustada para conservar un runtime completamente general
+**Regla de avance:** una casilla se marca `[x]` únicamente cuando hay código terminado y prueba reproducible; los cambios ejecutados se documentan en el registro.
 
 ## 1. Objetivo real de esta entrega
 
@@ -16,7 +16,7 @@ Completar las capacidades que todavía no existen sobre la arquitectura actual, 
 3. Abrir y reconstruir el documento visual mediante `?project=<id>`.
 4. Sincronizar edición, presencia y cursores entre navegadores del mismo proyecto.
 5. Reorganizar la interfaz para liberar espacio del canvas mediante una topbar y paneles compactos.
-6. Reemplazar el semáforo coordinado anterior por cuatro controladores lógicos independientes, con sensores, FSM `Rojo → Verde → Amarillo → Rojo` y exclusión segura de movimientos incompatibles.
+6. Conservar el ejemplo vial como un modelo manual de Services y Functional Blocks, sin sensores, FSM ni controladores específicos dentro del firmware general.
 7. Validar el flujo completo en la Pico física y dejar una demostración repetible.
 
 La Pico ejecuta el motor HiLeS y el Python de los Functional Blocks. Vite, React, Pyodide, Mosquitto y la sincronización visual permanecen en el PC y los navegadores.
@@ -62,7 +62,7 @@ Estas actividades ya fueron implementadas y probadas. **No se vuelven a repartir
 | Structural Block | Se dibuja y sus hijos pueden aparecer planos | No se resuelven conexiones que atraviesan puertos de frontera del bloque |
 | Tipos | El editor ofrece `vector` y `custom` | El runtime actual solo transporta boolean, integer, real y string |
 | Cuatro navegadores | Pueden recibir un mismo snapshot MQTT | No comparten creación, movimiento o edición de nodos ni muestran presencia/cursor |
-| Semáforos | Hay cuatro bloques visuales con una red común | No hay cuatro FSM independientes, sensores ni temporización realista |
+| Demo vial | Hay cuatro bloques visuales | Debe ejecutarse con entradas manuales y sin lógica específica en el firmware |
 | UI | Hay header, paleta izquierda y rail derecho | Los paneles todavía reducen de forma permanente el canvas |
 
 ## 3. Alcance exacto y límites
@@ -259,7 +259,7 @@ frontend/src/engine/__tests__/**
 
 ---
 
-### Persona 3 — Motor MicroPython completo y cuatro semáforos independientes
+### Persona 3 — Motor MicroPython completo y demo manual general
 
 **Responsable:** Juan Ramos
 
@@ -284,14 +284,11 @@ frontend/src/engine/__tests__/**
 - [x] Cancelar eventos y retardos pendientes al reiniciar o cargar otro modelo.
 - [x] Ampliar snapshots con valor retenido, evento/cola pendiente, timer y error observable.
 - [x] Reproducir todos los vectores de conformidad de Persona 2.
-- [x] Diseñar cuatro FSM separadas: Norte, Sur, Este y Oeste.
-- [x] Crear un sensor de presencia independiente por sentido.
-- [x] Crear solicitudes y permisos de paso para que cada FSM decida con su sensor sin compartir un único estado interno.
-- [x] Garantizar la secuencia `Rojo → Verde → Amarillo → Rojo`, con todo-rojo de seguridad antes de un movimiento conflictivo.
-- [x] Definir matriz de conflictos, tiempo mínimo verde, amarillo, todo-rojo y espera máxima para evitar inanición.
-- [x] Crear simulador de sensores y adaptador GPIO opcional (GPIO probado con un `machine` simulado; falta la placa física).
+- [x] Retirar del runtime general las FSM, sensores y adaptadores GPIO específicos del ejemplo vial.
+- [x] Dejar el demo construido únicamente con Services y Functional Blocks del modelo.
+- [x] Permitir que el usuario inyecte manualmente cantidades enteras y colores desde el panel genérico de simulación.
 - [x] Generar el nuevo JSON desde script; no editar manualmente el archivo de demo.
-- [x] Probar ausencia de verdes incompatibles, transición por amarillo, equidad y fail-safe ante sensor inválido.
+- [x] Probar Services enteros manuales, valores iniciales, ejecución de Functional Blocks y detección demostrativa de colores incompatibles.
 
 #### Archivos propios
 
@@ -301,14 +298,10 @@ firmware/pico/hiles/elements_v2.py
 firmware/pico/hiles/channels.py
 firmware/pico/hiles/engine_v2.py
 firmware/pico/hiles/engine_task_v2.py
-firmware/pico/devices/traffic_controller.py
-firmware/pico/devices/vehicle_sensor_task.py
-firmware/pico/platform/traffic_io.py
 firmware/tests/test_hiles_model_v2.py
 firmware/tests/test_hiles_engine_v2.py
 firmware/tests/test_hiles_channels.py
 firmware/tests/test_hiles_delays.py
-firmware/tests/test_traffic_controller.py
 scripts/generate-distributed-traffic-demo.mjs
 output/demo-4-semaforos-distribuidos.json
 docs/traffic/PROTOCOLO_SEMAFOROS.md
@@ -324,9 +317,9 @@ docs/traffic/MATRIZ_CONFLICTOS.md
 
 - [x] Los mismos vectores v2 producen el mismo estado observable en TypeScript y MicroPython.
 - [x] MQTT y Watchdog continúan ejecutándose mientras hay retardos pendientes (escritorio, con `FakeTransport` y `WatchdogTask`; falta la Pico física).
-- [x] Cada semáforo conserva su propio estado y sensor.
-- [x] Ningún sentido pasa de verde directamente a rojo.
-- [x] Nunca hay verdes simultáneos en movimientos incompatibles.
+- [x] El runtime no importa ni configura código específico del dominio.
+- [x] El demo compila como un modelo general con entradas manuales.
+- [x] El bloque de seguridad detecta combinaciones manuales incompatibles.
 
 ---
 
@@ -407,12 +400,12 @@ frontend/src/features/editor/*.test.tsx
 - [x] Publicar cursores con limitación de frecuencia y dibujar cursores remotos sobre el canvas.
 - [x] Mostrar lista compacta de participantes en el contenedor preparado por Persona 4.
 - [x] Evitar ecos, bucles de publicación y mensajes cruzados entre proyectos.
-- [x] Integrar IR v2, motor v2, Watchdog, sensores y firmware desde `main.py`.
+- [x] Integrar IR v2, motor v2 y Watchdog desde `main.py`, sin lógica de dominio.
 - [x] Actualizar el paquete de despliegue de la Pico sin credenciales ni archivos generados innecesarios.
 - [x] Ejecutar pruebas de dos proyectos simultáneos para demostrar aislamiento.
 - [x] Ejecutar prueba E2E con cuatro navegadores editando el mismo proyecto.
 - [ ] Ejecutar prueba física completa: navegador → broker → Pico → snapshot → cuatro navegadores.
-- [x] Ejecutar el demo de sensores y comprobar las cuatro FSM y la matriz de conflictos en escritorio; falta repetirlo con GPIO reales.
+- [x] Convertir el demo vial en un modelo manual sin sensores, FSM ni GPIO ocultos en el firmware.
 - [x] Actualizar la guía de demo únicamente con pasos realmente comprobados.
 - [x] Ejecutar firmware, frontend, tipos, lint y build finales.
 
@@ -450,7 +443,7 @@ entregas/entrega-6-20-octubre/GUIA_DEMO.md
 - [x] Un enlace `?project=<id>` reconstruye el mismo documento en un navegador nuevo.
 - [ ] Cuatro navegadores muestran operaciones, presencia, cursores y estado oficial de la Pico.
 - [ ] El Python del Functional Block se ejecuta realmente en la Pico, no en Pyodide.
-- [ ] Los cuatro semáforos responden a sensores independientes y respetan amarillo y exclusión.
+- [ ] El demo manual acepta cantidades y colores por Services y publica sus resultados desde la Pico.
 - [ ] La entrega puede repetirse desde la guía sin pasos implícitos.
 
 ## 6. Flujo de entregas entre personas
@@ -463,7 +456,7 @@ Persona 2
   IR v2 + compilador + semántica de canales + ProjectSyncClient
         ↓
 Persona 3
-  motor MicroPython v2 + Sample/Hold + retardos + semáforos
+  motor MicroPython v2 + Sample/Hold + retardos + demo manual general
         ↓
 Persona 4
   shell visual sobre contratos congelados
@@ -502,7 +495,7 @@ Handoff obligatorio de cada persona:
 
 - [x] Persona 2 termina motor TypeScript de referencia y `ProjectSyncClient`.
 - [x] Persona 3 termina motor MicroPython v2 y pruebas de paridad.
-- [x] Persona 3 genera y prueba semáforos distribuidos.
+- [x] Persona 3 genera y prueba el demo manual sin lógica vial en firmware.
 - [x] Persona 5 conecta store, snapshot, operaciones, presencia y cursores.
 
 ### Lunes 19, noche — integración y regresión
@@ -517,7 +510,7 @@ Handoff obligatorio de cada persona:
 - [ ] Copiar firmware limpio a la Pico.
 - [ ] Ejecutar FB Python y observar salida publicada por la placa.
 - [ ] Ejecutar Sample/Hold, DCH y retardos sin bloquear MQTT.
-- [ ] Ejecutar semáforos con sensores y matriz de conflictos.
+- [ ] Inyectar manualmente cantidades y colores en el demo desde los Services.
 - [x] Ejecutar flujo de cuatro navegadores (colaboración web y broker; falta añadir la Pico física al flujo).
 - [x] Completar la guía demo con los resultados web reales y mantener pendientes las evidencias físicas.
 - [x] Registrar cambios y evidencias solo después de obtener resultados.
@@ -543,13 +536,13 @@ Handoff obligatorio de cada persona:
 - [x] Presencia y cursores aparecen y desaparecen correctamente.
 - [x] Una reconexión recupera snapshot y continúa sin duplicar operaciones.
 
-### Semáforos
+### Demo manual de semáforos
 
-- [x] Existen cuatro FSM y cuatro sensores independientes.
-- [x] Toda salida de verde pasa por amarillo.
-- [x] Existe intervalo seguro de todo-rojo antes de conceder un conflicto.
-- [x] Nunca se observan verdes incompatibles (pruebas de escritorio con demanda aleatoria y sostenida).
-- [x] Una demanda sostenida no causa inanición permanente de otro sentido.
+- [x] Los cuatro contadores son Services `integer` inyectables manualmente.
+- [x] Las cuatro luces son Services `string` inyectables manualmente.
+- [x] Los Functional Blocks de lámparas y solicitud se ejecutan como código del modelo.
+- [x] El bloque de seguridad detecta luces incompatibles introducidas manualmente.
+- [x] El firmware y `config_local.py` no contienen lógica ni configuración vial.
 
 ### UI, calidad y entrega
 

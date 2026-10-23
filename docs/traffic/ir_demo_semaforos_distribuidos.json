@@ -23,49 +23,57 @@
       "elemento_id": "sensor-norte",
       "nombre": "🚗 Sensor Norte",
       "puerto_salida": "sensor-norte-out",
-      "tipo_dato": "boolean"
+      "tipo_dato": "integer",
+      "valor_inicial": 0
     },
     {
       "elemento_id": "luz-norte",
       "nombre": "🚦 Luz Norte",
       "puerto_salida": "luz-norte-out",
-      "tipo_dato": "string"
+      "tipo_dato": "string",
+      "valor_inicial": "rojo"
     },
     {
       "elemento_id": "sensor-sur",
       "nombre": "🚗 Sensor Sur",
       "puerto_salida": "sensor-sur-out",
-      "tipo_dato": "boolean"
+      "tipo_dato": "integer",
+      "valor_inicial": 0
     },
     {
       "elemento_id": "luz-sur",
       "nombre": "🚦 Luz Sur",
       "puerto_salida": "luz-sur-out",
-      "tipo_dato": "string"
+      "tipo_dato": "string",
+      "valor_inicial": "rojo"
     },
     {
       "elemento_id": "sensor-este",
       "nombre": "🚗 Sensor Este",
       "puerto_salida": "sensor-este-out",
-      "tipo_dato": "boolean"
+      "tipo_dato": "integer",
+      "valor_inicial": 0
     },
     {
       "elemento_id": "luz-este",
       "nombre": "🚦 Luz Este",
       "puerto_salida": "luz-este-out",
-      "tipo_dato": "string"
+      "tipo_dato": "string",
+      "valor_inicial": "rojo"
     },
     {
       "elemento_id": "sensor-oeste",
       "nombre": "🚗 Sensor Oeste",
       "puerto_salida": "sensor-oeste-out",
-      "tipo_dato": "boolean"
+      "tipo_dato": "integer",
+      "valor_inicial": 0
     },
     {
       "elemento_id": "luz-oeste",
       "nombre": "🚦 Luz Oeste",
       "puerto_salida": "luz-oeste-out",
-      "tipo_dato": "string"
+      "tipo_dato": "string",
+      "valor_inicial": "rojo"
     }
   ],
   "elementos": [
@@ -73,11 +81,12 @@
       "id": "sensor-norte",
       "tipo": "service",
       "nombre": "🚗 Sensor Norte",
-      "tipo_dato": "boolean",
+      "tipo_dato": "integer",
       "salidas": [
         "sensor-norte-out"
       ],
-      "entradas": []
+      "entradas": [],
+      "valor_inicial": 0
     },
     {
       "id": "luz-norte",
@@ -87,7 +96,8 @@
       "salidas": [
         "luz-norte-out"
       ],
-      "entradas": []
+      "entradas": [],
+      "valor_inicial": "rojo"
     },
     {
       "id": "lamparas-norte",
@@ -95,7 +105,7 @@
       "nombre": "Lámparas Norte",
       "habilitado": true,
       "lenguaje": "python",
-      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }",
+      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }",
       "entradas": [
         {
           "puerto": "lamparas-norte-luz",
@@ -103,9 +113,9 @@
           "tipo_dato": "string"
         },
         {
-          "puerto": "lamparas-norte-presencia",
-          "variable": "presencia",
-          "tipo_dato": "boolean"
+          "puerto": "lamparas-norte-vehiculos",
+          "variable": "vehiculos_esperando",
+          "tipo_dato": "integer"
         }
       ],
       "salidas": [
@@ -135,11 +145,12 @@
       "id": "sensor-sur",
       "tipo": "service",
       "nombre": "🚗 Sensor Sur",
-      "tipo_dato": "boolean",
+      "tipo_dato": "integer",
       "salidas": [
         "sensor-sur-out"
       ],
-      "entradas": []
+      "entradas": [],
+      "valor_inicial": 0
     },
     {
       "id": "luz-sur",
@@ -149,7 +160,8 @@
       "salidas": [
         "luz-sur-out"
       ],
-      "entradas": []
+      "entradas": [],
+      "valor_inicial": "rojo"
     },
     {
       "id": "lamparas-sur",
@@ -157,7 +169,7 @@
       "nombre": "Lámparas Sur",
       "habilitado": true,
       "lenguaje": "python",
-      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }",
+      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }",
       "entradas": [
         {
           "puerto": "lamparas-sur-luz",
@@ -165,9 +177,9 @@
           "tipo_dato": "string"
         },
         {
-          "puerto": "lamparas-sur-presencia",
-          "variable": "presencia",
-          "tipo_dato": "boolean"
+          "puerto": "lamparas-sur-vehiculos",
+          "variable": "vehiculos_esperando",
+          "tipo_dato": "integer"
         }
       ],
       "salidas": [
@@ -197,11 +209,12 @@
       "id": "sensor-este",
       "tipo": "service",
       "nombre": "🚗 Sensor Este",
-      "tipo_dato": "boolean",
+      "tipo_dato": "integer",
       "salidas": [
         "sensor-este-out"
       ],
-      "entradas": []
+      "entradas": [],
+      "valor_inicial": 0
     },
     {
       "id": "luz-este",
@@ -211,7 +224,8 @@
       "salidas": [
         "luz-este-out"
       ],
-      "entradas": []
+      "entradas": [],
+      "valor_inicial": "rojo"
     },
     {
       "id": "lamparas-este",
@@ -219,7 +233,7 @@
       "nombre": "Lámparas Este",
       "habilitado": true,
       "lenguaje": "python",
-      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }",
+      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }",
       "entradas": [
         {
           "puerto": "lamparas-este-luz",
@@ -227,9 +241,9 @@
           "tipo_dato": "string"
         },
         {
-          "puerto": "lamparas-este-presencia",
-          "variable": "presencia",
-          "tipo_dato": "boolean"
+          "puerto": "lamparas-este-vehiculos",
+          "variable": "vehiculos_esperando",
+          "tipo_dato": "integer"
         }
       ],
       "salidas": [
@@ -259,11 +273,12 @@
       "id": "sensor-oeste",
       "tipo": "service",
       "nombre": "🚗 Sensor Oeste",
-      "tipo_dato": "boolean",
+      "tipo_dato": "integer",
       "salidas": [
         "sensor-oeste-out"
       ],
-      "entradas": []
+      "entradas": [],
+      "valor_inicial": 0
     },
     {
       "id": "luz-oeste",
@@ -273,7 +288,8 @@
       "salidas": [
         "luz-oeste-out"
       ],
-      "entradas": []
+      "entradas": [],
+      "valor_inicial": "rojo"
     },
     {
       "id": "lamparas-oeste",
@@ -281,7 +297,7 @@
       "nombre": "Lámparas Oeste",
       "habilitado": true,
       "lenguaje": "python",
-      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }",
+      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }",
       "entradas": [
         {
           "puerto": "lamparas-oeste-luz",
@@ -289,9 +305,9 @@
           "tipo_dato": "string"
         },
         {
-          "puerto": "lamparas-oeste-presencia",
-          "variable": "presencia",
-          "tipo_dato": "boolean"
+          "puerto": "lamparas-oeste-vehiculos",
+          "variable": "vehiculos_esperando",
+          "tipo_dato": "integer"
         }
       ],
       "salidas": [
@@ -367,7 +383,7 @@
       "origen": "sensor-norte",
       "puerto_origen": "sensor-norte-out",
       "destino": "lamparas-norte",
-      "puerto_destino": "lamparas-norte-presencia"
+      "puerto_destino": "lamparas-norte-vehiculos"
     },
     {
       "id": "cch-luz-norte",
@@ -383,7 +399,7 @@
       "origen": "sensor-sur",
       "puerto_origen": "sensor-sur-out",
       "destino": "lamparas-sur",
-      "puerto_destino": "lamparas-sur-presencia"
+      "puerto_destino": "lamparas-sur-vehiculos"
     },
     {
       "id": "cch-luz-sur",
@@ -399,7 +415,7 @@
       "origen": "sensor-este",
       "puerto_origen": "sensor-este-out",
       "destino": "lamparas-este",
-      "puerto_destino": "lamparas-este-presencia"
+      "puerto_destino": "lamparas-este-vehiculos"
     },
     {
       "id": "cch-luz-este",
@@ -415,7 +431,7 @@
       "origen": "sensor-oeste",
       "puerto_origen": "sensor-oeste-out",
       "destino": "lamparas-oeste",
-      "puerto_destino": "lamparas-oeste-presencia"
+      "puerto_destino": "lamparas-oeste-vehiculos"
     },
     {
       "id": "cch-luz-oeste",

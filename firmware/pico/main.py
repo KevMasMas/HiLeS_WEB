@@ -42,9 +42,6 @@ def build_default_application(config=None, clock=None, machine_module=None,
         from devices.led_task import APAGADO, LedTask
         from hiles.engine_task_v2 import EngineTaskV2
         from devices.watchdog_task import WatchdogTask
-        from devices.vehicle_sensor_task import VehicleSensorTask
-        from devices.traffic_controller import TrafficControllerTask
-        from platform.traffic_io import build_traffic_io
         from platform.hardware import create_led_output
         from platform.mqtt_client import create_mqtt_client
         from platform.wifi import WifiConnection
@@ -55,9 +52,6 @@ def build_default_application(config=None, clock=None, machine_module=None,
         from .devices.led_task import APAGADO, LedTask
         from .hiles.engine_task_v2 import EngineTaskV2
         from .devices.watchdog_task import WatchdogTask
-        from .devices.vehicle_sensor_task import VehicleSensorTask
-        from .devices.traffic_controller import TrafficControllerTask
-        from .platform.traffic_io import build_traffic_io
         from .platform.hardware import create_led_output
         from .platform.mqtt_client import create_mqtt_client
         from .platform.wifi import WifiConnection
@@ -135,32 +129,12 @@ def build_default_application(config=None, clock=None, machine_module=None,
         connect_timeout_seconds=getattr(config, "MQTT_CONNECT_TIMEOUT_SECONDS", 2),
     )
     watchdog_task = WatchdogTask(scheduler, node, period_ms=getattr(config, "WATCHDOG_PERIOD_MS", 5000))
-    sensor_tasks = {}
-    traffic_task = None
-    sensor_sources, traffic_outputs = build_traffic_io(config, machine_module=machine_module)
-    if sensor_sources:
-        sensor_tasks = {
-            sentido: VehicleSensorTask(scheduler, source, sentido,
-                                       period_ms=getattr(config, "SENSOR_PERIOD_MS", 50))
-            for sentido, source in sensor_sources.items()
-        }
-    sentidos_requeridos = ("norte", "sur", "este", "oeste")
-    if all(sentido in sensor_tasks for sentido in sentidos_requeridos):
-        traffic_task = TrafficControllerTask(
-            scheduler,
-            {sentido: sensor_tasks[sentido] for sentido in sentidos_requeridos},
-            outputs=traffic_outputs,
-            period_ms=getattr(config, "TRAFFIC_PERIOD_MS", 100),
-            on_engine_input=engine_task.submit_local_input,
-        )
     scheduler.components = {
         "node": node,
         "wifi": wifi,
         "led": led_task,
         "engine": engine_task,
         "watchdog": watchdog_task,
-        "sensors": sensor_tasks,
-        "traffic": traffic_task,
         "led_command_handle": led_command_handle,
         "mqtt": mqtt_transport,
     }

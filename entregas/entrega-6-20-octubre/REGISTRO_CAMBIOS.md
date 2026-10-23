@@ -441,6 +441,49 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
   - Falta repetir Sample/Hold, DCH, retardos y las cuatro FSM con GPIO/sensores reales. Las pruebas actuales de esas piezas son de escritorio con reloj, transporte y `machine` simulados.
 - **Reversión, si aplica:** revertir únicamente esta entrada y los archivos enumerados. El script colaborativo usa identificadores de proyecto únicos y limpia de forma best-effort los snapshots/presencias retenidos que crea.
 
+### [2026-10-20 09:15] — Responsable: corrección del demo de vehículos y semáforos
+
+- **Estado:** [x] Corrección implementada y validada en escritorio. [!] Falta repetir el flujo navegador → broker → Pico con la placa física actualizada.
+- **Error encontrado:** el demo distribuido declaraba cada sensor como `boolean` (`presencia`), por lo que una cantidad como `8` no cumplía el contrato. Además, la guía proponía `def calcular(carros): return carros >= 6`; ese ejemplo falla si el puerto no se llama exactamente `carros` o si todavía no recibió un valor. La guía física también conservaba el Service legado `Habilitar ciclo`, que no existe en el modelo distribuido.
+- **Correcciones realizadas:**
+  1. El contrato vial usa ahora `vehiculos_esperando` de tipo `integer` en los cuatro Services, conexiones, Functional Blocks, IR v2 y entradas locales de la Pico. Cero significa sin cola y un entero positivo representa la cantidad detenida esperando verde.
+  2. `VehicleSensorTask` acepta enteros no negativos, conserva antirrebote y detección de falla, y mantiene compatibilidad con sensores GPIO booleanos convirtiéndolos a `0`/`1`.
+  3. Cada FSM publica `vehiculos_esperando` además del campo derivado `presencia`; crea solicitud con cantidad mayor que cero. El árbitro conserva la antigüedad como criterio principal y usa la cola mayor para desempatar solicitudes simultáneas.
+  4. `SimulatedVehicleSource` modela una cola: acumula llegadas en rojo y permite salidas únicamente en verde. `main.py` puede crear las cuatro fuentes simuladas solo con `TRAFFIC_SIMULATION = True`; el valor predeterminado `False` mantiene desacoplado el motor HiLeS general.
+  5. El ejemplo Python quedó protegido ante la entrada inicial ausente mediante `**inputs`, puerto `carros` (`integer`) y salida nombrada `hay_fila` (`boolean`). Se verificaron `{}` → `False`, `3` → `False` y `8` → `True`.
+  6. Se corrigieron la guía de demo, la guía de prueba en Pico, la guía de replicación y el protocolo vial. Ya no se indica usar `Habilitar ciclo`; la prueba explica cómo observar las cuatro colas numéricas.
+  7. Se regeneraron `output/demo-4-semaforos-distribuidos.json`, la fixture `docs/traffic/ir_demo_semaforos_distribuidos.json` mediante el compilador oficial y el ZIP de despliegue.
+- **Pruebas ejecutadas:**
+  - Firmware: `python -m unittest discover -s firmware/tests -p 'test_*.py'` → **177 aprobadas**.
+  - Frontend: `vitest run --no-isolate` con `TEMP` dentro del workspace → **17 archivos y 104 pruebas aprobadas**. La primera corrida paralela falló por archivos temporales eliminados por el sandbox (`ENOENT`), no por aserciones; al usar una ruta temporal persistente quedó aprobada.
+  - ESLint → **aprobado**.
+  - TypeScript + Vite → **build aprobado**; solo permanecen las advertencias conocidas de Pyodide externalizado y tamaño del chunk.
+  - `git diff --check` → sin errores de espacios; únicamente avisos de normalización LF/CRLF de Git.
+- **Paquete vigente:** `output/hiles-pico-w-deploy.zip`, 34 archivos, SHA-256 `9FA30B970D05E02A6A34070A432D495A3F16F533F81793B9E1CE40813182CAB2`. Este hash reemplaza el registrado el 19 de octubre.
+- **Pendiente físico:** actualizar los archivos de la Pico con el ZIP nuevo, activar `TRAFFIC_SIMULATION = True` en `config_local.py` si no se usarán cuatro sensores GPIO, cargar el demo y verificar las colas y transiciones reales por MQTT.
+
+### [2026-10-20 09:30] — Responsable: desacoplamiento total del ejemplo vial
+
+- **Estado:** [x] Runtime general restaurado y validado. [!] Falta copiar este paquete a la Pico y ejecutar el flujo físico.
+- **Motivo:** se determinó que `TrafficControllerTask`, `VehicleSensorTask`, `traffic_io` y las variables `TRAFFIC_*` colocaban lógica de un ejemplo particular dentro de la composición general. Aunque eran opcionales, el demo dependía de código que no había sido construido en el canvas.
+- **Corrección aplicada:**
+  1. `main.py` ahora compone únicamente scheduler, LED, `EngineTaskV2`, Watchdog, Wi-Fi, MQTT y bus interno. No importa, crea ni registra componentes viales.
+  2. `config_local.example.py` contiene solo conectividad y parámetros generales del motor; se eliminaron todas las variables `TRAFFIC_*`.
+  3. Se retiraron del firmware `devices/traffic_controller.py`, `devices/vehicle_sensor_task.py` y `platform/traffic_io.py`, junto con la prueba específica `test_traffic_controller.py`.
+  4. El demo conserva únicamente Services y Functional Blocks generales. El usuario introduce manualmente `vehiculos_esperando` (`integer`) y `luz` (`string`) desde el panel; la Pico ejecuta el Python declarado en el modelo.
+  5. El bloque `Seguridad del cruce` es demostrativo: detecta combinaciones manuales incompatibles, pero no existe una FSM ni un controlador oculto.
+  6. Se agregó una prueba de arquitectura que falla si `main.py`, la configuración o el árbol del firmware vuelven a incorporar código específico de tráfico.
+  7. Se actualizaron plan, guía demo, guía de replicación, guía de prueba en Pico, protocolo y generador del JSON para declarar el alcance manual real.
+  8. Los Services numéricos del demo comienzan en `0` y los Services de luz en `rojo`; la prueba básica requiere introducir únicamente cantidades y ejecutar un paso. Los colores manuales quedan como comprobación opcional.
+- **Pruebas ejecutadas:**
+  - Firmware general: **153 pruebas aprobadas**.
+  - Frontend: **17 archivos y 104 pruebas aprobadas**.
+  - ESLint: aprobado.
+  - TypeScript + Vite: build aprobado; solo advertencias conocidas de Pyodide y tamaño de chunk.
+  - El demo manual compila a IR v2 y la prueba de motor inyecta enteros y colores por Services sin componentes de dominio.
+- **Paquete vigente:** `output/hiles-pico-w-deploy.zip`, **31 archivos**, SHA-256 `209AEF16AB85DCAA7D0966D7F2DE00EC748BBC952A2DAA1CD38ABA3AFB82A57D`. Se verificó el listado del ZIP y no contiene `traffic_controller.py`, `vehicle_sensor_task.py` ni `traffic_io.py`. La guía incluida indica cómo retirar esos tres archivos obsoletos de una Pico que conserve la versión anterior.
+- **Alcance posterior:** cuando se conecte un sensor real, deberá alimentar un Service mediante un adaptador genérico. No se modificará `main.py`, el scheduler ni el motor para agregar lógica de semáforos.
+
 ## Confirmación de responsables
 
 - [x] Persona 1 — Nombre: Kevin Rincón
@@ -453,7 +496,7 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
 
 - [x] Persona 1 registra contrato y runtime autónomo; integración IR v2 y prueba física continúan pendientes.
 - [x] Persona 2 registra protocolo web y URL.
-- [x] Persona 3 registra motor v2, semáforos y sensores; integración en `main.py` aprobada y prueba física pendiente.
+- [x] Persona 3 registra motor v2 y demo manual; el runtime general no contiene sensores ni lógica vial.
 - [x] Persona 4 registra UI/UX y la comprobación visual a 1366×768 y 1920×1080.
 - [x] Persona 5 registra colaboración e integración.
 - [x] Todos los integrantes registraron sus cambios y pruebas de escritorio disponibles.

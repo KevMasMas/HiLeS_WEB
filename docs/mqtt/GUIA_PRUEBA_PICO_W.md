@@ -77,11 +77,12 @@ no se ejecutan dentro de la carpeta extraída del ZIP.
    ENGINE_STEP_INTERVAL_MS = 1000
    ENGINE_QUEUE_SIZE = 32
    WATCHDOG_PERIOD_MS = 5000
-   SENSOR_PERIOD_MS = 50
-   TRAFFIC_PERIOD_MS = 100
    ```
 
-4. En Thonny, crear en la raíz de la Pico la siguiente estructura y subir los
+4. Si la Pico conserva la versión vial anterior, eliminar únicamente
+   `/devices/traffic_controller.py`, `/devices/vehicle_sensor_task.py` y
+   `/platform/traffic_io.py`. No borrar `config_local.py`.
+5. En Thonny, crear en la raíz de la Pico la siguiente estructura y subir los
    archivos conservando exactamente sus nombres:
 
    ```text
@@ -96,8 +97,6 @@ no se ejecutan dentro de la carpeta extraída del ZIP.
    ├── devices/
    │   ├── __init__.py
    │   ├── led_task.py
-   │   ├── traffic_controller.py
-   │   ├── vehicle_sensor_task.py
    │   └── watchdog_task.py
    ├── hiles/
    │   ├── __init__.py
@@ -117,7 +116,6 @@ no se ejecutan dentro de la carpeta extraída del ZIP.
    │   ├── __init__.py
    │   ├── hardware.py
    │   ├── mqtt_client.py
-   │   ├── traffic_io.py
    │   └── wifi.py
    └── pubsub/
        ├── __init__.py
@@ -193,14 +191,16 @@ comprobar el comportamiento idempotente esperado por QoS 1.
    verificar `Sesión: ACTIVA` y `MQTT: CONNECTED`.
 4. En un solo navegador pulsar **Compilar y cargar circuito en la Pico**.
 5. Esperar `Modelo: Aceptado`, `Secuencia: 0` y `Estado: LISTA` en los cuatro.
-6. Pulsar **Enviar 1** en el Service `Habilitar ciclo`.
-7. Pulsar **Paso**. Los cuatro navegadores deben mostrar la misma secuencia y
-   la fase Norte–Sur verde / Este–Oeste roja.
-8. Pulsar más veces **Paso** para recorrer amarillo, verde Este–Oeste,
-   amarillo y todos en rojo. Nunca deben quedar verdes ambos ejes.
-9. Como alternativa, pulsar **Ejecutar** para avanzar automáticamente cada
-   segundo y **Detener** para finalizar la ejecución continua.
-10. Probar un comando desde otro navegador: la respuesta de la Pico debe
+6. Seleccionar el Service `Sensor Norte`, escribir `3` y pulsar **Enviar**.
+   Repetir con `Sensor Este = 8`; cero significa que no hay cola.
+7. Pulsar **Paso** y comprobar `solicitud = true` para los sentidos con una
+   cantidad positiva. Los Services de luz ya comienzan en `rojo`.
+8. Opcionalmente, introducir `amarillo` o `verde` en un Service `Luz` para
+   comprobar las salidas de lámparas. No existe configuración ni controlador
+   específico de tráfico.
+9. Como prueba de seguridad, introducir Norte=`verde` y Este=`verde`, comprobar
+   `seguro = false` y después restaurar ambas luces a `rojo`.
+10. Probar una acción desde otro navegador: la respuesta de la Pico debe
     actualizar los cuatro canvas, porque todos observan la misma sesión.
 
 Mover, crear, editar o borrar elementos se sincroniza por el namespace del

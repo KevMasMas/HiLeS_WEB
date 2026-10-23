@@ -286,22 +286,22 @@ class EngineTaskV2Tests(unittest.TestCase):
         self.assertEqual(self.task.local_inputs_ignored, 2)
         self.assertEqual(self.task.stats()["ir_version"], 2)
 
-    def test_distributed_traffic_demo_ir_runs(self):
+    def test_manual_services_demo_ir_runs(self):
         modelo = json.loads(DEMO_IR.read_text(encoding="utf-8"))
         confirmacion = self.load(modelo)
         self.assertTrue(confirmacion["aceptado"])
-        for sentido, luz in (("norte", "verde"), ("sur", "verde"), ("este", "rojo"), ("oeste", "rojo")):
-            self.task.submit_local_input("luz-" + sentido, luz)
-            self.task.submit_local_input("sensor-" + sentido, sentido == "este")
+        for sentido in ("norte", "sur", "este", "oeste"):
+            self.task.submit_local_input("sensor-" + sentido, 5 if sentido == "este" else 0)
         self.drain()
         self.task.engine.step(1000)
         estado = self.task.engine.snapshot()
-        self.assertEqual(estado["lamparas-norte"]["salidas"]["lamparas-norte-verde"], True)
+        self.assertEqual(estado["lamparas-norte"]["salidas"]["lamparas-norte-rojo"], True)
         self.assertEqual(estado["lamparas-este"]["salidas"]["lamparas-este-solicitud"], True)
-        self.assertEqual(estado["seguridad-cruce"]["salidas"], {"seguridad-seguro": True, "seguridad-eje": "norte-sur"})
+        self.assertEqual(estado["seguridad-cruce"]["salidas"], {"seguridad-seguro": True, "seguridad-eje": "todo-rojo"})
         for elemento in estado.values():
             self.assertNotIn("error", elemento)
 
+        self.task.engine.set_input("luz-norte", "verde")
         self.task.engine.set_input("luz-este", "amarillo")
         self.task.engine.step(1000)
         self.assertEqual(

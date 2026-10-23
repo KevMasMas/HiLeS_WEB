@@ -1,10 +1,8 @@
 // Genera output/demo-4-semaforos-distribuidos.json (Persona 3, entrega del 20 de octubre).
 //
-// Cuatro semáforos independientes: cada sentido tiene su sensor de presencia,
-// su luz y un Functional Block Python que traduce la luz a lámparas y a una
-// solicitud de paso. Las FSM y el árbitro de permisos se ejecutan en la Pico
-// (firmware/pico/devices/traffic_controller.py), que inyecta `sensor-<sentido>`
-// y `luz-<sentido>`. El bloque de control verifica la matriz de conflictos.
+// Demo manual construido únicamente con elementos generales de HiLeS. Cada
+// sentido tiene dos Services inyectables (`vehiculos_esperando` y `luz`) y un
+// Functional Block Python. No requiere lógica vial ni sensores en el firmware.
 //
 // Uso desde la raíz del repositorio:
 //   node scripts/generate-distributed-traffic-demo.mjs
@@ -18,8 +16,7 @@ const directions = [
   { id: 'oeste', name: 'Oeste', axis: 'este-oeste', x: 820, y: 520 },
 ];
 
-// Debe coincidir con MATRIZ_CONFLICTOS de traffic_controller.py y con
-// docs/traffic/MATRIZ_CONFLICTOS.md.
+// Matriz usada únicamente por el Functional Block de seguridad del modelo.
 const conflicts = {
   norte: ['este', 'oeste'],
   sur: ['este', 'oeste'],
@@ -41,14 +38,16 @@ const port = (id, name, direction, dataType, side, offset = 0.5) => ({
 const lampCode = [
   'def calcular(**inputs):',
   "    luz = inputs.get('luz')",
-  "    presencia = inputs.get('presencia')",
+  "    vehiculos_esperando = inputs.get('vehiculos_esperando')",
+  '    if vehiculos_esperando is None:',
+  '        vehiculos_esperando = 0',
   "    if luz != 'verde' and luz != 'amarillo':",
   "        luz = 'rojo'",
   '    return {',
   "        'rojo': luz == 'rojo',",
   "        'amarillo': luz == 'amarillo',",
   "        'verde': luz == 'verde',",
-  "        'solicitud': presencia is True and luz == 'rojo',",
+  "        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',",
   '    }',
 ].join('\n');
 
@@ -84,27 +83,33 @@ for (const direction of directions) {
     id: block, type: 'STRUCTURAL_BLOCK', name: `Semáforo ${direction.name}`,
     layout: { x: direction.x, y: direction.y, width: 640, height: 340 }, ports: [],
     properties: baseProperties({
-      description: `Semáforo independiente del sentido ${direction.name} (eje ${direction.axis}). Su FSM corre en la Pico.`,
+      description: `Ejemplo manual del sentido ${direction.name} (eje ${direction.axis}), construido con elementos generales.`,
     }),
   });
   elements.push({
     id: `sensor-${direction.id}`, type: 'SERVICE', name: `🚗 Sensor ${direction.name}`, parentId: block,
     layout: { x: 40, y: 60 },
-    ports: [port(`sensor-${direction.id}-out`, 'presencia', 'output', 'boolean', 'right')],
-    properties: baseProperties({ description: `Presencia vehicular del sentido ${direction.name}; la publica su sensor propio.` }),
+    ports: [port(`sensor-${direction.id}-out`, 'vehiculos_esperando', 'output', 'integer', 'right')],
+    properties: baseProperties({
+      description: `Cantidad de vehículos detenidos esperando paso en el sentido ${direction.name}.`,
+      heldValue: '0',
+    }),
   });
   elements.push({
     id: `luz-${direction.id}`, type: 'SERVICE', name: `🚦 Luz ${direction.name}`, parentId: block,
     layout: { x: 40, y: 210 },
     ports: [port(`luz-${direction.id}-out`, 'luz', 'output', 'string', 'right')],
-    properties: baseProperties({ description: 'Color oficial (rojo, amarillo o verde) decidido por la FSM de este sentido.' }),
+    properties: baseProperties({
+      description: 'Entrada manual opcional: inicia en rojo y acepta rojo, amarillo o verde.',
+      heldValue: 'rojo',
+    }),
   });
   elements.push({
     id: `lamparas-${direction.id}`, type: 'FUNCTIONAL_BLOCK', name: `Lámparas ${direction.name}`, parentId: block,
     layout: { x: 330, y: 110 },
     ports: [
       port(`lamparas-${direction.id}-luz`, 'luz', 'input', 'string', 'left', 0.3),
-      port(`lamparas-${direction.id}-presencia`, 'presencia', 'input', 'boolean', 'left', 0.7),
+      port(`lamparas-${direction.id}-vehiculos`, 'vehiculos_esperando', 'input', 'integer', 'left', 0.7),
       port(`lamparas-${direction.id}-rojo`, 'rojo', 'output', 'boolean', 'right', 0.2),
       port(`lamparas-${direction.id}-amarillo`, 'amarillo', 'output', 'boolean', 'right', 0.4),
       port(`lamparas-${direction.id}-verde`, 'verde', 'output', 'boolean', 'right', 0.6),
@@ -118,8 +123,8 @@ for (const direction of directions) {
   });
   connections.push({
     id: `cch-sensor-${direction.id}`, source: `sensor-${direction.id}`, sourceHandle: `sensor-${direction.id}-out`,
-    target: `lamparas-${direction.id}`, targetHandle: `lamparas-${direction.id}-presencia`,
-    label: 'CCH · presencia', type: 'hilesEdge', data: edgeData('boolean'),
+    target: `lamparas-${direction.id}`, targetHandle: `lamparas-${direction.id}-vehiculos`,
+    label: 'CCH · vehículos esperando', type: 'hilesEdge', data: edgeData('integer'),
   });
   connections.push({
     id: `cch-luz-${direction.id}`, source: `luz-${direction.id}`, sourceHandle: `luz-${direction.id}-out`,
@@ -162,7 +167,7 @@ const document = {
   schemaVersion: 2,
   metadata: {
     savedAt: '2026-10-18T22:00:00-05:00',
-    description: 'Cuatro semáforos independientes con sensores propios. Las FSM y los permisos de paso se ejecutan en la Pico; el modelo refleja luces, solicitudes y la matriz de conflictos.',
+    description: 'Demo manual construido solo con Services y Functional Blocks generales. El usuario inyecta cantidades y colores; la Pico ejecuta el Python del modelo.',
   },
   network: {
     topology: null,

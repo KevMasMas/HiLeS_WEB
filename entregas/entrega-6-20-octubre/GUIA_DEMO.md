@@ -4,7 +4,7 @@
 
 **Duración objetivo:** 8 a 12 minutos.
 
-> Estado de validación al 19 de octubre de 2026: se aprobaron las suites de firmware y frontend, TypeScript, lint, build, ZIP de despliegue, broker, aislamiento entre proyectos y cuatro navegadores reales con snapshot, edición, presencia y cursores. La Pico física no fue detectada por Windows; todas las evidencias que dependen de la placa o de GPIO reales siguen pendientes y no deben presentarse como realizadas.
+> Estado de validación al 20 de octubre de 2026: se aprobaron las suites de firmware y frontend, TypeScript, lint, build, ZIP de despliegue, broker, aislamiento entre proyectos y cuatro navegadores reales con snapshot, edición, presencia y cursores. La prueba física completa con la Pico sigue pendiente y no debe presentarse como realizada; esta versión no conecta sensores GPIO.
 
 ## 1. Propósito
 
@@ -73,11 +73,14 @@ Resultado esperado:
 ### Parte C — Python ejecutado en la Pico
 
 1. Abrir un Functional Block.
-2. Mostrar código Python sencillo:
+2. Crear o verificar un puerto de entrada `carros` (`integer`) y un puerto de salida `hay_fila` (`boolean`). Mostrar código Python tolerante al valor inicial:
 
 ```python
-def calcular(carros):
-    return carros >= 6
+def calcular(**inputs):
+    carros = inputs.get('carros')
+    if carros is None:
+        carros = 0
+    return {'hay_fila': carros >= 6}
 ```
 
 3. Activar ejecución remota.
@@ -136,24 +139,24 @@ Resultado esperado:
 - El scheduler y MQTT no se bloquean.
 - El error identifica el Functional Block.
 
-### Parte F — cuatro semáforos inteligentes
+### Parte F — demo manual con cuatro semáforos
 
 1. Cargar el demo distribuido.
-2. Mostrar que cada dirección tiene sensor y FSM propios.
-3. Activar demanda Norte.
-4. Recorrer Norte verde, amarillo y rojo.
-5. Activar demanda Este durante el ciclo Norte.
-6. Mostrar que Este espera hasta el intervalo seguro.
-7. Recorrer Este verde, amarillo y rojo.
-8. Activar varias demandas y explicar el desempate.
-9. Forzar o simular un fallo y mostrar el retorno a rojo.
+2. Explicar que el firmware sigue siendo general: cada dirección solo usa Services y un Functional Block.
+3. Inyectar, por ejemplo, Norte = 3 y Este = 8. Cero significa que no hay cola.
+4. Ejecutar un paso; las luces ya comienzan en `rojo`.
+5. Mostrar `solicitud = true` donde la cantidad sea mayor que cero.
+6. Como prueba opcional, inyectar manualmente `verde` en Norte y ejecutar otro paso.
+7. Mostrar las salidas de lámparas calculadas por Python en la Pico.
+8. Inyectar simultáneamente Norte=`verde` y Este=`verde`.
+9. Mostrar que `Seguridad del cruce` reporta `seguro = false`.
 
 Resultado esperado:
 
-- No existe salto normal de verde a rojo.
-- Direcciones conflictivas nunca aparecen verdes simultáneamente.
-- Una demanda en espera termina siendo atendida.
-- Un fallo conduce a rojo.
+- Las entradas manuales enteras llegan a la Pico.
+- El Functional Block calcula lámparas y solicitudes.
+- El estado muestra la cantidad de vehículos y no solo presencia verdadera/falsa.
+- El bloque de seguridad detecta una combinación manual incompatible.
 
 ## 4. Evidencias que deben registrarse
 
@@ -168,10 +171,10 @@ Resultado esperado:
 | Sample/Hold, CCH y DCH | Personas 2 y 3 | Pendiente |
 | Petri/LCH y retardos no bloqueantes | Personas 1 y 3 | Pendiente |
 | Paridad TypeScript/MicroPython | Personas 2, 3 y 5 | Pendiente |
-| Ciclo de cuatro semáforos | Persona 3 | Pendiente |
+| Entradas manuales y cálculo del demo | Persona 3 | Pendiente en Pico física |
 | Vista final de TopBar y canvas | Persona 4 | Aprobada a 1366×768 y 1920×1080 |
 | Memoria y duración máxima | Personas 1 y 5 | Pendiente |
-| Suites y build | Persona 5 | 174 firmware + 103 frontend; lint, tipos y build aprobados |
+| Suites y build | Persona 5 | 153 firmware + 104 frontend; lint, tipos y build aprobados |
 
 Los comandos, resultados, capturas disponibles y pendientes se registran en `REGISTRO_CAMBIOS.md`.
 
@@ -232,8 +235,8 @@ npm run build
 - [ ] Los retardos no bloquean MQTT ni otras tareas.
 - [ ] Reiniciar limpia todo el estado temporal.
 - [ ] Los vectores TypeScript y MicroPython coinciden.
-- [ ] Los semáforos cumplen verde → amarillo → rojo.
-- [ ] No aparecen verdes conflictivos.
+- [ ] Los Services manuales aceptan cantidades enteras y colores.
+- [ ] El bloque de seguridad detecta verdes conflictivos introducidos manualmente.
 - [x] Las pruebas automáticas están registradas.
 - [x] Las limitaciones reales se declaran sin presentar pendientes como terminados.
 

@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "metadata": {
     "savedAt": "2026-10-18T22:00:00-05:00",
-    "description": "Cuatro semáforos independientes con sensores propios. Las FSM y los permisos de paso se ejecutan en la Pico; el modelo refleja luces, solicitudes y la matriz de conflictos."
+    "description": "Demo manual construido solo con Services y Functional Blocks generales. El usuario inyecta cantidades y colores; la Pico ejecuta el Python del modelo."
   },
   "network": {
     "topology": null,
@@ -28,7 +28,7 @@
       },
       "ports": [],
       "properties": {
-        "description": "Semáforo independiente del sentido Norte (eje norte-sur). Su FSM corre en la Pico.",
+        "description": "Ejemplo manual del sentido Norte (eje norte-sur), construido con elementos generales.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -56,16 +56,16 @@
       "ports": [
         {
           "id": "sensor-norte-out",
-          "name": "presencia",
+          "name": "vehiculos_esperando",
           "direction": "output",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "right",
           "offset": 0.5
         }
       ],
       "properties": {
-        "description": "Presencia vehicular del sentido Norte; la publica su sensor propio.",
+        "description": "Cantidad de vehículos detenidos esperando paso en el sentido Norte.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -76,7 +76,7 @@
         "maxTokens": 1,
         "delay": 0,
         "condition": "",
-        "heldValue": "",
+        "heldValue": "0",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -102,7 +102,7 @@
         }
       ],
       "properties": {
-        "description": "Color oficial (rojo, amarillo o verde) decidido por la FSM de este sentido.",
+        "description": "Entrada manual opcional: inicia en rojo y acepta rojo, amarillo o verde.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -113,7 +113,7 @@
         "maxTokens": 1,
         "delay": 0,
         "condition": "",
-        "heldValue": "",
+        "heldValue": "rojo",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -138,10 +138,10 @@
           "offset": 0.3
         },
         {
-          "id": "lamparas-norte-presencia",
-          "name": "presencia",
+          "id": "lamparas-norte-vehiculos",
+          "name": "vehiculos_esperando",
           "direction": "input",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "left",
           "offset": 0.7
@@ -199,7 +199,7 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }"
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }"
       }
     },
     {
@@ -214,7 +214,7 @@
       },
       "ports": [],
       "properties": {
-        "description": "Semáforo independiente del sentido Sur (eje norte-sur). Su FSM corre en la Pico.",
+        "description": "Ejemplo manual del sentido Sur (eje norte-sur), construido con elementos generales.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -242,16 +242,16 @@
       "ports": [
         {
           "id": "sensor-sur-out",
-          "name": "presencia",
+          "name": "vehiculos_esperando",
           "direction": "output",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "right",
           "offset": 0.5
         }
       ],
       "properties": {
-        "description": "Presencia vehicular del sentido Sur; la publica su sensor propio.",
+        "description": "Cantidad de vehículos detenidos esperando paso en el sentido Sur.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -262,7 +262,7 @@
         "maxTokens": 1,
         "delay": 0,
         "condition": "",
-        "heldValue": "",
+        "heldValue": "0",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -288,7 +288,7 @@
         }
       ],
       "properties": {
-        "description": "Color oficial (rojo, amarillo o verde) decidido por la FSM de este sentido.",
+        "description": "Entrada manual opcional: inicia en rojo y acepta rojo, amarillo o verde.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -299,7 +299,7 @@
         "maxTokens": 1,
         "delay": 0,
         "condition": "",
-        "heldValue": "",
+        "heldValue": "rojo",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -324,10 +324,10 @@
           "offset": 0.3
         },
         {
-          "id": "lamparas-sur-presencia",
-          "name": "presencia",
+          "id": "lamparas-sur-vehiculos",
+          "name": "vehiculos_esperando",
           "direction": "input",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "left",
           "offset": 0.7
@@ -385,7 +385,7 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }"
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }"
       }
     },
     {
@@ -400,7 +400,7 @@
       },
       "ports": [],
       "properties": {
-        "description": "Semáforo independiente del sentido Este (eje este-oeste). Su FSM corre en la Pico.",
+        "description": "Ejemplo manual del sentido Este (eje este-oeste), construido con elementos generales.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -428,16 +428,16 @@
       "ports": [
         {
           "id": "sensor-este-out",
-          "name": "presencia",
+          "name": "vehiculos_esperando",
           "direction": "output",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "right",
           "offset": 0.5
         }
       ],
       "properties": {
-        "description": "Presencia vehicular del sentido Este; la publica su sensor propio.",
+        "description": "Cantidad de vehículos detenidos esperando paso en el sentido Este.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -448,7 +448,7 @@
         "maxTokens": 1,
         "delay": 0,
         "condition": "",
-        "heldValue": "",
+        "heldValue": "0",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -474,7 +474,7 @@
         }
       ],
       "properties": {
-        "description": "Color oficial (rojo, amarillo o verde) decidido por la FSM de este sentido.",
+        "description": "Entrada manual opcional: inicia en rojo y acepta rojo, amarillo o verde.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -485,7 +485,7 @@
         "maxTokens": 1,
         "delay": 0,
         "condition": "",
-        "heldValue": "",
+        "heldValue": "rojo",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -510,10 +510,10 @@
           "offset": 0.3
         },
         {
-          "id": "lamparas-este-presencia",
-          "name": "presencia",
+          "id": "lamparas-este-vehiculos",
+          "name": "vehiculos_esperando",
           "direction": "input",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "left",
           "offset": 0.7
@@ -571,7 +571,7 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }"
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }"
       }
     },
     {
@@ -586,7 +586,7 @@
       },
       "ports": [],
       "properties": {
-        "description": "Semáforo independiente del sentido Oeste (eje este-oeste). Su FSM corre en la Pico.",
+        "description": "Ejemplo manual del sentido Oeste (eje este-oeste), construido con elementos generales.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -614,16 +614,16 @@
       "ports": [
         {
           "id": "sensor-oeste-out",
-          "name": "presencia",
+          "name": "vehiculos_esperando",
           "direction": "output",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "right",
           "offset": 0.5
         }
       ],
       "properties": {
-        "description": "Presencia vehicular del sentido Oeste; la publica su sensor propio.",
+        "description": "Cantidad de vehículos detenidos esperando paso en el sentido Oeste.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -634,7 +634,7 @@
         "maxTokens": 1,
         "delay": 0,
         "condition": "",
-        "heldValue": "",
+        "heldValue": "0",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -660,7 +660,7 @@
         }
       ],
       "properties": {
-        "description": "Color oficial (rojo, amarillo o verde) decidido por la FSM de este sentido.",
+        "description": "Entrada manual opcional: inicia en rojo y acepta rojo, amarillo o verde.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -671,7 +671,7 @@
         "maxTokens": 1,
         "delay": 0,
         "condition": "",
-        "heldValue": "",
+        "heldValue": "rojo",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -696,10 +696,10 @@
           "offset": 0.3
         },
         {
-          "id": "lamparas-oeste-presencia",
-          "name": "presencia",
+          "id": "lamparas-oeste-vehiculos",
+          "name": "vehiculos_esperando",
           "direction": "input",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "left",
           "offset": 0.7
@@ -757,7 +757,7 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    presencia = inputs.get('presencia')\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': presencia is True and luz == 'rojo',\n    }"
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }"
       }
     },
     {
@@ -919,13 +919,13 @@
       "source": "sensor-norte",
       "sourceHandle": "sensor-norte-out",
       "target": "lamparas-norte",
-      "targetHandle": "lamparas-norte-presencia",
-      "label": "CCH · presencia",
+      "targetHandle": "lamparas-norte-vehiculos",
+      "label": "CCH · vehículos esperando",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
         "routing": "orthogonal",
-        "dataType": "boolean",
+        "dataType": "integer",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -955,13 +955,13 @@
       "source": "sensor-sur",
       "sourceHandle": "sensor-sur-out",
       "target": "lamparas-sur",
-      "targetHandle": "lamparas-sur-presencia",
-      "label": "CCH · presencia",
+      "targetHandle": "lamparas-sur-vehiculos",
+      "label": "CCH · vehículos esperando",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
         "routing": "orthogonal",
-        "dataType": "boolean",
+        "dataType": "integer",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -991,13 +991,13 @@
       "source": "sensor-este",
       "sourceHandle": "sensor-este-out",
       "target": "lamparas-este",
-      "targetHandle": "lamparas-este-presencia",
-      "label": "CCH · presencia",
+      "targetHandle": "lamparas-este-vehiculos",
+      "label": "CCH · vehículos esperando",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
         "routing": "orthogonal",
-        "dataType": "boolean",
+        "dataType": "integer",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -1027,13 +1027,13 @@
       "source": "sensor-oeste",
       "sourceHandle": "sensor-oeste-out",
       "target": "lamparas-oeste",
-      "targetHandle": "lamparas-oeste-presencia",
-      "label": "CCH · presencia",
+      "targetHandle": "lamparas-oeste-vehiculos",
+      "label": "CCH · vehículos esperando",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
         "routing": "orthogonal",
-        "dataType": "boolean",
+        "dataType": "integer",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",

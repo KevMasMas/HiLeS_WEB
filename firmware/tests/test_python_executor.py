@@ -37,23 +37,24 @@ class PythonExecutorTests(unittest.TestCase):
         self.assertEqual(executor.compile_count, 1)
         self.assertEqual(executor.run_count, 2)
 
-    def test_function_with_inputs_get_matches_editor_example(self):
+    def test_function_with_inputs_get_matches_car_queue_editor_example(self):
         source = """def calcular(**inputs):
-    vehiculos = inputs.get('vehiculos')
-    if vehiculos is None:
-        return False
-    return vehiculos < 10
+    carros = inputs.get('carros')
+    if carros is None:
+        carros = 0
+    return {'hay_fila': carros >= 6}
 """
         executor = PythonExecutor(
-            "fb-cupo",
+            "fb-fila",
             source,
-            ["vehiculos"],
-            ["hay_cupo"],
-            input_types={"vehiculos": "integer"},
-            output_types={"hay_cupo": "boolean"},
+            ["carros"],
+            ["hay_fila"],
+            input_types={"carros": "integer"},
+            output_types={"hay_fila": "boolean"},
         )
-        self.assertEqual(executor.execute({"vehiculos": 7}), {"hay_cupo": True})
-        self.assertEqual(executor.execute({"vehiculos": 12}), {"hay_cupo": False})
+        self.assertEqual(executor.execute({}), {"hay_fila": False})
+        self.assertEqual(executor.execute({"carros": 3}), {"hay_fila": False})
+        self.assertEqual(executor.execute({"carros": 8}), {"hay_fila": True})
 
     def test_multiple_outputs_require_declared_mapping(self):
         executor = PythonExecutor(
