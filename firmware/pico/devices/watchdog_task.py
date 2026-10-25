@@ -20,13 +20,14 @@ class WatchdogTask(Task):
         self,
         scheduler,
         node,
+        device_id="pico01",
         period_ms=5000,
         rssi_reader=None,
         temperature_reader=None,
         gc_module=None,
         priority=9,
         name="watchdog",
-        max_update_ms=25,
+        max_update_ms=100,
     ):
         if node is None:
             raise ValueError("WatchdogTask necesita un Node")
@@ -34,7 +35,10 @@ class WatchdogTask(Task):
             raise ValueError("rssi_reader debe ser invocable o None")
         if temperature_reader is not None and not callable(temperature_reader):
             raise ValueError("temperature_reader debe ser invocable o None")
+        if not isinstance(device_id, str) or not device_id.strip():
+            raise ValueError("device_id debe ser un texto no vacío")
         self.node = node
+        self.device_id = device_id.strip()
         self.rssi_reader = rssi_reader
         self.temperature_reader = temperature_reader
         self.gc_module = gc if gc_module is None else gc_module
@@ -76,15 +80,20 @@ class WatchdogTask(Task):
     def update(self):
         errors = []
         payload = {
+            "dispositivo": self.device_id,
             "tiempo_ms": self.scheduler.clock.now_ms(),
             "tareas": self.scheduler.stats(),
         }
+        payload["tiempo_activo"] = payload["tiempo_ms"]
         memory = self._memory(errors)
         if memory is not None:
             payload["memoria"] = memory
+            if "mem_free" in memory:
+                payload["memoria_libre"] = memory["mem_free"]
         rssi = self._read(self.rssi_reader, "rssi", errors)
         if rssi is not None:
             payload["rssi_dbm"] = rssi
+            payload["rssi"] = rssi
         temperature = self._read(self.temperature_reader, "temperatura", errors)
         if temperature is not None:
             payload["temperatura_c"] = temperature

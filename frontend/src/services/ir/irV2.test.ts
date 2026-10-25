@@ -196,11 +196,29 @@ describe('Compilador HilesModelDocument → IR v2 y migración IR v1 → IR v2',
     expect(sensores).toHaveLength(4);
     expect(sensores.every((sensor) => sensor.tipo_dato === 'integer')).toBe(true);
     expect(sensores.every((sensor) => sensor.valor_inicial === 0)).toBe(true);
-    const luces = compilado.modelo.entradas_externas.filter((entrada) =>
+    const lucesManuales = compilado.modelo.entradas_externas.filter((entrada) =>
       entrada.elemento_id.startsWith('luz-'),
     );
-    expect(luces).toHaveLength(4);
-    expect(luces.every((luz) => luz.valor_inicial === 'rojo')).toBe(true);
+    expect(lucesManuales).toHaveLength(0);
+    const controlador = compilado.modelo.elementos.find(
+      (elemento) => elemento.id === 'control-trafico',
+    );
+    expect(controlador).toMatchObject({ tipo: 'functional_block' });
+    if (controlador?.tipo === 'functional_block') {
+      expect(controlador.entradas.map((entrada) => entrada.variable)).toEqual([
+        'vehiculos_norte',
+        'vehiculos_sur',
+        'vehiculos_este',
+        'vehiculos_oeste',
+      ]);
+      expect(controlador.salidas.map((salida) => salida.variable)).toEqual([
+        'luz_norte',
+        'luz_sur',
+        'luz_este',
+        'luz_oeste',
+        'eje',
+      ]);
+    }
     const lamparas = compilado.modelo.elementos.filter(
       (elemento) => elemento.tipo === 'functional_block' && elemento.id.startsWith('lamparas-'),
     );

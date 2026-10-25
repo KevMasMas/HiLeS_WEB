@@ -1,8 +1,8 @@
 // Genera output/demo-4-semaforos-distribuidos.json (Persona 3, entrega del 20 de octubre).
 //
-// Demo manual construido únicamente con elementos generales de HiLeS. Cada
-// sentido tiene dos Services inyectables (`vehiculos_esperando` y `luz`) y un
-// Functional Block Python. No requiere lógica vial ni sensores en el firmware.
+// Demo automático construido únicamente con elementos generales de HiLeS.
+// El usuario inyecta solo los cuatro conteos de vehículos; un Functional Block
+// central decide qué eje recibe verde y mantiene el otro en rojo.
 //
 // Uso desde la raíz del repositorio:
 //   node scripts/generate-distributed-traffic-demo.mjs
@@ -15,14 +15,6 @@ const directions = [
   { id: 'este', name: 'Este', axis: 'este-oeste', x: 80, y: 520 },
   { id: 'oeste', name: 'Oeste', axis: 'este-oeste', x: 820, y: 520 },
 ];
-
-// Matriz usada únicamente por el Functional Block de seguridad del modelo.
-const conflicts = {
-  norte: ['este', 'oeste'],
-  sur: ['este', 'oeste'],
-  este: ['norte', 'sur'],
-  oeste: ['norte', 'sur'],
-};
 
 const baseProperties = (overrides = {}) => ({
   description: '', collapsed: false, locked: false, visible: true,
@@ -47,27 +39,39 @@ const lampCode = [
   "        'rojo': luz == 'rojo',",
   "        'amarillo': luz == 'amarillo',",
   "        'verde': luz == 'verde',",
-  "        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',",
+  "        'vehiculos': vehiculos_esperando,",
   '    }',
 ].join('\n');
 
-const activeExpr = (direction) =>
-  `inputs.get('luz_${direction}') == 'verde' or inputs.get('luz_${direction}') == 'amarillo'`;
-
-const safetyCode = [
+const trafficControlCode = [
   'def calcular(**inputs):',
-  ...directions.map((direction) => `    ${direction.id} = ${activeExpr(direction.id)}`),
-  '    conflicto = ' + Object.entries(conflicts)
-    .flatMap(([from, others]) => others.filter((other) => from < other).map((other) => `(${from} and ${other})`))
-    .join(' or '),
+  ...directions.flatMap((direction) => [
+    `    ${direction.id} = inputs.get('vehiculos_${direction.id}')`,
+    `    if ${direction.id} is None:`,
+    `        ${direction.id} = 0`,
+  ]),
+  '    total_norte_sur = norte + sur',
+  '    total_este_oeste = este + oeste',
+  "    luz_norte = 'rojo'",
+  "    luz_sur = 'rojo'",
+  "    luz_este = 'rojo'",
+  "    luz_oeste = 'rojo'",
   "    eje = 'todo-rojo'",
-  '    if conflicto:',
-  "        eje = 'conflicto'",
-  '    elif norte or sur:',
+  '    if total_norte_sur > total_este_oeste:',
+  "        luz_norte = 'verde'",
+  "        luz_sur = 'verde'",
   "        eje = 'norte-sur'",
-  '    elif este or oeste:',
+  '    elif total_este_oeste > total_norte_sur:',
+  "        luz_este = 'verde'",
+  "        luz_oeste = 'verde'",
   "        eje = 'este-oeste'",
-  "    return {'seguro': not conflicto, 'eje': eje}",
+  '    return {',
+  "        'luz_norte': luz_norte,",
+  "        'luz_sur': luz_sur,",
+  "        'luz_este': luz_este,",
+  "        'luz_oeste': luz_oeste,",
+  "        'eje': eje,",
+  '    }',
 ].join('\n');
 
 const elements = [];
@@ -83,7 +87,7 @@ for (const direction of directions) {
     id: block, type: 'STRUCTURAL_BLOCK', name: `Semáforo ${direction.name}`,
     layout: { x: direction.x, y: direction.y, width: 640, height: 340 }, ports: [],
     properties: baseProperties({
-      description: `Ejemplo manual del sentido ${direction.name} (eje ${direction.axis}), construido con elementos generales.`,
+      description: `Recibe el número de vehículos del sentido ${direction.name} y muestra el color decidido automáticamente.`,
     }),
   });
   elements.push({
@@ -96,15 +100,6 @@ for (const direction of directions) {
     }),
   });
   elements.push({
-    id: `luz-${direction.id}`, type: 'SERVICE', name: `🚦 Luz ${direction.name}`, parentId: block,
-    layout: { x: 40, y: 210 },
-    ports: [port(`luz-${direction.id}-out`, 'luz', 'output', 'string', 'right')],
-    properties: baseProperties({
-      description: 'Entrada manual opcional: inicia en rojo y acepta rojo, amarillo o verde.',
-      heldValue: 'rojo',
-    }),
-  });
-  elements.push({
     id: `lamparas-${direction.id}`, type: 'FUNCTIONAL_BLOCK', name: `Lámparas ${direction.name}`, parentId: block,
     layout: { x: 330, y: 110 },
     ports: [
@@ -113,10 +108,10 @@ for (const direction of directions) {
       port(`lamparas-${direction.id}-rojo`, 'rojo', 'output', 'boolean', 'right', 0.2),
       port(`lamparas-${direction.id}-amarillo`, 'amarillo', 'output', 'boolean', 'right', 0.4),
       port(`lamparas-${direction.id}-verde`, 'verde', 'output', 'boolean', 'right', 0.6),
-      port(`lamparas-${direction.id}-solicitud`, 'solicitud', 'output', 'boolean', 'right', 0.8),
+      port(`lamparas-${direction.id}-vehiculos-out`, 'vehiculos', 'output', 'integer', 'right', 0.8),
     ],
     properties: baseProperties({
-      description: 'Traduce la luz a lámparas y muestra la solicitud de paso cuando hay vehículos en rojo.',
+      description: 'Convierte la decisión automática en las señales rojo, amarillo y verde.',
       codeLanguage: 'python',
       code: lampCode,
     }),
@@ -126,40 +121,41 @@ for (const direction of directions) {
     target: `lamparas-${direction.id}`, targetHandle: `lamparas-${direction.id}-vehiculos`,
     label: 'CCH · vehículos esperando', type: 'hilesEdge', data: edgeData('integer'),
   });
-  connections.push({
-    id: `cch-luz-${direction.id}`, source: `luz-${direction.id}`, sourceHandle: `luz-${direction.id}-out`,
-    target: `lamparas-${direction.id}`, targetHandle: `lamparas-${direction.id}-luz`,
-    label: 'CCH · luz', type: 'hilesEdge', data: edgeData('string'),
-  });
 }
 
 elements.push({
-  id: 'control-block', type: 'STRUCTURAL_BLOCK', name: 'Matriz de conflictos',
+  id: 'control-block', type: 'STRUCTURAL_BLOCK', name: 'Control automático de tráfico',
   layout: { x: 400, y: 960, width: 760, height: 300 }, ports: [],
   properties: baseProperties({
-    description: 'Comprueba en cada paso que Norte–Sur y Este–Oeste nunca estén activos a la vez. No decide colores.',
+    description: 'Suma los carros de cada eje y concede verde al eje con mayor congestión. En empate deja todo rojo.',
   }),
 });
 elements.push({
-  id: 'seguridad-cruce', type: 'FUNCTIONAL_BLOCK', name: 'Seguridad del cruce', parentId: 'control-block',
+  id: 'control-trafico', type: 'FUNCTIONAL_BLOCK', name: 'Decidir eje con prioridad', parentId: 'control-block',
   layout: { x: 260, y: 90 },
   ports: [
     ...directions.map((direction, index) =>
-      port(`seguridad-luz-${direction.id}`, `luz_${direction.id}`, 'input', 'string', 'left', 0.2 + index * 0.2)),
-    port('seguridad-seguro', 'seguro', 'output', 'boolean', 'right', 0.35),
-    port('seguridad-eje', 'eje', 'output', 'string', 'right', 0.65),
+      port(`control-vehiculos-${direction.id}`, `vehiculos_${direction.id}`, 'input', 'integer', 'left', 0.15 + index * 0.2)),
+    ...directions.map((direction, index) =>
+      port(`control-luz-${direction.id}`, `luz_${direction.id}`, 'output', 'string', 'right', 0.15 + index * 0.17)),
+    port('control-eje', 'eje', 'output', 'string', 'bottom', 0.5),
   ],
   properties: baseProperties({
-    description: 'seguro=false indicaría verdes o amarillos incompatibles; eje muestra el movimiento activo.',
+    description: 'Compara Norte+Sur contra Este+Oeste y produce automáticamente los cuatro colores.',
     codeLanguage: 'python',
-    code: safetyCode,
+    code: trafficControlCode,
   }),
 });
 for (const direction of directions) {
   connections.push({
-    id: `cch-seguridad-${direction.id}`, source: `luz-${direction.id}`, sourceHandle: `luz-${direction.id}-out`,
-    target: 'seguridad-cruce', targetHandle: `seguridad-luz-${direction.id}`,
-    label: `CCH · luz ${direction.name}`, type: 'hilesEdge', data: edgeData('string'),
+    id: `cch-control-sensor-${direction.id}`, source: `sensor-${direction.id}`, sourceHandle: `sensor-${direction.id}-out`,
+    target: 'control-trafico', targetHandle: `control-vehiculos-${direction.id}`,
+    label: `CCH · carros ${direction.name}`, type: 'hilesEdge', data: edgeData('integer'),
+  });
+  connections.push({
+    id: `cch-control-luz-${direction.id}`, source: 'control-trafico', sourceHandle: `control-luz-${direction.id}`,
+    target: `lamparas-${direction.id}`, targetHandle: `lamparas-${direction.id}-luz`,
+    label: `CCH · decisión ${direction.name}`, type: 'hilesEdge', data: edgeData('string'),
   });
 }
 
@@ -167,7 +163,7 @@ const document = {
   schemaVersion: 2,
   metadata: {
     savedAt: '2026-10-18T22:00:00-05:00',
-    description: 'Demo manual construido solo con Services y Functional Blocks generales. El usuario inyecta cantidades y colores; la Pico ejecuta el Python del modelo.',
+    description: 'Semáforo inteligente: el usuario inyecta solo cantidades y el controlador asigna verde al eje con más vehículos.',
   },
   network: {
     topology: null,
@@ -178,9 +174,9 @@ const document = {
   relationNode: [
     ...directions.map((direction) => ({
       nodeId: `${direction.id}-block`,
-      elementIds: [`sensor-${direction.id}`, `luz-${direction.id}`, `lamparas-${direction.id}`],
+      elementIds: [`sensor-${direction.id}`, `lamparas-${direction.id}`],
     })),
-    { nodeId: 'control-block', elementIds: ['seguridad-cruce'] },
+    { nodeId: 'control-block', elementIds: ['control-trafico'] },
   ],
   connections,
 };

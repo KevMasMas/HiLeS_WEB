@@ -128,7 +128,12 @@ def build_default_application(config=None, clock=None, machine_module=None,
         password=config.MQTT_PASSWORD,
         connect_timeout_seconds=getattr(config, "MQTT_CONNECT_TIMEOUT_SECONDS", 2),
     )
-    watchdog_task = WatchdogTask(scheduler, node, period_ms=getattr(config, "WATCHDOG_PERIOD_MS", 5000))
+    watchdog_task = WatchdogTask(
+        scheduler,
+        node,
+        device_id=config.MQTT_CLIENT_ID,
+        period_ms=getattr(config, "WATCHDOG_PERIOD_MS", 5000),
+    )
     scheduler.components = {
         "node": node,
         "wifi": wifi,

@@ -137,7 +137,7 @@ export const ejecutarPython = (codigo: string, entradas: EntradasRuntime = {}): 
       finalizar(() => reject(new ErrorEjecucionCodigo(`La ejecución Python superó el límite de ${TIEMPO_MAXIMO_PYTHON_MS} ms.`)));
     }, TIEMPO_MAXIMO_PYTHON_MS);
 
-    worker.onmessage = (evento: MessageEvent<{ ok: boolean; value?: RuntimeValue; error?: string }>) => {
+    worker.onmessage = (evento: MessageEvent<{ ok: boolean; value?: unknown; error?: string }>) => {
       if (evento.data.ok && evento.data.value !== undefined) {
         finalizar(() => resolve(evento.data.value as RuntimeValue));
       } else {

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { serializeModel } from '../domain/modelDocument';
-import { compilarDocumentoAIr } from '../services/ir';
+import { compilarDocumentoAIrV2 } from '../services/ir';
 import { mqttClient } from '../services/mqtt/MqttClient';
 import { RemoteExecutionClient } from '../services/mqtt/RemoteExecutionClient';
 import type { AccionSimulacion, ValorMensajeMqtt } from '../services/mqtt/messages';
@@ -94,15 +94,18 @@ export const useRemoteExecutionStore = create<RemoteExecutionState>((set, get) =
       return false;
     }
     const { nodes, edges } = useEditorStore.getState();
-    const compilacion = compilarDocumentoAIr(serializeModel(nodes, edges));
-    if (!compilacion.ok) {
+    const compilacion = compilarDocumentoAIrV2(serializeModel(nodes, edges), {
+      modeloId: get().modeloId,
+      version: get().version,
+    });
+    if (!compilacion.ok || !compilacion.modelo) {
       set({
         modeloAceptado: false,
-        mensaje: `El circuito no se puede enviar: ${compilacion.avisos.map((aviso) => aviso.mensaje).join(' ')}`,
+        mensaje: `El circuito no se puede enviar: ${compilacion.errores.map((error) => error.mensaje).join(' ')}`,
       });
       return false;
     }
-    const publicado = remoteClient.cargarModelo(compilacion.ir);
+    const publicado = remoteClient.cargarModeloIrV2(compilacion.modelo);
     set({
       modeloAceptado: null,
       mensaje: publicado

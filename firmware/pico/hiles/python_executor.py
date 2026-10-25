@@ -116,7 +116,12 @@ def _tokenize(source):
         if char == "_" or char.isalpha():
             start = index
             index += 1
-            while index < length and (source[index] == "_" or source[index].isalnum()):
+            while index < length and (
+                source[index] == "_"
+                or source[index].isdigit()
+                or "a" <= source[index] <= "z"
+                or "A" <= source[index] <= "Z"
+            ):
                 index += 1
             tokens.append(source[start:index])
             continue

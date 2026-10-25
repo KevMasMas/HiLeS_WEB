@@ -14,6 +14,7 @@ import {
 } from '../types/hiles';
 import { HilesElementTranslations } from '../types/translations';
 import { isModelDocument, serializeModel, validateModelDocument } from '../domain/modelDocument';
+import { makePrefixedId, safeRandomUUID } from '../utils/uuid';
 import { orientOperatorPorts } from './operatorPorts';
 
 export { orientOperatorPorts } from './operatorPorts';
@@ -100,7 +101,7 @@ const defaultProperties = (type?: HilesElementType): HilesNodeProperties => ({
 });
 
 const createPort = (direction: PortDirection, name?: string, nature: HilesPort['nature'] = 'continuous'): HilesPort => ({
-  id: `${direction === 'input' ? 'IN' : 'OUT'}_${crypto.randomUUID()}`,
+  id: `${direction === 'input' ? 'IN' : 'OUT'}_${safeRandomUUID()}`,
   name: name ?? (direction === 'input' ? 'Input' : 'Output'),
   direction,
   dataType: nature === 'control' ? 'boolean' : 'real',
@@ -118,8 +119,8 @@ const defaultPorts = (type: HilesElementType): HilesPort[] => {
     { ...createPort('output', 'Action'), id: 'transition-action-out', dataType: 'boolean', side: 'bottom', offset: 0.5 },
   ];
   if (type === HilesElementType.SERVICE) return [
-    { ...createPort('input', 'In'), id: `IN_${crypto.randomUUID()}`, dataType: 'boolean', side: 'left', offset: 0.5 },
-    { ...createPort('output', 'Out'), id: `OUT_${crypto.randomUUID()}`, dataType: 'boolean', side: 'right', offset: 0.5 },
+    { ...createPort('input', 'In'), id: `IN_${safeRandomUUID()}`, dataType: 'boolean', side: 'left', offset: 0.5 },
+    { ...createPort('output', 'Out'), id: `OUT_${safeRandomUUID()}`, dataType: 'boolean', side: 'right', offset: 0.5 },
   ];
   if (type === HilesElementType.SAMPLE || type === HilesElementType.HOLD) {
     return operatorPorts(type, type === HilesElementType.HOLD ? 'left' : 'right');
@@ -281,7 +282,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const count = get().edges.filter((edge) => edge.data?.hilesConnectionType === type).length + 1;
     const edge: HilesEdge = normalizeEdge({
       ...connection,
-      id: `${type}-${crypto.randomUUID()}`,
+      id: makePrefixedId(type),
       type: 'hilesEdge',
       label: `${appearance.prefix}${count}`,
       data: { hilesConnectionType: type, routing: 'orthogonal', dataType: 'real', delay: 0, weight: 1, propagationMode: 'push', waypoints: [] },
@@ -292,7 +293,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
   addNode: (type, position, options = {}) => {
     if (type === HilesElementType.TOKEN) return;
-    const id = `${type}-${crypto.randomUUID()}`;
+    const id = makePrefixedId(type);
     const isStructural = type === HilesElementType.STRUCTURAL_BLOCK;
     const newNode: HilesNode = {
       id, type: 'hilesNode', position,

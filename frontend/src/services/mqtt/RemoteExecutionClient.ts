@@ -46,6 +46,59 @@ export type EventoEjecucionRemota =
 
 type EventoRemotoHandler = (evento: EventoEjecucionRemota) => void;
 
+const CLAVES_IR_V2_COMPACTAS: Record<string, string> = {
+  ir_version: 'v', modelo_id: 'm', version: 'w', entradas_externas: 'x',
+  elementos: 'e', conexiones: 'c', elemento_id: 'd', puerto_salida: 'q',
+  tipo_dato: 't', valor_inicial: 'z', id: 'i', tipo: 'y', salidas: 's',
+  entradas: 'a', codigo: 'o', puerto: 'p', variable: 'b', origen: 'g',
+  puerto_origen: 'j', destino: 'k', puerto_destino: 'u',
+};
+
+const omitirCampoIrV2Compacto = (clave: string, valor: unknown): boolean =>
+  clave === 'metadata'
+  || clave === 'nombre'
+  || clave === 'lenguaje'
+  || (clave === 'habilitado' && valor === true);
+
+/** Reduce el pico de memoria de ``umqtt.simple`` sin cambiar la semántica IR v2. */
+const compactarModeloIrV2ParaPico = (modelo: ModeloEjecutableMqtt): unknown => {
+  const frecuencias = new Map<string, number>();
+  const contar = (valor: unknown): void => {
+    if (Array.isArray(valor)) {
+      valor.forEach(contar);
+    } else if (typeof valor === 'object' && valor !== null) {
+      Object.entries(valor).forEach(([clave, hijo]) => {
+        if (!omitirCampoIrV2Compacto(clave, hijo)) contar(hijo);
+      });
+    } else if (typeof valor === 'string') {
+      frecuencias.set(valor, (frecuencias.get(valor) ?? 0) + 1);
+    }
+  };
+  contar(modelo);
+
+  const diccionario = [...frecuencias.entries()]
+    .filter(([valor, repeticiones]) => repeticiones > 1 && valor.length > 3)
+    .map(([valor]) => valor);
+  const indices = new Map(diccionario.map((valor, indice) => [valor, indice]));
+  const compactar = (valor: unknown): unknown => {
+    if (Array.isArray(valor)) return valor.map(compactar);
+    if (typeof valor === 'object' && valor !== null) {
+      return Object.fromEntries(
+        Object.entries(valor)
+          .filter(([clave, hijo]) => !omitirCampoIrV2Compacto(clave, hijo))
+          .map(([clave, hijo]) => [CLAVES_IR_V2_COMPACTAS[clave] ?? clave, compactar(hijo)]),
+      );
+    }
+    if (typeof valor === 'string') {
+      const indice = indices.get(valor);
+      if (indice !== undefined) return `$${indice.toString(36)}`;
+      return valor.startsWith('$') ? `$${valor}` : valor;
+    }
+    return valor;
+  };
+  return { _f: 'ir2c1', _d: diccionario, _m: compactar(modelo) };
+};
+
 const crearIdMensaje = (): string => {
   const uuid = globalThis.crypto?.randomUUID?.();
   return uuid ? `web-${uuid}` : `web-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
@@ -189,7 +242,16 @@ export class RemoteExecutionClient {
   }
 
   public cargarModeloIrV2(modelo: ModeloEjecutableMqtt): boolean {
-    return this.cargarModelo(modelo, { irVersion: 2 });
+    const sesion = this.requerirSesion();
+    const topic = this.topicosProyecto?.simulacionComando ?? MQTT_TOPICS.SIMULACION_COMANDO;
+    const preparado = this.mqtt.publish(topic, {
+      accion: 'liberar',
+      modelo_id: sesion.modeloId,
+      version: sesion.version,
+      id_mensaje: `preparar-carga-${Date.now()}`,
+    });
+    if (!preparado) return false;
+    return this.cargarModelo(compactarModeloIrV2ParaPico(modelo) as ModeloEjecutableMqtt, { irVersion: 2 });
   }
 
   public enviarComando(accion: AccionSimulacion): boolean {

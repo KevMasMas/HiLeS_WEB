@@ -61,6 +61,16 @@ MAX_DCH_QUEUE_CAPACITY = 32
 MAX_DELAY_MS = 600000
 MAX_MODELO_BYTES = 31744
 
+_CLAVES_IR_V2_COMPACTAS = {
+    "v": "ir_version", "m": "modelo_id", "w": "version",
+    "x": "entradas_externas", "e": "elementos", "c": "conexiones",
+    "d": "elemento_id", "q": "puerto_salida", "t": "tipo_dato",
+    "z": "valor_inicial", "i": "id", "y": "tipo", "s": "salidas",
+    "a": "entradas", "o": "codigo", "p": "puerto", "b": "variable",
+    "g": "origen", "j": "puerto_origen", "k": "destino",
+    "u": "puerto_destino",
+}
+
 OPERADORES_UNARIOS_V2 = ("-", "+", "!", "not")
 OPERADORES_BINARIOS_V2 = (
     "==", "!=", "<", "<=", ">", ">=", "+", "-", "*", "/", "%",
@@ -70,6 +80,58 @@ OPERADORES_BINARIOS_V2 = (
 
 def _falla(codigo, mensaje, elemento_id=None, conexion_id=None):
     raise IrError(codigo, mensaje, elemento_id=elemento_id, conexion_id=conexion_id)
+
+
+def _indice_base36(texto):
+    indice = 0
+    if not texto:
+        return None
+    for caracter in texto:
+        if "0" <= caracter <= "9":
+            digito = ord(caracter) - ord("0")
+        elif "a" <= caracter <= "z":
+            digito = ord(caracter) - ord("a") + 10
+        else:
+            return None
+        indice = indice * 36 + digito
+    return indice
+
+
+def _expandir_valor_ir_v2_compacto(valor, diccionario):
+    if isinstance(valor, list):
+        for indice in range(len(valor)):
+            valor[indice] = _expandir_valor_ir_v2_compacto(valor[indice], diccionario)
+        return valor
+    if isinstance(valor, dict):
+        for clave in list(valor):
+            hijo = _expandir_valor_ir_v2_compacto(valor[clave], diccionario)
+            clave_expandida = _CLAVES_IR_V2_COMPACTAS.get(clave, clave)
+            if clave_expandida != clave:
+                del valor[clave]
+            valor[clave_expandida] = hijo
+        return valor
+    if isinstance(valor, str) and valor.startswith("$"):
+        if valor.startswith("$$"):
+            return valor[1:]
+        indice = _indice_base36(valor[1:])
+        if indice is None or indice >= len(diccionario):
+            _falla(IR_ESTRUCTURA_INVALIDA, "Referencia inválida en el diccionario IR v2 compacto.")
+        return diccionario[indice]
+    return valor
+
+
+def _expandir_modelo_ir_v2_compacto(modelo):
+    if not isinstance(modelo, dict) or modelo.get("_f") != "ir2c1":
+        return modelo
+    diccionario = modelo.get("_d")
+    contenido = modelo.get("_m")
+    if (
+        not isinstance(diccionario, list)
+        or not all(isinstance(valor, str) for valor in diccionario)
+        or not isinstance(contenido, dict)
+    ):
+        _falla(IR_ESTRUCTURA_INVALIDA, "El modelo IR v2 compacto es inválido.")
+    return _expandir_valor_ir_v2_compacto(contenido, diccionario)
 
 
 def _es_texto_limpio(valor):
@@ -706,6 +768,28 @@ def _detectar_ciclo(ids, adyacencia):
 
 
 def _bytes_json(valor):
+    """Cuenta el JSON UTF-8 sin construir una segunda copia completa.
+
+    En MicroPython un modelo válido puede caber como objetos dispersos en el
+    heap aunque no quede un bloque contiguo para otro ``json.dumps`` completo.
+    Serializar solo escalares mantiene el mismo límite con un pico pequeño.
+    """
+    if isinstance(valor, dict):
+        total = 2
+        primero = True
+        for clave, hijo in valor.items():
+            if not primero:
+                total += 1
+            primero = False
+            total += _bytes_json(str(clave)) + 1 + _bytes_json(hijo)
+        return total
+    if isinstance(valor, (list, tuple)):
+        total = 2
+        for indice, hijo in enumerate(valor):
+            if indice:
+                total += 1
+            total += _bytes_json(hijo)
+        return total
     try:
         texto = json.dumps(valor, separators=(",", ":"), ensure_ascii=False)
     except TypeError:  # MicroPython no admite ensure_ascii ni separators.
@@ -968,5 +1052,7 @@ def validate_load_message_v2(mensaje):
     if ir_version == 1:
         modelo = validate_ir_v1(mensaje.get("modelo"))
     else:
-        modelo = validate_ir_v2(mensaje.get("modelo"))
+        modelo_expandido = _expandir_modelo_ir_v2_compacto(mensaje.get("modelo"))
+        mensaje["modelo"] = modelo_expandido
+        modelo = validate_ir_v2(modelo_expandido)
     return mensaje["modelo_id"], int(version), int(ir_version), modelo

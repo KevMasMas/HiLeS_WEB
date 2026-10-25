@@ -26,7 +26,7 @@ export type ValorMensajeMqtt = boolean | number | string;
 export type ValorMensajeMqttV2 = IrValorRuntimeV2;
 export type AccionLed = 'encender' | 'apagar' | 'titilar';
 export type AccionLedEstado = AccionLed | 'inicio';
-export type AccionSimulacion = 'iniciar' | 'detener' | 'reiniciar' | 'paso';
+export type AccionSimulacion = 'iniciar' | 'detener' | 'reiniciar' | 'paso' | 'liberar';
 export type EstadoSimulacion = 'sin_modelo' | 'lista' | 'ejecutando' | 'pausada' | 'detenida' | 'error';
 
 export interface MensajeLedComando {
@@ -157,7 +157,7 @@ export type ResultadoValidacionMensaje =
 const TOPICS_CONOCIDOS = new Set<string>(Object.values(MQTT_TOPICS));
 const ACCIONES_LED = new Set<AccionLed>(['encender', 'apagar', 'titilar']);
 const ACCIONES_ESTADO_LED = new Set<AccionLedEstado>(['encender', 'apagar', 'titilar', 'inicio']);
-const ACCIONES_SIMULACION = new Set<AccionSimulacion>(['iniciar', 'detener', 'reiniciar', 'paso']);
+const ACCIONES_SIMULACION = new Set<AccionSimulacion>(['iniciar', 'detener', 'reiniciar', 'paso', 'liberar']);
 const ESTADOS_SIMULACION = new Set<EstadoSimulacion>(['sin_modelo', 'lista', 'ejecutando', 'pausada', 'detenida', 'error']);
 const VERSIONES_IR_VALIDAS = new Set<number>(MQTT_SUPPORTED_IR_VERSIONS);
 
@@ -314,6 +314,14 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
         return error(topic, `ir_version debe ser ${MQTT_SUPPORTED_IR_VERSIONS.join(' o ')}`);
       }
       if (!esObjeto(payload.modelo)) return error(topic, 'modelo debe ser un objeto JSON');
+      const modeloCompactoIrV2 = payload.ir_version === 2 && payload.modelo._f === 'ir2c1';
+      if (modeloCompactoIrV2) {
+        if (!Array.isArray(payload.modelo._d) || !payload.modelo._d.every(esTexto)) {
+          return error(topic, 'modelo._d debe ser un diccionario de textos');
+        }
+        if (!esObjeto(payload.modelo._m)) return error(topic, 'modelo._m debe ser un objeto');
+        break;
+      }
       if (!Array.isArray(payload.modelo.elementos)) return error(topic, 'modelo.elementos debe ser una lista');
       if (!Array.isArray(payload.modelo.conexiones)) return error(topic, 'modelo.conexiones debe ser una lista');
       if (payload.modelo.elementos.length > MQTT_MAX_MODEL_ELEMENTS) {

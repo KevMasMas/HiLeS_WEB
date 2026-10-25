@@ -5,7 +5,7 @@ interface SolicitudPython {
 
 interface RespuestaPython {
   ok: boolean;
-  value?: boolean | number | string;
+  value?: unknown;
   error?: string;
 }
 
@@ -32,12 +32,13 @@ self.onmessage = async (evento: MessageEvent<SolicitudPython>) => {
       'globals().update(__hiles_inputs)',
     ].join('\n');
     const programa = esFuncion
-      ? `${preparacion}\n${codigo}\n__hiles_result = calcular(**__hiles_inputs)\n__hiles_result`
-      : `${preparacion}\n__hiles_result = (${codigo})\n__hiles_result`;
-    const resultado = await pyodide.runPythonAsync(programa);
-    if (typeof resultado !== 'boolean' && typeof resultado !== 'number' && typeof resultado !== 'string') {
-      throw new Error('El código Python debe retornar boolean, número o texto.');
+      ? `${preparacion}\n${codigo}\n__hiles_result = calcular(**__hiles_inputs)\njson.dumps(__hiles_result)`
+      : `${preparacion}\n__hiles_result = (${codigo})\njson.dumps(__hiles_result)`;
+    const resultadoSerializado = await pyodide.runPythonAsync(programa);
+    if (typeof resultadoSerializado !== 'string') {
+      throw new Error('El código Python debe retornar un valor compatible con JSON.');
     }
+    const resultado: unknown = JSON.parse(resultadoSerializado);
     self.postMessage({ ok: true, value: resultado } satisfies RespuestaPython);
   } catch (error) {
     self.postMessage({

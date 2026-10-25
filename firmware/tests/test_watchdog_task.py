@@ -38,6 +38,7 @@ class WatchdogTaskTests(unittest.TestCase):
         watchdog = WatchdogTask(
             scheduler,
             node,
+            device_id="pico-prueba",
             period_ms=100,
             rssi_reader=lambda: -51,
             temperature_reader=lambda: 27.5,
@@ -48,6 +49,10 @@ class WatchdogTaskTests(unittest.TestCase):
 
         self.assertEqual(len(payloads), 1)
         payload = payloads[0]
+        self.assertEqual(payload["dispositivo"], "pico-prueba")
+        self.assertEqual(payload["memoria_libre"], 12345)
+        self.assertEqual(payload["rssi"], -51)
+        self.assertEqual(payload["tiempo_activo"], 0)
         self.assertEqual(payload["memoria"], {"mem_free": 12345, "mem_alloc": 6789})
         self.assertEqual(payload["rssi_dbm"], -51)
         self.assertEqual(payload["temperatura_c"], 27.5)

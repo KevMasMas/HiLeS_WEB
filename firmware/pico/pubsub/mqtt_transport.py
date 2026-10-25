@@ -3,6 +3,11 @@
 import json
 
 try:
+    import gc
+except ImportError:  # pragma: no cover
+    gc = None
+
+try:
     from ..core.task import Task
 except ImportError:  # pragma: no cover
     from core.task import Task
@@ -100,6 +105,12 @@ class MqttTransport(Task):
             if used_poller:
                 if not self._socket_poller.poll(0):
                     return
+                # ``umqtt.simple`` reserva el payload completo antes de llamar
+                # al callback. Recolectar aquí evita que la fragmentación del
+                # heap impida recibir modelos medianos aunque haya memoria
+                # libre total suficiente.
+                if gc is not None:
+                    gc.collect()
                 self.client.wait_msg()
             else:
                 check_msg = getattr(self.client, "check_msg", None)
@@ -205,7 +216,10 @@ class MqttTransport(Task):
         try:
             if len(raw_payload) > self.max_payload_bytes:
                 raise ValueError("el payload supera el límite de {} bytes".format(self.max_payload_bytes))
-            payload = json.loads(self._as_text(raw_payload))
+            # MicroPython y CPython aceptan ``bytes`` en ``json.loads``. No
+            # decodificar antes evita mantener simultáneamente dos copias del
+            # modelo (bytes + str), algo costoso en la Pico W.
+            payload = json.loads(raw_payload)
             if not isinstance(payload, dict):
                 raise ValueError("el payload debe ser un objeto JSON")
         except Exception as exc:

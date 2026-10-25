@@ -8,6 +8,11 @@ relativos y el transporte decide cómo enviarlos al broker.
 """
 
 try:
+    import gc
+except ImportError:  # pragma: no cover
+    gc = None
+
+try:
     from ..core.task import Task
     from ..pubsub.topics import (
         ENTRADA_ESTABLECER,
@@ -37,7 +42,7 @@ EJECUTANDO = "ejecutando"
 PAUSADA = "pausada"
 DETENIDA = "detenida"
 
-ACCIONES_SIMULACION = ("iniciar", "detener", "reiniciar", "paso")
+ACCIONES_SIMULACION = ("iniciar", "detener", "reiniciar", "paso", "liberar")
 
 COMANDO_RECHAZADO = "COMANDO_RECHAZADO"
 MOTOR_OCUPADO = "MOTOR_OCUPADO"
@@ -277,9 +282,24 @@ class EngineTask(Task):
         if accion not in ACCIONES_SIMULACION:
             self._publish_error(
                 COMANDO_RECHAZADO,
-                "accion debe ser iniciar, detener, reiniciar o paso.",
+                "accion debe ser iniciar, detener, reiniciar, paso o liberar.",
                 payload,
             )
+            return
+        if accion == "liberar":
+            if not es_texto(payload.get("id_mensaje")):
+                self._publish_error(COMANDO_RECHAZADO, "id_mensaje debe ser un texto no vacío.", payload)
+                return
+            self.engine = None
+            self.modelo_id = None
+            self.version = None
+            self.secuencia = 0
+            self.estado = SIN_MODELO
+            self._next_auto_step = None
+            self._dedup_order = []
+            self._dedup_responses = {}
+            if gc is not None:
+                gc.collect()
             return
         if not self._check_active_model(payload, COMANDO_RECHAZADO):
             return

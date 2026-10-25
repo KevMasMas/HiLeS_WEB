@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { serializeModel } from '../domain/modelDocument';
 import { mqttClient } from '../services/mqtt/MqttClient';
 import { ProjectSyncClient, type ColaboradorProyectoV2, type CursorRemotoProyectoV2 } from '../services/projects/ProjectSyncClient';
+import { safeRandomUUID } from '../utils/uuid';
 import { useEditorStore } from './useEditorStore';
 
 interface ProjectState {
@@ -23,11 +24,11 @@ const identity = () => {
         return { clientId: parsed.clientId, name: parsed.name };
       }
     }
-    const value = { clientId: `web-${crypto.randomUUID()}`, name: `Editor ${Math.floor(Math.random() * 900 + 100)}` };
+    const value = { clientId: `web-${safeRandomUUID()}`, name: `Editor ${Math.floor(Math.random() * 900 + 100)}` };
     sessionStorage.setItem(key, JSON.stringify(value));
     return value;
   } catch {
-    return { clientId: `web-${crypto.randomUUID()}`, name: 'Editor' };
+    return { clientId: `web-${safeRandomUUID()}`, name: 'Editor' };
   }
 };
 

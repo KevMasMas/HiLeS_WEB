@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "metadata": {
     "savedAt": "2026-10-18T22:00:00-05:00",
-    "description": "Demo manual construido solo con Services y Functional Blocks generales. El usuario inyecta cantidades y colores; la Pico ejecuta el Python del modelo."
+    "description": "Semáforo inteligente: el usuario inyecta solo cantidades y el controlador asigna verde al eje con más vehículos."
   },
   "network": {
     "topology": null,
@@ -28,7 +28,7 @@
       },
       "ports": [],
       "properties": {
-        "description": "Ejemplo manual del sentido Norte (eje norte-sur), construido con elementos generales.",
+        "description": "Recibe el número de vehículos del sentido Norte y muestra el color decidido automáticamente.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -77,43 +77,6 @@
         "delay": 0,
         "condition": "",
         "heldValue": "0",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "luz-norte",
-      "type": "SERVICE",
-      "name": "🚦 Luz Norte",
-      "parentId": "norte-block",
-      "layout": {
-        "x": 40,
-        "y": 210
-      },
-      "ports": [
-        {
-          "id": "luz-norte-out",
-          "name": "luz",
-          "direction": "output",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Entrada manual opcional: inicia en rojo y acepta rojo, amarillo o verde.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "rojo",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -174,17 +137,17 @@
           "offset": 0.6
         },
         {
-          "id": "lamparas-norte-solicitud",
-          "name": "solicitud",
+          "id": "lamparas-norte-vehiculos-out",
+          "name": "vehiculos",
           "direction": "output",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "right",
           "offset": 0.8
         }
       ],
       "properties": {
-        "description": "Traduce la luz a lámparas y muestra la solicitud de paso cuando hay vehículos en rojo.",
+        "description": "Convierte la decisión automática en las señales rojo, amarillo y verde.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -199,7 +162,7 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }"
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'vehiculos': vehiculos_esperando,\n    }"
       }
     },
     {
@@ -214,7 +177,7 @@
       },
       "ports": [],
       "properties": {
-        "description": "Ejemplo manual del sentido Sur (eje norte-sur), construido con elementos generales.",
+        "description": "Recibe el número de vehículos del sentido Sur y muestra el color decidido automáticamente.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -263,43 +226,6 @@
         "delay": 0,
         "condition": "",
         "heldValue": "0",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "luz-sur",
-      "type": "SERVICE",
-      "name": "🚦 Luz Sur",
-      "parentId": "sur-block",
-      "layout": {
-        "x": 40,
-        "y": 210
-      },
-      "ports": [
-        {
-          "id": "luz-sur-out",
-          "name": "luz",
-          "direction": "output",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Entrada manual opcional: inicia en rojo y acepta rojo, amarillo o verde.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "rojo",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -360,17 +286,17 @@
           "offset": 0.6
         },
         {
-          "id": "lamparas-sur-solicitud",
-          "name": "solicitud",
+          "id": "lamparas-sur-vehiculos-out",
+          "name": "vehiculos",
           "direction": "output",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "right",
           "offset": 0.8
         }
       ],
       "properties": {
-        "description": "Traduce la luz a lámparas y muestra la solicitud de paso cuando hay vehículos en rojo.",
+        "description": "Convierte la decisión automática en las señales rojo, amarillo y verde.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -385,7 +311,7 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }"
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'vehiculos': vehiculos_esperando,\n    }"
       }
     },
     {
@@ -400,7 +326,7 @@
       },
       "ports": [],
       "properties": {
-        "description": "Ejemplo manual del sentido Este (eje este-oeste), construido con elementos generales.",
+        "description": "Recibe el número de vehículos del sentido Este y muestra el color decidido automáticamente.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -449,43 +375,6 @@
         "delay": 0,
         "condition": "",
         "heldValue": "0",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "luz-este",
-      "type": "SERVICE",
-      "name": "🚦 Luz Este",
-      "parentId": "este-block",
-      "layout": {
-        "x": 40,
-        "y": 210
-      },
-      "ports": [
-        {
-          "id": "luz-este-out",
-          "name": "luz",
-          "direction": "output",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Entrada manual opcional: inicia en rojo y acepta rojo, amarillo o verde.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "rojo",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -546,17 +435,17 @@
           "offset": 0.6
         },
         {
-          "id": "lamparas-este-solicitud",
-          "name": "solicitud",
+          "id": "lamparas-este-vehiculos-out",
+          "name": "vehiculos",
           "direction": "output",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "right",
           "offset": 0.8
         }
       ],
       "properties": {
-        "description": "Traduce la luz a lámparas y muestra la solicitud de paso cuando hay vehículos en rojo.",
+        "description": "Convierte la decisión automática en las señales rojo, amarillo y verde.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -571,7 +460,7 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }"
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'vehiculos': vehiculos_esperando,\n    }"
       }
     },
     {
@@ -586,7 +475,7 @@
       },
       "ports": [],
       "properties": {
-        "description": "Ejemplo manual del sentido Oeste (eje este-oeste), construido con elementos generales.",
+        "description": "Recibe el número de vehículos del sentido Oeste y muestra el color decidido automáticamente.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -635,43 +524,6 @@
         "delay": 0,
         "condition": "",
         "heldValue": "0",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "luz-oeste",
-      "type": "SERVICE",
-      "name": "🚦 Luz Oeste",
-      "parentId": "oeste-block",
-      "layout": {
-        "x": 40,
-        "y": 210
-      },
-      "ports": [
-        {
-          "id": "luz-oeste-out",
-          "name": "luz",
-          "direction": "output",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.5
-        }
-      ],
-      "properties": {
-        "description": "Entrada manual opcional: inicia en rojo y acepta rojo, amarillo o verde.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "rojo",
         "operatorDirection": "right",
         "rotation": 0
       }
@@ -732,17 +584,17 @@
           "offset": 0.6
         },
         {
-          "id": "lamparas-oeste-solicitud",
-          "name": "solicitud",
+          "id": "lamparas-oeste-vehiculos-out",
+          "name": "vehiculos",
           "direction": "output",
-          "dataType": "boolean",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "right",
           "offset": 0.8
         }
       ],
       "properties": {
-        "description": "Traduce la luz a lámparas y muestra la solicitud de paso cuando hay vehículos en rojo.",
+        "description": "Convierte la decisión automática en las señales rojo, amarillo y verde.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -757,13 +609,13 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }"
+        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'vehiculos': vehiculos_esperando,\n    }"
       }
     },
     {
       "id": "control-block",
       "type": "STRUCTURAL_BLOCK",
-      "name": "Matriz de conflictos",
+      "name": "Control automático de tráfico",
       "layout": {
         "x": 400,
         "y": 960,
@@ -772,7 +624,7 @@
       },
       "ports": [],
       "properties": {
-        "description": "Comprueba en cada paso que Norte–Sur y Este–Oeste nunca estén activos a la vez. No decide colores.",
+        "description": "Suma los carros de cada eje y concede verde al eje con mayor congestión. En empate deja todo rojo.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -789,9 +641,9 @@
       }
     },
     {
-      "id": "seguridad-cruce",
+      "id": "control-trafico",
       "type": "FUNCTIONAL_BLOCK",
-      "name": "Seguridad del cruce",
+      "name": "Decidir eje con prioridad",
       "parentId": "control-block",
       "layout": {
         "x": 260,
@@ -799,62 +651,89 @@
       },
       "ports": [
         {
-          "id": "seguridad-luz-norte",
-          "name": "luz_norte",
+          "id": "control-vehiculos-norte",
+          "name": "vehiculos_norte",
           "direction": "input",
-          "dataType": "string",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "left",
-          "offset": 0.2
+          "offset": 0.15
         },
         {
-          "id": "seguridad-luz-sur",
-          "name": "luz_sur",
+          "id": "control-vehiculos-sur",
+          "name": "vehiculos_sur",
           "direction": "input",
-          "dataType": "string",
+          "dataType": "integer",
           "nature": "continuous",
           "side": "left",
-          "offset": 0.4
-        },
-        {
-          "id": "seguridad-luz-este",
-          "name": "luz_este",
-          "direction": "input",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.6000000000000001
-        },
-        {
-          "id": "seguridad-luz-oeste",
-          "name": "luz_oeste",
-          "direction": "input",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.8
-        },
-        {
-          "id": "seguridad-seguro",
-          "name": "seguro",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
           "offset": 0.35
         },
         {
-          "id": "seguridad-eje",
+          "id": "control-vehiculos-este",
+          "name": "vehiculos_este",
+          "direction": "input",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.55
+        },
+        {
+          "id": "control-vehiculos-oeste",
+          "name": "vehiculos_oeste",
+          "direction": "input",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.7500000000000001
+        },
+        {
+          "id": "control-luz-norte",
+          "name": "luz_norte",
+          "direction": "output",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.15
+        },
+        {
+          "id": "control-luz-sur",
+          "name": "luz_sur",
+          "direction": "output",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.32
+        },
+        {
+          "id": "control-luz-este",
+          "name": "luz_este",
+          "direction": "output",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.49
+        },
+        {
+          "id": "control-luz-oeste",
+          "name": "luz_oeste",
+          "direction": "output",
+          "dataType": "string",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.66
+        },
+        {
+          "id": "control-eje",
           "name": "eje",
           "direction": "output",
           "dataType": "string",
           "nature": "continuous",
-          "side": "right",
-          "offset": 0.65
+          "side": "bottom",
+          "offset": 0.5
         }
       ],
       "properties": {
-        "description": "seguro=false indicaría verdes o amarillos incompatibles; eje muestra el movimiento activo.",
+        "description": "Compara Norte+Sur contra Este+Oeste y produce automáticamente los cuatro colores.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -869,7 +748,7 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    norte = inputs.get('luz_norte') == 'verde' or inputs.get('luz_norte') == 'amarillo'\n    sur = inputs.get('luz_sur') == 'verde' or inputs.get('luz_sur') == 'amarillo'\n    este = inputs.get('luz_este') == 'verde' or inputs.get('luz_este') == 'amarillo'\n    oeste = inputs.get('luz_oeste') == 'verde' or inputs.get('luz_oeste') == 'amarillo'\n    conflicto = (norte and oeste) or (este and norte) or (este and sur) or (oeste and sur)\n    eje = 'todo-rojo'\n    if conflicto:\n        eje = 'conflicto'\n    elif norte or sur:\n        eje = 'norte-sur'\n    elif este or oeste:\n        eje = 'este-oeste'\n    return {'seguro': not conflicto, 'eje': eje}"
+        "code": "def calcular(**inputs):\n    norte = inputs.get('vehiculos_norte')\n    if norte is None:\n        norte = 0\n    sur = inputs.get('vehiculos_sur')\n    if sur is None:\n        sur = 0\n    este = inputs.get('vehiculos_este')\n    if este is None:\n        este = 0\n    oeste = inputs.get('vehiculos_oeste')\n    if oeste is None:\n        oeste = 0\n    total_norte_sur = norte + sur\n    total_este_oeste = este + oeste\n    luz_norte = 'rojo'\n    luz_sur = 'rojo'\n    luz_este = 'rojo'\n    luz_oeste = 'rojo'\n    eje = 'todo-rojo'\n    if total_norte_sur > total_este_oeste:\n        luz_norte = 'verde'\n        luz_sur = 'verde'\n        eje = 'norte-sur'\n    elif total_este_oeste > total_norte_sur:\n        luz_este = 'verde'\n        luz_oeste = 'verde'\n        eje = 'este-oeste'\n    return {\n        'luz_norte': luz_norte,\n        'luz_sur': luz_sur,\n        'luz_este': luz_este,\n        'luz_oeste': luz_oeste,\n        'eje': eje,\n    }"
       }
     }
   ],
@@ -878,7 +757,6 @@
       "nodeId": "norte-block",
       "elementIds": [
         "sensor-norte",
-        "luz-norte",
         "lamparas-norte"
       ]
     },
@@ -886,7 +764,6 @@
       "nodeId": "sur-block",
       "elementIds": [
         "sensor-sur",
-        "luz-sur",
         "lamparas-sur"
       ]
     },
@@ -894,7 +771,6 @@
       "nodeId": "este-block",
       "elementIds": [
         "sensor-este",
-        "luz-este",
         "lamparas-este"
       ]
     },
@@ -902,14 +778,13 @@
       "nodeId": "oeste-block",
       "elementIds": [
         "sensor-oeste",
-        "luz-oeste",
         "lamparas-oeste"
       ]
     },
     {
       "nodeId": "control-block",
       "elementIds": [
-        "seguridad-cruce"
+        "control-trafico"
       ]
     }
   ],
@@ -926,24 +801,6 @@
         "hilesConnectionType": "CONTINUOUS",
         "routing": "orthogonal",
         "dataType": "integer",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "cch-luz-norte",
-      "source": "luz-norte",
-      "sourceHandle": "luz-norte-out",
-      "target": "lamparas-norte",
-      "targetHandle": "lamparas-norte-luz",
-      "label": "CCH · luz",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "string",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -969,24 +826,6 @@
       }
     },
     {
-      "id": "cch-luz-sur",
-      "source": "luz-sur",
-      "sourceHandle": "luz-sur-out",
-      "target": "lamparas-sur",
-      "targetHandle": "lamparas-sur-luz",
-      "label": "CCH · luz",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "string",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
       "id": "cch-sensor-este",
       "source": "sensor-este",
       "sourceHandle": "sensor-este-out",
@@ -998,24 +837,6 @@
         "hilesConnectionType": "CONTINUOUS",
         "routing": "orthogonal",
         "dataType": "integer",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "cch-luz-este",
-      "source": "luz-este",
-      "sourceHandle": "luz-este-out",
-      "target": "lamparas-este",
-      "targetHandle": "lamparas-este-luz",
-      "label": "CCH · luz",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "string",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -1041,84 +862,138 @@
       }
     },
     {
-      "id": "cch-luz-oeste",
-      "source": "luz-oeste",
-      "sourceHandle": "luz-oeste-out",
+      "id": "cch-control-sensor-norte",
+      "source": "sensor-norte",
+      "sourceHandle": "sensor-norte-out",
+      "target": "control-trafico",
+      "targetHandle": "control-vehiculos-norte",
+      "label": "CCH · carros Norte",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "integer",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-control-luz-norte",
+      "source": "control-trafico",
+      "sourceHandle": "control-luz-norte",
+      "target": "lamparas-norte",
+      "targetHandle": "lamparas-norte-luz",
+      "label": "CCH · decisión Norte",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-control-sensor-sur",
+      "source": "sensor-sur",
+      "sourceHandle": "sensor-sur-out",
+      "target": "control-trafico",
+      "targetHandle": "control-vehiculos-sur",
+      "label": "CCH · carros Sur",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "integer",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-control-luz-sur",
+      "source": "control-trafico",
+      "sourceHandle": "control-luz-sur",
+      "target": "lamparas-sur",
+      "targetHandle": "lamparas-sur-luz",
+      "label": "CCH · decisión Sur",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-control-sensor-este",
+      "source": "sensor-este",
+      "sourceHandle": "sensor-este-out",
+      "target": "control-trafico",
+      "targetHandle": "control-vehiculos-este",
+      "label": "CCH · carros Este",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "integer",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-control-luz-este",
+      "source": "control-trafico",
+      "sourceHandle": "control-luz-este",
+      "target": "lamparas-este",
+      "targetHandle": "lamparas-este-luz",
+      "label": "CCH · decisión Este",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "string",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-control-sensor-oeste",
+      "source": "sensor-oeste",
+      "sourceHandle": "sensor-oeste-out",
+      "target": "control-trafico",
+      "targetHandle": "control-vehiculos-oeste",
+      "label": "CCH · carros Oeste",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "integer",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-control-luz-oeste",
+      "source": "control-trafico",
+      "sourceHandle": "control-luz-oeste",
       "target": "lamparas-oeste",
       "targetHandle": "lamparas-oeste-luz",
-      "label": "CCH · luz",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "string",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "cch-seguridad-norte",
-      "source": "luz-norte",
-      "sourceHandle": "luz-norte-out",
-      "target": "seguridad-cruce",
-      "targetHandle": "seguridad-luz-norte",
-      "label": "CCH · luz Norte",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "string",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "cch-seguridad-sur",
-      "source": "luz-sur",
-      "sourceHandle": "luz-sur-out",
-      "target": "seguridad-cruce",
-      "targetHandle": "seguridad-luz-sur",
-      "label": "CCH · luz Sur",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "string",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "cch-seguridad-este",
-      "source": "luz-este",
-      "sourceHandle": "luz-este-out",
-      "target": "seguridad-cruce",
-      "targetHandle": "seguridad-luz-este",
-      "label": "CCH · luz Este",
-      "type": "hilesEdge",
-      "data": {
-        "hilesConnectionType": "CONTINUOUS",
-        "routing": "orthogonal",
-        "dataType": "string",
-        "delay": 0,
-        "weight": 1,
-        "propagationMode": "push",
-        "waypoints": []
-      }
-    },
-    {
-      "id": "cch-seguridad-oeste",
-      "source": "luz-oeste",
-      "sourceHandle": "luz-oeste-out",
-      "target": "seguridad-cruce",
-      "targetHandle": "seguridad-luz-oeste",
-      "label": "CCH · luz Oeste",
+      "label": "CCH · decisión Oeste",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
