@@ -20,12 +20,12 @@ Actualmente están implementados:
 - comunicación física web → Mosquitto → Pico W → web;
 - control y confirmación del LED integrado de la Pico W;
 - reconexión básica de la web, Wi-Fi y MQTT;
-- contrato e IR v1 compartidos entre TypeScript y MicroPython;
+- contratos IR v1 e IR v2 compartidos entre TypeScript y MicroPython;
 - motor HiLeS MicroPython con ejecución cooperativa y deduplicación QoS 1;
 - modo remoto web que aplica las instantáneas oficiales al canvas;
 - modelo de cruce coordinado Norte–Sur / Este–Oeste.
 
-El runtime MicroPython ya ejecuta el subconjunto IR v1 formado por `Service`, `Functional Block`, `Place` y `Transition`. En modo remoto, la web no recalcula el circuito: publica el modelo y los comandos, y representa las instantáneas emitidas por `EngineTask`. Esta integración está validada con dobles de escritorio; aún falta medirla y ensayarla en una Pico W física.
+El runtime MicroPython ejecuta IR v1 e IR v2 con `Service`, `Functional Block` Python, `Sample`, `Hold`, `Place`, `Transition`, CCH, DCH, LCH/Petri y retardos cooperativos. En modo remoto, la web no recalcula el circuito: publica el modelo y los comandos, y representa las instantáneas emitidas por `EngineTask`. El flujo navegador → Mosquitto → Pico W → snapshot → navegadores fue validado físicamente por el usuario el 25 de octubre de 2026; las suites automatizadas continúan cubriendo la paridad con el motor TypeScript.
 
 ## Arquitectura
 
@@ -388,15 +388,16 @@ Los mensajes MQTT tienen un límite inicial de 32 KiB. El contrato remoto admite
 - [Guía de ensayo remoto sin Pico](docs/mqtt/GUIA_ENSAYO_REMOTO_SIN_PICO.md)
 - [Guía para copiar y probar la Pico W](docs/mqtt/GUIA_PRUEBA_PICO_W.md)
 - [Plan del motor frontend](entregas/entrega-3-26-septiembre/PLAN_MOTOR_FRONTEND.md)
+- [Plan de ejecución distribuida — entrega del 30 de octubre](entregas/entrega-7-30-octubre/PLAN_IMPLEMENTACION_ENTREGA_30.md)
+- [Registro de cambios — entrega del 30 de octubre](entregas/entrega-7-30-octubre/REGISTRO_CAMBIOS.md)
 
 ## Trabajo pendiente
 
 Las siguientes tareas forman parte de la evolución planificada, no del alcance ya completado:
 
-- portar CCH, DCH, `Sample`, `Hold` y retardos al runtime MicroPython;
 - hacer dinámico el identificador MQTT para múltiples dispositivos;
-- validar tiempos y memoria en una Pico física;
-- ejecutar el ensayo conjunto con cuatro navegadores y el broker;
+- registrar mediciones cuantitativas repetibles de memoria libre, duración máxima y tamaño límite de modelos en una Pico física;
+- automatizar una prueba física de regresión que conserve logs y resultados, además de la validación manual ya aprobada;
 - ejecutar instancias distribuidas en varios computadores.
 
 ## Flujo de contribución

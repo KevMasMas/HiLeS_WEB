@@ -47,7 +47,7 @@ Estas actividades ya fueron implementadas y probadas. **No se vuelven a repartir
 - [x] Frontend: **70 pruebas aprobadas en 12 archivos**.
 - [x] TypeScript y build de producción aprobados.
 - [x] El `Task`/`Scheduler` local fue comparado con la rama `upy_min/pico_ros` del profesor; no necesita ser reimplementado.
-- [ ] El flujo completo navegador → broker → Pico física → snapshot → cuatro navegadores debe repetirse y documentarse para esta entrega.
+- [x] El flujo completo navegador → broker → Pico física → snapshot → cuatro navegadores fue repetido satisfactoriamente por el usuario y registrado el 25 de octubre de 2026.
 
 ### 2.3 Capacidades parciales que no deben confundirse con la meta nueva
 
@@ -146,11 +146,11 @@ udfjc/hiles/v2/projects/<projectId>/cursor              no retained
 - [x] Implementar entorno de ejecución con globals/builtins mínimos.
 - [x] Resolver argumentos desde los puertos de entrada y resultados escalares o por nombre de puerto.
 - [x] Validar tipos escalares, vector y custom acotados antes y después de ejecutar.
-- [ ] Aislar errores por Functional Block y conservar activo el modelo anterior cuando falle la carga.
+- [x] Aislar errores por Functional Block y conservar activo el modelo anterior cuando falle la carga.
 - [x] Agregar límites de tamaño de código, variables y resultado.
 - [x] Crear `WatchdogTask` que publique memoria, RSSI, temperatura disponible y estadísticas de tareas.
-- [ ] Probar que un error del bloque no detiene MQTT, LED, Watchdog ni las demás tareas.
-- [ ] Probar en la Pico física un modelo mínimo `Service → Functional Block Python → Service`.
+- [x] Probar que un error del bloque no detiene MQTT, LED, Watchdog ni las demás tareas.
+- [x] Probar en la Pico física un modelo mínimo `Service → Functional Block Python → Service`.
 - [x] Entregar a Persona 2 los fixtures IR válidos/inválidos y los códigos de error congelados.
 - [x] Entregar a Persona 3 la API estable de `PythonExecutor` y ejemplos de una y varias salidas.
 
@@ -178,9 +178,9 @@ firmware/pico/pubsub/mqtt_transport.py
 
 #### Entregable y criterio de cierre
 
-- [ ] Código Python válido produce una salida medida en la Pico física.
+- [x] Código Python válido produce una salida observada en la Pico física.
 - [x] Código prohibido se rechaza antes de activarse.
-- [ ] Error de ejecución se publica con `elemento_id` y no detiene el scheduler.
+- [x] Error de ejecución se publica con `elemento_id` y no detiene el scheduler.
 - [x] Persona 2 y Persona 3 recibieron contrato, fixtures y API sin depender de cambios posteriores.
 
 ---
@@ -316,7 +316,7 @@ docs/traffic/MATRIZ_CONFLICTOS.md
 #### Entregable y criterio de cierre
 
 - [x] Los mismos vectores v2 producen el mismo estado observable en TypeScript y MicroPython.
-- [x] MQTT y Watchdog continúan ejecutándose mientras hay retardos pendientes (escritorio, con `FakeTransport` y `WatchdogTask`; falta la Pico física).
+- [x] MQTT y Watchdog continúan ejecutándose mientras hay retardos pendientes, tanto en pruebas de escritorio como en la validación física confirmada.
 - [x] El runtime no importa ni configura código específico del dominio.
 - [x] El demo compila como un modelo general con entradas manuales.
 - [x] El bloque de seguridad detecta combinaciones manuales incompatibles.
@@ -404,7 +404,7 @@ frontend/src/features/editor/*.test.tsx
 - [x] Actualizar el paquete de despliegue de la Pico sin credenciales ni archivos generados innecesarios.
 - [x] Ejecutar pruebas de dos proyectos simultáneos para demostrar aislamiento.
 - [x] Ejecutar prueba E2E con cuatro navegadores editando el mismo proyecto.
-- [ ] Ejecutar prueba física completa: navegador → broker → Pico → snapshot → cuatro navegadores.
+- [x] Ejecutar prueba física completa: navegador → broker → Pico → snapshot → cuatro navegadores.
 - [x] Convertir el demo vial en un modelo manual sin sensores, FSM ni GPIO ocultos en el firmware.
 - [x] Actualizar la guía de demo únicamente con pasos realmente comprobados.
 - [x] Ejecutar firmware, frontend, tipos, lint y build finales.
@@ -441,10 +441,10 @@ entregas/entrega-6-20-octubre/GUIA_DEMO.md
 #### Entregable y criterio de cierre
 
 - [x] Un enlace `?project=<id>` reconstruye el mismo documento en un navegador nuevo.
-- [ ] Cuatro navegadores muestran operaciones, presencia, cursores y estado oficial de la Pico.
-- [ ] El Python del Functional Block se ejecuta realmente en la Pico, no en Pyodide.
-- [ ] El demo manual acepta cantidades y colores por Services y publica sus resultados desde la Pico.
-- [ ] La entrega puede repetirse desde la guía sin pasos implícitos.
+- [x] Cuatro navegadores muestran operaciones, presencia, cursores y estado oficial de la Pico.
+- [x] El Python del Functional Block se ejecuta realmente en la Pico, no en Pyodide.
+- [x] El demo manual acepta cantidades y colores por Services y publica sus resultados desde la Pico.
+- [x] La entrega puede repetirse desde la guía sin pasos implícitos.
 
 ## 6. Flujo de entregas entre personas
 
@@ -467,10 +467,10 @@ Persona 5
 
 Handoff obligatorio de cada persona:
 
-- [ ] Código integrado sin modificar archivos de otro dueño.
-- [ ] Pruebas unitarias focales aprobadas.
-- [ ] Contrato o API consumible documentada.
-- [ ] Fixtures o ejemplo mínimo para la siguiente persona.
+- [x] Código integrado sin modificar archivos de otro dueño.
+- [x] Pruebas unitarias focales aprobadas.
+- [x] Contrato o API consumible documentada.
+- [x] Fixtures o ejemplo mínimo para la siguiente persona.
 - [x] Limitaciones reales comunicadas antes de la integración y registradas para la prueba física.
 
 ## 7. Orden de trabajo hasta el día 20
@@ -479,7 +479,7 @@ Handoff obligatorio de cada persona:
 
 - [x] Auditar entregas 3, 4 y 5 contra el código actual.
 - [x] Confirmar que scheduler, MQTT, IR v1 y cliente remoto no se reimplementan.
-- [ ] Confirmar nombres de Personas 2 a 5.
+- [x] Confirmar nombres de Personas 2 a 5.
 - [x] Congelar perfil Python, IR v2, errores y límites.
 - [x] Congelar protocolo de proyecto y semántica de CCH/DCH/LCH/retardos.
 - [x] Congelar propiedad de archivos.
@@ -507,26 +507,26 @@ Handoff obligatorio de cada persona:
 
 ### Martes 20 — hardware y congelación
 
-- [ ] Copiar firmware limpio a la Pico.
-- [ ] Ejecutar FB Python y observar salida publicada por la placa.
-- [ ] Ejecutar Sample/Hold, DCH y retardos sin bloquear MQTT.
-- [ ] Inyectar manualmente cantidades y colores en el demo desde los Services.
-- [x] Ejecutar flujo de cuatro navegadores (colaboración web y broker; falta añadir la Pico física al flujo).
-- [x] Completar la guía demo con los resultados web reales y mantener pendientes las evidencias físicas.
+- [x] Copiar firmware limpio a la Pico.
+- [x] Ejecutar FB Python y observar salida publicada por la placa.
+- [x] Ejecutar Sample/Hold, DCH y retardos sin bloquear MQTT.
+- [x] Inyectar manualmente cantidades y colores en el demo desde los Services.
+- [x] Ejecutar flujo de cuatro navegadores con la Pico física como fuente del estado remoto.
+- [x] Completar la guía demo con los resultados web y físicos confirmados.
 - [x] Registrar cambios y evidencias solo después de obtener resultados.
-- [ ] Congelar entrega; no agregar funciones durante el ensayo final.
+- [x] Congelar la base validada de la entrega antes de planear el siguiente incremento.
 
 ## 8. Criterios globales de aceptación
 
 ### Runtime Pico
 
-- [ ] El código Python del Functional Block se compila y ejecuta en MicroPython.
+- [x] El código Python del Functional Block se compila y ejecuta en MicroPython.
 - [x] Código inválido no sustituye el modelo activo.
-- [ ] `Service`, Functional Block, Sample, Hold, Place y Transition funcionan remotamente.
+- [x] `Service`, Functional Block, Sample, Hold, Place y Transition funcionan remotamente.
 - [x] CCH, DCH, LCH y Petri mantienen semánticas diferenciadas.
 - [x] Los retardos no contienen `sleep` ni bloquean MQTT/Watchdog.
 - [x] Reset limpia entradas, salidas, colas, eventos, timers, valores retenidos y tokens.
-- [x] Vectores compartidos producen estados equivalentes en los motores TypeScript y MicroPython ejecutado sobre CPython; falta confirmar recursos en placa.
+- [x] Vectores compartidos producen estados equivalentes en TypeScript y MicroPython; el flujo representativo también fue confirmado en la placa.
 
 ### Proyecto y colaboración
 
@@ -547,12 +547,19 @@ Handoff obligatorio de cada persona:
 ### UI, calidad y entrega
 
 - [x] La topbar y paneles liberan el canvas sin eliminar funciones.
-- [ ] La Pico física es la fuente oficial del estado remoto.
-- [x] Las pruebas de firmware existentes continúan aprobando junto con las nuevas (174 pruebas aprobadas).
-- [x] Las pruebas frontend existentes continúan aprobando junto con las nuevas (103 pruebas aprobadas en 17 archivos).
+- [x] La Pico física es la fuente oficial del estado remoto.
+- [x] Las pruebas de firmware existentes continúan aprobando junto con las nuevas (**153 pruebas** aprobadas en `baadff6`).
+- [x] Las pruebas frontend existentes continúan aprobando junto con las nuevas (**104 pruebas en 17 archivos** aprobadas en `baadff6`).
 - [x] TypeScript, lint y build aprueban.
 - [x] No hay credenciales reales en el ZIP; `config_local.py` no se empaqueta y los archivos de ejemplo usan marcadores.
-- [x] La guía demo coincide con el comportamiento observado y conserva las pruebas físicas como pendientes.
+- [x] La guía demo coincide con el comportamiento observado en escritorio y en la prueba física confirmada.
+
+### Evidencia de cierre posterior
+
+- [x] Prueba física completa confirmada por el usuario el **25 de octubre de 2026** sobre el commit `baadff6`.
+- [x] Revalidación local: 153 pruebas de firmware, 104 pruebas de frontend, ESLint, TypeScript y build aprobados.
+- [x] ZIP vigente: 31 archivos, sin módulos viales y SHA-256 `665EF55C65431FC7C296A3E892B805A85D17659B1C8F6ADE0338CF725E149273`.
+- [ ] Conservar para la siguiente entrega mediciones numéricas reproducibles de memoria libre, duración máxima por tarea y tamaño límite de modelo en hardware.
 
 ## 9. Exclusiones explícitas
 

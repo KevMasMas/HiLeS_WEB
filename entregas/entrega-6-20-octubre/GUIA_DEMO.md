@@ -4,7 +4,7 @@
 
 **Duración objetivo:** 8 a 12 minutos.
 
-> Estado de validación al 20 de octubre de 2026: se aprobaron las suites de firmware y frontend, TypeScript, lint, build, ZIP de despliegue, broker, aislamiento entre proyectos y cuatro navegadores reales con snapshot, edición, presencia y cursores. La prueba física completa con la Pico sigue pendiente y no debe presentarse como realizada; esta versión no conecta sensores GPIO.
+> Cierre actualizado el 25 de octubre de 2026: además de las suites, build, broker y cuatro navegadores, el usuario confirmó satisfactoriamente la prueba física completa con la Pico W como fuente del estado remoto. La validación usa entradas manuales mediante Services; no afirma integración de sensores GPIO.
 
 ## 1. Propósito
 
@@ -14,29 +14,29 @@ Demostrar que el editor y la colaboración funcionan en los navegadores del PC, 
 
 ### PC servidor
 
-- [ ] Confirmar la IPv4 actual del PC.
-- [ ] Confirmar que el firewall permite el puerto de Vite.
-- [ ] Iniciar Mosquitto con TCP y WebSockets.
-- [ ] Verificar credenciales locales sin mostrarlas ni registrarlas.
-- [ ] Iniciar Vite con `--host 0.0.0.0`.
-- [ ] Confirmar que la aplicación abre desde otro equipo.
-- [ ] Preparar el `projectId` de la demostración.
+- [x] Confirmar la IPv4 actual del PC.
+- [x] Confirmar que el firewall permite el puerto de Vite.
+- [x] Iniciar Mosquitto con TCP y WebSockets.
+- [x] Verificar credenciales locales sin mostrarlas ni registrarlas.
+- [x] Iniciar Vite con `--host 0.0.0.0`.
+- [x] Confirmar que la aplicación abre desde otro equipo.
+- [x] Preparar el `projectId` de la demostración.
 
 ### Raspberry Pi Pico W
 
-- [ ] Copiar el firmware actualizado.
-- [ ] Copiar `config_local.py` únicamente a la placa.
-- [ ] Confirmar conexión Wi-Fi.
-- [ ] Confirmar conexión MQTT.
-- [ ] Confirmar publicación del estado de conexión.
+- [x] Copiar el firmware actualizado.
+- [x] Copiar `config_local.py` únicamente a la placa.
+- [x] Confirmar conexión Wi-Fi.
+- [x] Confirmar conexión MQTT.
+- [x] Confirmar publicación del estado de conexión.
 - [ ] Registrar memoria libre inicial.
 
 ### Navegadores
 
-- [ ] Abrir cuatro navegadores o perfiles independientes.
-- [ ] Usar exactamente el mismo enlace `?project=<id>`.
-- [ ] Confirmar una identidad y color diferentes por cliente.
-- [ ] Confirmar conexión MQTT en los cuatro clientes.
+- [x] Abrir cuatro navegadores o perfiles independientes.
+- [x] Usar exactamente el mismo enlace `?project=<id>`.
+- [x] Confirmar una identidad y color diferentes por cliente.
+- [x] Confirmar conexión MQTT en los cuatro clientes.
 - [ ] Cerrar procesos que puedan alterar el ensayo de red.
 
 ## 3. Secuencia de demostración
@@ -165,13 +165,13 @@ Resultado esperado:
 | Cuatro navegadores con el mismo proyecto | Persona 5 | Aprobado en navegador y broker el 19/10 |
 | Presencia y cursores | Persona 5 | Aprobado: 4 → 1 participantes al cerrar clientes |
 | Cambio de canvas sincronizado | Persona 5 | Aprobado: edición visible en el cuarto navegador y restaurada |
-| Confirmación de modelo por la Pico | Personas 1 y 2 | Pendiente |
-| Resultado Python remoto | Persona 1 | Pendiente |
-| Rechazo de código bloqueante | Persona 1 | Pendiente |
-| Sample/Hold, CCH y DCH | Personas 2 y 3 | Pendiente |
-| Petri/LCH y retardos no bloqueantes | Personas 1 y 3 | Pendiente |
-| Paridad TypeScript/MicroPython | Personas 2, 3 y 5 | Pendiente |
-| Entradas manuales y cálculo del demo | Persona 3 | Pendiente en Pico física |
+| Confirmación de modelo por la Pico | Personas 1 y 2 | Aprobado físicamente; confirmado por el usuario el 25/10 |
+| Resultado Python remoto | Persona 1 | Aprobado físicamente; confirmado por el usuario el 25/10 |
+| Rechazo de código bloqueante | Persona 1 | Aprobado físicamente; confirmado por el usuario el 25/10 |
+| Sample/Hold, CCH y DCH | Personas 2 y 3 | Aprobado físicamente; confirmado por el usuario el 25/10 |
+| Petri/LCH y retardos no bloqueantes | Personas 1 y 3 | Aprobado físicamente; confirmado por el usuario el 25/10 |
+| Paridad TypeScript/MicroPython | Personas 2, 3 y 5 | Aprobado en suites y flujo físico representativo |
+| Entradas manuales y cálculo del demo | Persona 3 | Aprobado en Pico física; confirmado por el usuario el 25/10 |
 | Vista final de TopBar y canvas | Persona 4 | Aprobada a 1366×768 y 1920×1080 |
 | Memoria y duración máxima | Personas 1 y 5 | Pendiente |
 | Suites y build | Persona 5 | 153 firmware + 104 frontend; lint, tipos y build aprobados |
@@ -223,20 +223,20 @@ npm run build
 
 ## 6. Checklist final
 
-- [ ] La Pico es la fuente oficial de la ejecución remota.
-- [ ] La presentación diferencia Pyodide local de MicroPython remoto.
+- [x] La Pico es la fuente oficial de la ejecución remota.
+- [x] La presentación diferencia Pyodide local de MicroPython remoto.
 - [x] Los cuatro clientes abren el mismo proyecto.
 - [x] La presencia se actualiza y expira correctamente.
-- [ ] El código Python válido produce la salida esperada.
-- [ ] El código prohibido se rechaza sin bloquear la Pico.
-- [ ] `Service`, Functional Block, `Sample`, `Hold`, `Place` y `Transition` ejecutan en la Pico.
-- [ ] CCH, DCH y Petri/LCH producen el resultado esperado.
-- [ ] Los eventos DCH no se repiten y mantienen FIFO.
-- [ ] Los retardos no bloquean MQTT ni otras tareas.
-- [ ] Reiniciar limpia todo el estado temporal.
-- [ ] Los vectores TypeScript y MicroPython coinciden.
-- [ ] Los Services manuales aceptan cantidades enteras y colores.
-- [ ] El bloque de seguridad detecta verdes conflictivos introducidos manualmente.
+- [x] El código Python válido produce la salida esperada.
+- [x] El código prohibido se rechaza sin bloquear la Pico.
+- [x] `Service`, Functional Block, `Sample`, `Hold`, `Place` y `Transition` ejecutan en la Pico.
+- [x] CCH, DCH y Petri/LCH producen el resultado esperado.
+- [x] Los eventos DCH no se repiten y mantienen FIFO.
+- [x] Los retardos no bloquean MQTT ni otras tareas.
+- [x] Reiniciar limpia todo el estado temporal.
+- [x] Los vectores TypeScript y MicroPython coinciden.
+- [x] Los Services manuales aceptan cantidades enteras y colores.
+- [x] El bloque de seguridad detecta verdes conflictivos introducidos manualmente.
 - [x] Las pruebas automáticas están registradas.
 - [x] Las limitaciones reales se declaran sin presentar pendientes como terminados.
 
