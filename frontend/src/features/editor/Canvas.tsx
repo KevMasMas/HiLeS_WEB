@@ -9,6 +9,7 @@ import { HilesNode } from './CustomNodes';
 import { HilesEdge } from './HilesEdge';
 import { HilesConnectionType, HilesElementType, type HilesNodeData } from '../../types/hiles';
 import { getProjectSyncClient, useProjectStore } from '../../stores/useProjectStore';
+import { EVENTO_ENFOCAR_ELEMENTO, type DetalleEnfocarElemento } from '../collaboration/focus';
 
 const nodeTypes = { hilesNode: HilesNode };
 const edgeTypes = { hilesEdge: HilesEdge };
@@ -42,7 +43,7 @@ const CanvasInner: React.FC = () => {
   } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [isRightPanning, setIsRightPanning] = useState(false);
-  const { screenToFlowPosition, getViewport, setViewport } = useReactFlow();
+  const { screenToFlowPosition, getViewport, setViewport, setCenter } = useReactFlow();
   const cursors = useProjectStore((state) => state.cursors);
   const store = useEditorStore();
   const { nodes, edges, activeConnectionType } = store;
@@ -173,6 +174,20 @@ const CanvasInner: React.FC = () => {
     window.addEventListener('keydown', removeSelection);
     return () => window.removeEventListener('keydown', removeSelection);
   }, [store]);
+  // Centra la vista cuando se sigue a un colaborador o se pulsa «Ir a…» (Persona 3, entrega 7).
+  useEffect(() => {
+    const enfocar = (event: Event) => {
+      const { id } = (event as CustomEvent<DetalleEnfocarElemento>).detail;
+      const node = useEditorStore.getState().nodes.find((item) => item.id === id);
+      if (!node) return;
+      const byId = new Map<string, Node>(useEditorStore.getState().nodes.map((item) => [item.id, item]));
+      const origin = absolutePosition(node, byId);
+      const size = nodeSize(node);
+      void setCenter(origin.x + size.width / 2, origin.y + size.height / 2, { zoom: Math.max(getViewport().zoom, 0.9), duration: 350 });
+    };
+    window.addEventListener(EVENTO_ENFOCAR_ELEMENTO, enfocar);
+    return () => window.removeEventListener(EVENTO_ENFOCAR_ELEMENTO, enfocar);
+  }, [getViewport, setCenter]);
   useEffect(() => {
     const element = reactFlowWrapper.current;
     if (!element) return;
@@ -219,7 +234,7 @@ const CanvasInner: React.FC = () => {
           <span>➤</span><small style={{ background: cursor.color }}>{cursor.usuario}</small>
         </div>;
       })}
-      <div style={styles.zoomHint}>{zoom < DETAIL_ZOOM ? 'Summary view · Zoom in to reveal internal logic' : 'Detailed view · Internal elements are visible'}</div>
+      <div style={styles.zoomHint}>{zoom < DETAIL_ZOOM ? 'Vista resumida · Acércate para ver la lógica interna' : 'Vista detallada · Los elementos internos están visibles'}</div>
       {store.connectionError && <button style={styles.error} onClick={store.clearConnectionError}>⚠ {store.connectionError} <strong>×</strong></button>}
     </div>
   );

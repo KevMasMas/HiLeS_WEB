@@ -12,7 +12,7 @@
 |---|---|
 | Persona 1 | Protocolo y particionador distribuido |
 | Persona 2 | Worker MicroPython multi-Pico |
-| Persona 3 | Worker web, colaboración y UX |
+| Persona 3 (Juan Ramos) | Worker web, colaboración y UX |
 | Persona 4 | Investigación Three.js |
 | Persona 5 | Integración, automatización física y documentación |
 
@@ -70,7 +70,7 @@ La matriz ideal usa cuatro ejecutores para cuatro semáforos. Si no hay cuatro P
 - [x] Propiedad de despliegue en Structural Blocks y Functional Blocks.
 - [x] Particionado determinista del modelo en fragmentos válidos.
 - [ ] Ejecutor Pico capaz de cargar solamente su fragmento.
-- [ ] Ejecutor navegador compatible con el mismo contrato de fragmento.
+- [x] Ejecutor navegador compatible con el mismo contrato de fragmento.
 - [ ] Puentes MQTT entre conexiones cuyos extremos viven en ejecutores distintos.
 - [ ] Estado agregado y diagnóstico visible para todos los colaboradores.
 - [ ] Prueba con al menos dos ejecutores reales y un enlace entre ellos.
@@ -79,11 +79,11 @@ La matriz ideal usa cuatro ejecutores para cuatro semáforos. Si no hay cuatro P
 
 ### P1 — debe entrar si P0 está estable
 
-- [ ] Selector visual de destino por Structural Block.
+- [x] Selector visual de destino por Structural Block.
 - [ ] Panel de ejecutores con conexión, memoria, RSSI, modelo y última actividad.
-- [ ] Mejoras de colaboración: selección remota, “seguir colaborador”, estados claros y enlace para invitar.
-- [ ] Tutorial guiado, ayuda contextual y estado vacío para usuarios nuevos.
-- [ ] Revisión visual general: logo, consistencia de idioma, espaciado, iconos, mensajes y accesibilidad.
+- [x] Mejoras de colaboración: selección remota, “seguir colaborador”, estados claros y enlace para invitar.
+- [x] Tutorial guiado, ayuda contextual y estado vacío para usuarios nuevos.
+- [x] Revisión visual general: logo, consistencia de idioma, espaciado, iconos, mensajes y accesibilidad (quedan textos en inglés en archivos de otros integrantes, listados en `docs/ux/REVISION_VISUAL_Y_ACCESIBILIDAD.md`).
 - [ ] Demo distribuido de semáforos con token lógico y modo seguro.
 
 ### P2 — investigación aislada, no bloquea P0
@@ -285,28 +285,30 @@ firmware/tests/test_mqtt_transport.py
 
 ### Persona 3 — worker web, colaboración y experiencia de usuario
 
+**Responsable:** Juan Ramos.
+
 **Dependencias:** contratos de Persona 1 y estados del worker de Persona 2.
 
 **Responsabilidad:** permitir ejecución en navegador y hacer comprensible la distribución.
 
 #### Tareas de ejecución
 
-- [ ] Implementar un worker de navegador con el mismo contrato que una Pico.
-- [ ] Registrar cada navegador ejecutor con identidad independiente del colaborador visual.
-- [ ] Cargar, ejecutar y liberar solamente el fragmento asignado.
-- [ ] Publicar/consumir conexiones remotas sin eco.
-- [ ] Agregar selector `Este navegador`, `Pico <id>` o `Sin asignar`.
-- [ ] Mostrar estado agregado sin ejecutar fragmentos ajenos.
+- [x] Implementar un worker de navegador con el mismo contrato que una Pico.
+- [x] Registrar cada navegador ejecutor con identidad independiente del colaborador visual.
+- [x] Cargar, ejecutar y liberar solamente el fragmento asignado.
+- [x] Publicar/consumir conexiones remotas sin eco.
+- [x] Agregar selector `Este navegador`, `Pico <id>` o `Sin asignar`.
+- [x] Mostrar estado agregado sin ejecutar fragmentos ajenos.
 
 #### Tareas de colaboración y frontend
 
-- [ ] Mostrar avatar, color, estado y selección actual de cada colaborador.
-- [ ] Añadir “seguir colaborador” y centrar la vista en su selección.
-- [ ] Mejorar diálogo para compartir enlace y copiar `projectId`.
-- [ ] Diseñar panel de ejecutores y mapa de asignaciones.
-- [ ] Crear tutorial inicial: canvas, elementos, conexiones, colaboración, despliegue y ejecución.
-- [ ] Añadir ayuda contextual, mensajes de error accionables y estados vacíos.
-- [ ] Revisar logo, paleta, tipografía, iconos, consistencia español/inglés y accesibilidad básica.
+- [x] Mostrar avatar, color, estado y selección actual de cada colaborador.
+- [x] Añadir “seguir colaborador” y centrar la vista en su selección.
+- [x] Mejorar diálogo para compartir enlace y copiar `projectId`.
+- [x] Diseñar panel de ejecutores y mapa de asignaciones.
+- [x] Crear tutorial inicial: canvas, elementos, conexiones, colaboración, despliegue y ejecución.
+- [x] Añadir ayuda contextual, mensajes de error accionables y estados vacíos.
+- [x] Revisar logo, paleta, tipografía, iconos, consistencia español/inglés y accesibilidad básica (textos en inglés pendientes en archivos ajenos, listados en `docs/ux/REVISION_VISUAL_Y_ACCESIBILIDAD.md`).
 
 #### Archivos propios previstos
 
@@ -323,10 +325,18 @@ frontend/src/assets/brand/**
 
 #### Criterios de cierre
 
-- [ ] Un bloque asignado a browser produce el mismo resultado observable que en la Pico para el fixture elegido.
-- [ ] Cambiar la asignación es colaborativo y no genera operaciones duplicadas.
-- [ ] Un usuario nuevo puede completar el tutorial sin conocer previamente HiLeS.
-- [ ] Los estados desconectado, desplegando, ejecutando y error son distinguibles sin abrir la consola.
+- [x] Un bloque asignado a browser produce el mismo resultado observable que en la Pico para el fixture elegido (vector `docs/mqtt/vectores_v3/02_paridad_worker_navegador.json`, verificado en TypeScript y en Python).
+- [x] Cambiar la asignación es colaborativo y no genera operaciones duplicadas (probado a nivel de operaciones del protocolo v2; falta ensayo con dos navegadores y broker real).
+- [ ] Un usuario nuevo puede completar el tutorial sin conocer previamente HiLeS (tutorial y ejemplo implementados y probados; falta la prueba con un usuario real).
+- [ ] Los estados desconectado, desplegando, ejecutando y error son distinguibles sin abrir la consola (lógica `describirFase` probada; falta verificación visual en navegador con broker).
+
+#### Resultado comprobado — 28 de octubre
+
+- `BrowserWorker` (`browser:<sessionId>`) cumple el contrato v3 de la Pico: estado retenido con Last Will, aceptación atómica con SHA-256 sobre los bytes recibidos, ACK, siete validaciones de canal, deduplicación, salidas sin eco, comandos, entradas propias, snapshots parciales, liberación y resincronización.
+- Paridad: el vector 02, generado con el motor MicroPython, se reproduce paso a paso en el navegador (`BrowserWorker.test.ts`) y en la Pico (`test_paridad_worker_navegador.py`).
+- Asignaciones en el documento compartido (`properties.deploymentTarget`), panel de ejecutores, mapa de asignaciones, despliegue con espera de ACK, estado agregado sobre el canvas y diagnóstico con recomendaciones.
+- Colaboración: selección remota, estado de cada persona, «seguir colaborador» y diálogo para compartir. Además, tutorial de 7 pasos con ejemplo mínimo, ayuda contextual, estado vacío, logo, paleta y accesibilidad.
+- Regresión: frontend con 23 archivos y 144 pruebas aprobadas; ESLint, TypeScript y build aprobados; firmware con 166 pruebas aprobadas.
 
 ---
 
@@ -435,7 +445,7 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 
 - [x] Persona 1 congela protocolo, manifiesto y fixtures.
 - [ ] Persona 2 prepara registro dinámico y worker Pico.
-- [ ] Persona 3 prepara store/panel y worker navegador.
+- [x] Persona 3 prepara store/panel y worker navegador.
 - [ ] Persona 4 entrega escena Three.js con datos simulados.
 - [ ] Persona 5 prepara runner, plantilla de evidencia e informe.
 
@@ -443,16 +453,16 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 
 - [x] Particionador y validadores aprobados.
 - [ ] Fragmento local ejecuta en Pico.
-- [ ] Fragmento local ejecuta en navegador.
+- [x] Fragmento local ejecuta en navegador (pruebas de escritorio con broker simulado).
 - [ ] Primera conexión remota atraviesa MQTT.
-- [ ] UI muestra ejecutores y asignación.
+- [x] UI muestra ejecutores y asignación.
 
 ### Miércoles 28 — integración distribuida
 
 - [ ] Estado agregado visible en colaboradores.
 - [ ] Reconexión, deduplicación y cambio de época probados.
 - [ ] Matriz de dos o más ejecutores aprobada.
-- [ ] Tutorial y colaboración mejorada integrados.
+- [x] Tutorial y colaboración mejorada integrados.
 - [ ] Three.js consume el adapter acordado o queda documentado como aislado.
 
 ### Jueves 29 — hardware, regresión y documentación
@@ -543,7 +553,7 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 |---|---|---|
 | Protocolo y particionado | Persona 1 | Hecho: contrato v3, particionador, fixtures y 10 pruebas aprobadas |
 | Worker Pico | Persona 2 | Hecho en software: `DistributedWorker`, canales remotos, paridad SHA-256 y 165 pruebas aprobadas (pendiente corrida en placas físicas) |
-| Worker browser, colaboración y UX | Persona 3 | Pendiente |
+| Worker browser, colaboración y UX | Persona 3 | Hecho en software: `BrowserWorker`, paridad con la Pico (vector 02), panel de ejecutores, colaboración, tutorial y UX; pendiente ensayo con broker real y usuario nuevo |
 | Prototipo Three.js | Persona 4 | Pendiente |
 | Automatización física | Persona 5 | Pendiente |
 | Pico↔Pico | Personas 2 y 5 | Pendiente según hardware |

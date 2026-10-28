@@ -1,0 +1,19 @@
+.tour { position: fixed; z-index: 140; inset: 0; background: rgba(15,23,42,.35); }
+.tour__spotlight { position: fixed; border: 3px solid var(--hiles-accent); border-radius: 10px; box-shadow: 0 0 0 9999px rgba(15,23,42,.35); pointer-events: none; transition: all .2s ease; }
+.tour__card { position: fixed; width: min(380px, calc(100vw - 24px)); display: grid; gap: 8px; padding: 18px; box-sizing: border-box; border-radius: 12px; background: var(--hiles-surface); color: var(--hiles-ink); box-shadow: 0 24px 60px rgba(15,23,42,.4); font: 500 var(--hiles-text-md)/1.5 var(--hiles-font); outline: none; }
+.tour__card:focus-visible { box-shadow: var(--hiles-focus), 0 24px 60px rgba(15,23,42,.4); }
+.tour__card h2 { margin: 0; font-size: 18px; }
+.tour__card p { margin: 0; }
+.tour__progress { color: var(--hiles-primary-strong); font-size: var(--hiles-text-xs); font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
+.tour__action { padding: 8px 10px; border-radius: 8px; background: #ecfeff; color: #164e63; font-size: var(--hiles-text-sm); }
+.tour__dots { display: flex; gap: 5px; }
+.tour__dots span { width: 8px; height: 8px; border-radius: 50%; background: #cbd5e1; }
+.tour__dots span.is-active { background: var(--hiles-primary); }
+.tour__footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tour__footer > span { display: flex; gap: 6px; }
+@media (prefers-reduced-motion: reduce) { .tour__spotlight { transition: none; } }
+
+.empty-canvas { position: absolute; z-index: 15; top: 50%; left: 50%; width: min(440px, calc(100% - 32px)); display: grid; gap: 10px; padding: 22px; box-sizing: border-box; transform: translate(-50%, -50%); border: 1px solid var(--hiles-border); border-radius: 14px; background: rgba(255,255,255,.97); color: var(--hiles-ink); box-shadow: 0 18px 44px rgba(15,23,42,.14); font: 500 var(--hiles-text-md)/1.5 var(--hiles-font); text-align: center; }
+.empty-canvas h2 { margin: 0; font-size: 20px; }
+.empty-canvas p { margin: 0; color: var(--hiles-muted); }
+.empty-canvas__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }

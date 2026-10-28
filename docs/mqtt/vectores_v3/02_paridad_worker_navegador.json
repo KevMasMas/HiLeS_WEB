@@ -1,0 +1,218 @@
+{
+  "version_contrato": 3,
+  "descripcion": "Paridad del worker de navegador con el motor MicroPython de la Pico para fragmentos browser del vector 01. Generado con firmware/pico/hiles/engine_v2.py; verificado por firmware/tests/test_paridad_worker_navegador.py y frontend/src/services/distributed/BrowserWorker.test.ts.",
+  "fuente": "01_fixtures_distribucion_v3.json",
+  "casos": [
+    {
+      "escenario": "dos ejecutores: Pico y navegador",
+      "executor_id": "browser:b",
+      "estado_inicial": {
+        "hold-c": {
+          "evento_pendiente": false
+        },
+        "hold-d": {
+          "evento_pendiente": false
+        }
+      },
+      "pasos": [
+        {
+          "remotos": {
+            "conn-b-c": 2
+          },
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": 2,
+              "salida": 2,
+              "evento_pendiente": true
+            },
+            "hold-d": {
+              "valor_retenido": 2,
+              "salida": 2,
+              "evento_pendiente": true
+            }
+          },
+          "salidas_remotas": []
+        },
+        {
+          "remotos": {},
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": 2,
+              "salida": 2,
+              "evento_pendiente": false
+            },
+            "hold-d": {
+              "valor_retenido": 2,
+              "salida": 2,
+              "evento_pendiente": true
+            }
+          },
+          "salidas_remotas": []
+        },
+        {
+          "remotos": {
+            "conn-b-c": 6
+          },
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": 6,
+              "salida": 6,
+              "evento_pendiente": true
+            },
+            "hold-d": {
+              "valor_retenido": 6,
+              "salida": 6,
+              "evento_pendiente": true
+            }
+          },
+          "salidas_remotas": []
+        },
+        {
+          "remotos": {
+            "conn-b-c": 6
+          },
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": 6,
+              "salida": 6,
+              "evento_pendiente": true
+            },
+            "hold-d": {
+              "valor_retenido": 6,
+              "salida": 6,
+              "evento_pendiente": true
+            }
+          },
+          "salidas_remotas": []
+        },
+        {
+          "remotos": {},
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": 6,
+              "salida": 6,
+              "evento_pendiente": false
+            },
+            "hold-d": {
+              "valor_retenido": 6,
+              "salida": 6,
+              "evento_pendiente": true
+            }
+          },
+          "salidas_remotas": []
+        }
+      ]
+    },
+    {
+      "escenario": "tres ejecutores: Pico y dos navegadores",
+      "executor_id": "browser:b",
+      "estado_inicial": {
+        "hold-c": {
+          "evento_pendiente": false
+        }
+      },
+      "pasos": [
+        {
+          "remotos": {
+            "conn-b-c": 2
+          },
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": 2,
+              "salida": 2,
+              "evento_pendiente": true
+            }
+          },
+          "salidas_remotas": [
+            {
+              "connection_id": "conn-c-d",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "remotos": {},
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": 2,
+              "salida": 2,
+              "evento_pendiente": false
+            }
+          },
+          "salidas_remotas": []
+        },
+        {
+          "remotos": {
+            "conn-b-c": 6
+          },
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": 6,
+              "salida": 6,
+              "evento_pendiente": true
+            }
+          },
+          "salidas_remotas": [
+            {
+              "connection_id": "conn-c-d",
+              "value": 6
+            }
+          ]
+        },
+        {
+          "remotos": {
+            "conn-b-c": 6
+          },
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": 6,
+              "salida": 6,
+              "evento_pendiente": true
+            }
+          },
+          "salidas_remotas": []
+        },
+        {
+          "remotos": {},
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": 6,
+              "salida": 6,
+              "evento_pendiente": false
+            }
+          },
+          "salidas_remotas": []
+        },
+        {
+          "remotos": {
+            "conn-b-c": -3
+          },
+          "avance_tiempo_ms": 1000,
+          "elementos_esperados": {
+            "hold-c": {
+              "valor_retenido": -3,
+              "salida": -3,
+              "evento_pendiente": true
+            }
+          },
+          "salidas_remotas": [
+            {
+              "connection_id": "conn-c-d",
+              "value": -3
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

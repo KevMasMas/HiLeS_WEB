@@ -78,3 +78,80 @@ Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integ
 - **Entrada que recibe:** contrato y particionador de ejecución distribuida v3 de Persona 1 (`d2b8e81`).
 - **Handoff entregado a:** Persona 3 (worker de navegador, panel de ejecutores e inyección distribuida en `deployments/<deploymentId>/input` y `command`) y Persona 5 (automatización física multi-Pico y pruebas integradas).
 - **Cómo revertir o recuperar:** eliminar `firmware/pico/hiles/distributed_worker.py`, `firmware/tests/test_distributed_worker.py` y `docs/mqtt/vectores_v3/01_fixtures_distribucion_v3.json`, y restaurar con `git checkout` los archivos listados en esta entrada.
+
+### [2026-10-28 15:13] — Persona 3 (Juan Ramos) — Worker de navegador, colaboración y experiencia de usuario
+
+- **Objetivo:** permitir que un navegador sea ejecutor con el mismo contrato v3 que una Pico W y hacer comprensible la distribución: asignar bloques, desplegar, observar el estado agregado, colaborar y aprender a usar HiLeS sin conocimiento previo.
+- **Estado:** [x] Hecho en software y probado en escritorio. [!] Pendientes: ensayo con Mosquitto real y dos o más navegadores o Pico W, verificación visual en el navegador y prueba del tutorial con un usuario nuevo.
+- **Commit o rama:** `mqtt-pico`, trabajo preparado sobre `f0ccc39`; commit pendiente al momento de este registro.
+- **Archivos modificados:**
+  - **Creados, propios de Persona 3:**
+    - `frontend/src/services/distributed/BrowserWorker.ts` y `BrowserWorker.test.ts`
+    - `frontend/src/stores/useDistributedExecutionStore.ts`
+    - `frontend/src/features/distributed/`: `assignments.ts`, `assignments.test.ts`, `assignmentSync.test.ts`, `AssignmentSelector.tsx`, `DistributedPanel.tsx`, `distributedTransport.ts`, `useFaseDistribuida.ts`, `distributed.css`
+    - `frontend/src/features/collaboration/`: `ShareDialog.tsx`, `clipboard.ts`, `focus.ts`, `presence.ts`, `presence.test.ts`, `useFollowStore.ts`, `collaboration.css`
+    - `frontend/src/features/onboarding/`: `Tutorial.tsx`, `tutorialSteps.ts`, `tutorialState.ts`, `ejemploMinimo.ts`, `ejemploMinimo.test.ts`, `EmptyCanvas.tsx`, `HelpHint.tsx`, `onboarding.css`
+    - `frontend/src/assets/brand/`: `hiles-mark.svg`, `brand.ts`
+  - **Modificados, propios de Persona 3 en esta entrega:**
+    - `frontend/src/features/editor/TopBar.tsx`: textos en español, botones Ejecutores, Compartir y Ayuda, etiqueta de fase distribuida y logo; conserva las mismas props.
+    - `frontend/src/features/editor/editor.css`: variables de marca, tamaños mínimos legibles, foco visible, `prefers-reduced-motion` y estilos compartidos; se retiraron las reglas antiguas de avatares.
+    - `frontend/src/features/collaboration/Participants.tsx`: venía de Persona 5 (entrega 6) y ahora pertenece a Persona 3 según el plan.
+  - **Creados fuera de la lista prevista:**
+    - `docs/mqtt/vectores_v3/02_paridad_worker_navegador.json`: vector compartido TS ↔ MicroPython en la carpeta de vectores de Personas 1 y 2; no se modificó el vector 01.
+    - `firmware/tests/test_paridad_worker_navegador.py`: verifica el vector 02 con el motor de la Pico.
+    - `docs/ux/REVISION_VISUAL_Y_ACCESIBILIDAD.md`.
+  - **Archivos de otras personas modificados (detalle en «Cambios en trabajo de otras personas»):**
+    - `frontend/src/features/editor/Canvas.tsx`
+    - `frontend/src/services/projects/ProjectSyncClient.ts`
+    - `frontend/vitest.config.ts`
+    - este registro y el plan
+- **Decisiones tomadas y motivo:**
+  1. **Motor sin modificaciones.** `BrowserWorker` ejecuta el fragmento con `MotorSimulacion` sin modificarlo.
+     - Cada ruta remota de entrada se conecta a un Service proxy (`__remoto__<conexión>`). Las rutas CCH y DCH llegan por DCH, de modo que cada mensaje se entrega una sola vez, como `inject_remote_channel` en la Pico; LCH se conserva para que el pulso se limpie en Transitions.
+     - Las rutas de salida se capturan en `bus.notificar` con la semántica remota de la Pico: CCH solo al cambiar, DCH por evento, LCH solo en pulsos verdaderos y `retardo_ms` como fecha límite.
+     - Al generar el vector se comprobó que un proxy CCH reenviaría el valor en cada paso y marcaría un evento en cada paso en los Hold. Por eso se eligió DCH para los proxies.
+  2. **Conexiones MQTT propias del plano v3.** El worker usa una conexión con Last Will retenido `offline` y el control usa otra. No se reutiliza el cliente de colaboración por dos motivos: su validador marca como error cualquier topic v3, y un Last Will compartido no describiría al ejecutor.
+  3. **Identidades separadas.** La identidad del ejecutor es `browser:<sessionId>` (sesión de la pestaña), distinta del `clientId` del colaborador. Editar no obliga a ejecutar.
+  4. **Asignación en el documento compartido.** La asignación se guarda en `properties.deploymentTarget` de Structural Blocks, Functional Blocks y ejecutables de raíz, y viaja como una sola operación `node.update` del protocolo de proyecto v2. El plan v3 se construye desde esas propiedades.
+  5. **Despliegue con limpieza de retenidos.** Al desplegar se compila, se resuelven asignaciones, se particiona con el código de Persona 1, se limpian los retenidos de la época anterior y se publican los fragmentos canónicos y el manifiesto. «Iniciar» solo se habilita cuando todos los ACK de la época están aceptados.
+  6. **Estado agregado.** Se compone por propietario y época del manifiesto y se pinta en `node.data.runtime`, que no se serializa ni se sincroniza. Los elementos de un ejecutor `offline` se marcan obsoletos.
+  7. **Selección remota.** Se anuncia en el campo existente `vista_activa` de la presencia (`canvas#<nodeId>`), sin crear un topic nuevo. «Seguir» es un estado local que centra la vista.
+  8. **Idioma.** La interfaz propia queda en español; los textos en inglés de archivos ajenos se listan en `docs/ux/REVISION_VISUAL_Y_ACCESIBILIDAD.md` en lugar de editarse.
+- **Pruebas ejecutadas y resultado exacto:**
+  - `npx vitest run` en `frontend/`: **23 archivos y 144 pruebas aprobadas** (línea base: 18 archivos y 114 pruebas; 30 pruebas nuevas). Se reparten así:
+    - `BrowserWorker.test.ts`: 14 (paridad con la Pico, hash del manifiesto, estado retenido y Last Will, ACK, rechazo por hash y por destino, siete validaciones de canal, salidas sin eco, start/stop/reset, liberación por manifiesto vacío o nueva época, resincronización tras perder el broker, entradas propias y `offline` al detener).
+    - `assignments.test.ts`: 7.
+    - `assignmentSync.test.ts`: 3 (una sola operación por asignación; reaplicarla es idempotente).
+    - `presence.test.ts`: 3.
+    - `ejemploMinimo.test.ts`: 3 (el ejemplo compila a IR v2 y se particiona entre Pico y navegador con una ruta remota; el tutorial cubre los seis temas pedidos).
+  - `npm.cmd run lint`: **0 errores**. `npx tsc -p tsconfig.app.json --noEmit`: **sin errores**. `npm.cmd run build`: **aprobado (282 módulos)**, con el aviso conocido de tamaño de chunk.
+  - `python -m unittest discover -s firmware/tests -t .`: **166 pruebas aprobadas** (165 de línea base + `test_paridad_worker_navegador.py`).
+- **Evidencia física o visual:** el vector `docs/mqtt/vectores_v3/02_paridad_worker_navegador.json` tiene 2 casos y 11 pasos, con snapshots y salidas remotas generados con `firmware/pico/hiles/engine_v2.py`, y lo reproducen ambos lenguajes. No hay capturas: no se levantó la aplicación ni Mosquitto en esta sesión.
+- **Errores encontrados y corrección:**
+  1. El proxy CCH inicial reenviaba el valor remoto en cada paso; se cambió a entrega por evento.
+  2. TypeScript rechazó parámetros-propiedad por `erasableSyntaxOnly`; se declararon los campos explícitamente.
+  3. ESLint (`react-refresh/only-export-components`) pidió separar `copiarTexto` y el estado del tutorial en módulos sin componentes.
+  4. Dos expectativas de prueba propias se corrigieron antes de registrar.
+- **Cambios en trabajo de otras personas:**
+  - `frontend/src/services/projects/ProjectSyncClient.ts` (Persona 2, entrega 6): el latido de presencia republicaba siempre `vista_activa: null` y borraba la selección anunciada. Ahora conserva la última vista publicada (campo `vistaActivaPresencia`, 3 líneas). El formato del mensaje no cambia.
+  - `frontend/src/features/editor/Canvas.tsx`: se agregó un `useEffect` que escucha el evento `hiles:enfocar-elemento` y llama `setCenter` (seguir colaborador, «Ir a…», errores). La pista de zoom se tradujo al español. No se cambió ninguna otra lógica del lienzo.
+  - `frontend/vitest.config.ts`: se agregó `src/features/**/*.test.ts` al `include` para que corran las pruebas de `features/distributed`, `collaboration` y `onboarding`.
+  - `docs/mqtt/vectores_v3/`: se agregó el archivo `02_...` sin tocar el `01_...` de Personas 1 y 2.
+  - `PLAN_IMPLEMENTACION_ENTREGA_30.md` (Persona 5): se registró a Juan Ramos como Persona 3 y se marcaron sus casillas, P1/P0 propios y cronograma, junto con la fila de evidencia. Quedan abiertos los criterios del tutorial con un usuario real y la verificación visual de estados.
+- **Riesgos o limitaciones:**
+  - Sin ensayo con broker real: la conexión mqtt.js del worker, el Last Will y los retenidos solo se probaron con un broker simulado.
+  - Los Functional Blocks Python en el navegador usan Pyodide; el fixture de paridad usa Hold, por lo que la paridad de Python navegador ↔ Pico no está cubierta por el vector 02.
+  - Si llegan dos mensajes CCH remotos de la misma conexión en un mismo paso, el navegador entrega el segundo en el paso siguiente; la Pico los entrega juntos.
+  - El panel no muestra RSSI, porque el estado v3 del ejecutor no lo publica.
+  - Quedan textos en inglés en archivos ajenos.
+- **Entrada que recibe:** contrato, particionador y fixtures v3 de Persona 1 (`d2b8e81`); worker Pico, rutas remotas y vector 01 de Persona 2 (`f0ccc39`).
+- **Handoff entregado a:** Persona 5 (integración y pruebas):
+  - Ensayo con Mosquitto y la guía manual de `docs/ux/REVISION_VISUAL_Y_ACCESIBILIDAD.md` §5.
+  - Matriz Pico↔browser y browser↔browser.
+  - Captura de los estados de la etiqueta de fase.
+  - Prueba del tutorial con un usuario nuevo.
+- **Cómo revertir o recuperar:**
+  1. Eliminar los archivos creados listados.
+  2. Restaurar con `git checkout` `TopBar.tsx`, `editor.css`, `Participants.tsx`, `Canvas.tsx`, `ProjectSyncClient.ts` y `vitest.config.ts`.
+  3. Revertir esta entrada y las casillas de Persona 3 del plan.
+  - La propiedad `deploymentTarget` en documentos ya guardados es inofensiva para versiones anteriores, porque se ignora al compilar.

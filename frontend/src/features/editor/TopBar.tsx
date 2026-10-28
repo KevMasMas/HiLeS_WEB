@@ -1,8 +1,17 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { MARCA } from '../../assets/brand/brand';
 import { mqttClient } from '../../services/mqtt/MqttClient';
 import type { MqttConnectionStatus } from '../../services/mqtt/config';
+import { useDistributedExecutionStore } from '../../stores/useDistributedExecutionStore';
 import { useRemoteExecutionStore } from '../../stores/useRemoteExecutionStore';
 import { useSimulationStore } from '../../stores/useSimulationStore';
+import { ShareDialog } from '../collaboration/ShareDialog';
+import { DistributedPanel } from '../distributed/DistributedPanel';
+import { useFaseDistribuida } from '../distributed/useFaseDistribuida';
+import { EmptyCanvas } from '../onboarding/EmptyCanvas';
+import { Tutorial } from '../onboarding/Tutorial';
+import { tutorialCompletado } from '../onboarding/tutorialState';
 import { getExecutionAvailability, type DockPanel } from './panelState';
 
 interface TopBarProps {
@@ -25,15 +34,27 @@ interface TopBarProps {
   onTogglePanel: (panel: Exclude<DockPanel, null>) => void;
 }
 
-const connectionLabel: Record<MqttConnectionStatus, string> = {
-  DISCONNECTED: 'Offline',
-  CONNECTING: 'Connecting',
-  CONNECTED: 'Connected',
+const etiquetaConexion: Record<MqttConnectionStatus, string> = {
+  DISCONNECTED: 'Desconectado',
+  CONNECTING: 'Conectando',
+  CONNECTED: 'Conectado',
   ERROR: 'Error',
 };
 
+const etiquetaEstadoSimulacion = (estado: string): string => ({
+  inactiva: 'Sin modelo',
+  lista: 'Lista',
+  ejecutando: 'Ejecutando',
+  estabilizada: 'Estable',
+  pausada: 'Pausada',
+  detenida: 'Detenida',
+  error: 'Error',
+  sin_modelo: 'Sin modelo',
+  'sin modelo': 'Sin modelo',
+}[estado] ?? estado.replaceAll('_', ' '));
+
 const IconButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: string; label: string }> = ({ icon, label, ...props }) => (
-  <button {...props} className={`topbar-button ${props.className ?? ''}`.trim()} title={props.title ?? label} aria-label={props['aria-label'] ?? label}>
+  <button type="button" {...props} className={`topbar-button ${props.className ?? ''}`.trim()} title={props.title ?? label} aria-label={props['aria-label'] ?? label}>
     <span aria-hidden="true">{icon}</span>
     <span className="topbar-button__label">{label}</span>
   </button>
@@ -59,8 +80,12 @@ export const TopBar: React.FC<TopBarProps> = ({
   onTogglePanel,
 }) => {
   const [mqttStatus, setMqttStatus] = useState(mqttClient.getStatus());
+  const [panelDistribuido, setPanelDistribuido] = useState(false);
+  const [compartir, setCompartir] = useState(false);
+  const [tutorial, setTutorial] = useState(() => !tutorialCompletado());
   const simulation = useSimulationStore();
   const remote = useRemoteExecutionStore();
+  const fase = useFaseDistribuida();
   const esPico = simulation.modoEjecucion === 'pico';
   const availability = getExecutionAvailability({
     modo: simulation.modoEjecucion,
@@ -68,9 +93,10 @@ export const TopBar: React.FC<TopBarProps> = ({
     estadoLocal: simulation.estado,
     sesionRemotaActiva: remote.sesionActiva,
   });
-  const executionStatus = esPico ? remote.estadoRemoto ?? 'sin modelo' : simulation.estado;
+  const executionStatus = esPico ? remote.estadoRemoto ?? 'sin_modelo' : simulation.estado;
 
   useEffect(() => mqttClient.onStatusChange(setMqttStatus), []);
+  useEffect(() => useDistributedExecutionStore.getState().iniciar(projectId), [projectId]);
 
   const runStep = () => {
     if (esPico) remote.enviarComando('paso');
@@ -86,14 +112,14 @@ export const TopBar: React.FC<TopBarProps> = ({
   };
 
   return (
-    <header className="topbar" aria-label="HiLeS main toolbar">
-      <div className="topbar__brand" title="HiLeS Web editor">
-        <span className="topbar__mark" aria-hidden="true">H</span>
-        <span>HiLeS</span>
+    <header className="topbar" aria-label="Barra principal de HiLeS">
+      <div className="topbar__brand" title={`${MARCA.nombre} · ${MARCA.subtitulo}`}>
+        <img className="topbar__logo" src={MARCA.logo} alt="" width={28} height={28} />
+        <span>{MARCA.nombre}</span>
       </div>
 
       <div className="topbar__project">
-        <label htmlFor="hiles-project-id">Project</label>
+        <label htmlFor="hiles-project-id">Proyecto</label>
         <input
           id="hiles-project-id"
           value={projectDraft}
@@ -106,50 +132,68 @@ export const TopBar: React.FC<TopBarProps> = ({
               event.currentTarget.blur();
             }
           }}
-          title={`Current project: ${projectId}`}
-          aria-label="Current project identifier"
+          title={`Proyecto actual: ${projectId}. Escribe otro identificador y pulsa Enter para cambiar.`}
+          aria-label="Identificador del proyecto actual"
         />
         <span className="topbar__file" title={fileName}>{fileName}</span>
       </div>
 
-      <nav className="topbar__groups" aria-label="Editor actions">
-        <div className="topbar__group" aria-label="File actions">
-          <IconButton icon="＋" label="New" onClick={onNewProject} />
-          <IconButton icon="⇧" label="Import" onClick={onImport} />
-          <IconButton icon="⇩" label="Export" onClick={onExport} />
+      <nav className="topbar__groups" aria-label="Acciones del editor">
+        <div className="topbar__group" aria-label="Archivo">
+          <IconButton icon="＋" label="Nuevo" title="Vaciar el proyecto actual" onClick={onNewProject} />
+          <IconButton icon="⇧" label="Importar" title="Importar un modelo JSON" onClick={onImport} />
+          <IconButton icon="⇩" label="Exportar" title="Descargar el modelo como JSON" onClick={onExport} />
         </div>
-        <div className="topbar__group" aria-label="History actions">
-          <IconButton icon="↶" label="Undo" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl/Cmd + Z)" />
-          <IconButton icon="↷" label="Redo" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl/Cmd + Shift + Z or Ctrl + Y)" />
+        <div className="topbar__group" aria-label="Historial">
+          <IconButton icon="↶" label="Deshacer" onClick={onUndo} disabled={!canUndo} title="Deshacer (Ctrl/Cmd + Z)" />
+          <IconButton icon="↷" label="Rehacer" onClick={onRedo} disabled={!canRedo} title="Rehacer (Ctrl/Cmd + Shift + Z o Ctrl + Y)" />
         </div>
-        <div className="topbar__group" aria-label="Workspace panels">
-          <IconButton icon="▦" label="Elements" className={paletteOpen ? 'is-active' : ''} aria-pressed={paletteOpen} onClick={onTogglePalette} />
-          <IconButton icon="⚙" label="Properties" className={activePanel === 'properties' ? 'is-active' : ''} aria-pressed={activePanel === 'properties'} onClick={() => onTogglePanel('properties')} />
-          <IconButton icon="◫" label="Simulation" className={activePanel === 'simulation' ? 'is-active' : ''} aria-pressed={activePanel === 'simulation'} onClick={() => onTogglePanel('simulation')} />
+        <div className="topbar__group" aria-label="Paneles">
+          <IconButton icon="▦" label="Elementos" data-tour="elementos" className={paletteOpen ? 'is-active' : ''} aria-pressed={paletteOpen} onClick={onTogglePalette} />
+          <IconButton icon="⚙" label="Propiedades" className={activePanel === 'properties' ? 'is-active' : ''} aria-pressed={activePanel === 'properties'} onClick={() => onTogglePanel('properties')} />
+          <IconButton icon="◫" label="Simulación" className={activePanel === 'simulation' ? 'is-active' : ''} aria-pressed={activePanel === 'simulation'} onClick={() => onTogglePanel('simulation')} />
           <IconButton icon="⌁" label="MQTT" className={activePanel === 'mqtt' ? 'is-active' : ''} aria-pressed={activePanel === 'mqtt'} onClick={() => onTogglePanel('mqtt')} />
+          <IconButton icon="⛁" label="Ejecutores" data-tour="ejecutores" title="Asignar bloques, desplegar y ver el estado distribuido" className={panelDistribuido ? 'is-active' : ''} aria-pressed={panelDistribuido} onClick={() => setPanelDistribuido((valor) => !valor)} />
         </div>
-        <div className="topbar__group topbar__group--execution" aria-label="Execution actions">
-          <IconButton icon="▶" label="Step" onClick={runStep} disabled={availability.stepDisabled} title="Execute one simulation step" />
-          <IconButton icon="⏩" label="Run" onClick={run} disabled={availability.runDisabled} title="Run the simulation" />
-          {availability.stopVisible && <IconButton icon="■" label="Stop" onClick={() => remote.enviarComando('detener')} disabled={availability.stopDisabled} />}
-          <IconButton icon="↺" label="Reset" onClick={reset} disabled={availability.resetDisabled} />
+        <div className="topbar__group topbar__group--execution" aria-label="Simulación local o Pico">
+          <IconButton icon="▶" label="Paso" onClick={runStep} disabled={availability.stepDisabled} title="Ejecutar un paso de simulación" />
+          <IconButton icon="⏩" label="Ejecutar" onClick={run} disabled={availability.runDisabled} title="Ejecutar la simulación" />
+          {availability.stopVisible && <IconButton icon="■" label="Detener" onClick={() => remote.enviarComando('detener')} disabled={availability.stopDisabled} />}
+          <IconButton icon="↺" label="Reiniciar" onClick={reset} disabled={availability.resetDisabled} />
+        </div>
+        <div className="topbar__group" aria-label="Equipo y ayuda">
+          <IconButton icon="⤴" label="Compartir" data-tour="compartir" title="Copiar el enlace o el projectId" onClick={() => setCompartir(true)} />
+          <IconButton icon="?" label="Ayuda" title="Abrir el tutorial" onClick={() => setTutorial(true)} />
         </div>
       </nav>
 
-      <div className="topbar__status" aria-label="Project and runtime status">
+      <div className="topbar__status" aria-label="Estado del proyecto y la ejecución">
         <span className={`topbar-chip is-${simulation.modoEjecucion}`}>{esPico ? 'Pico' : 'Local'}</span>
-        <span className="topbar-chip" title={`Execution state: ${executionStatus}`}>{String(executionStatus).replaceAll('_', ' ')}</span>
-        <span className={`topbar-chip mqtt-${mqttStatus.toLowerCase()}`} title={`MQTT: ${connectionLabel[mqttStatus]}`}>
-          <i aria-hidden="true" /> MQTT {connectionLabel[mqttStatus]}
+        <span className="topbar-chip" title={`Estado de la simulación: ${etiquetaEstadoSimulacion(String(executionStatus))}`}>{etiquetaEstadoSimulacion(String(executionStatus))}</span>
+        <button
+          type="button"
+          data-tour="estado-distribuido"
+          className={`topbar-chip topbar-chip--button phase-${fase.fase}`}
+          title={`Ejecución distribuida: ${fase.detalle}`}
+          aria-label={`Ejecución distribuida: ${fase.etiqueta}. ${fase.detalle}`}
+          onClick={() => setPanelDistribuido(true)}
+        >
+          <i aria-hidden="true" /> {fase.etiqueta}
+        </button>
+        <span className={`topbar-chip mqtt-${mqttStatus.toLowerCase()}`} title={`MQTT de colaboración: ${etiquetaConexion[mqttStatus]}`}>
+          <i aria-hidden="true" /> MQTT {etiquetaConexion[mqttStatus]}
         </span>
-        <div id="hiles-collaboration-slot" className="topbar__collaboration-slot" data-collaboration-slot aria-label="Collaboration participants">
-          <span aria-hidden="true">●</span><span className="topbar-button__label">Collaboration</span>
-        </div>
+        <div id="hiles-collaboration-slot" className="topbar__collaboration-slot" data-collaboration-slot aria-label="Colaboradores" />
       </div>
 
       <div className="topbar__save-status" role="status" aria-live="polite">
-        {statusMessage ? `✓ ${statusMessage}` : '✓ Autosaved locally'}
+        {statusMessage ? `✓ ${statusMessage}` : '✓ Guardado localmente'}
       </div>
+
+      {panelDistribuido && createPortal(<DistributedPanel onClose={() => setPanelDistribuido(false)} />, document.body)}
+      {compartir && <ShareDialog projectId={projectId} onClose={() => setCompartir(false)} />}
+      <Tutorial abierto={tutorial} onClose={() => setTutorial(false)} />
+      <EmptyCanvas onAbrirTutorial={() => setTutorial(true)} />
     </header>
   );
 };
