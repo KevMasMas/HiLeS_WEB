@@ -40,6 +40,7 @@ udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/channels/<connect
 udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/snapshot/<executorId>
 udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/error
 udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/command
+udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/input
 ```
 
 | Mensaje | QoS | Retain | Motivo |
@@ -51,13 +52,14 @@ udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/command
 | Canal CCH/DCH/LCH | 1 | no | un evento anterior nunca debe convertirse en estado inicial fantasma |
 | Snapshot parcial | 0 | no | telemetría reemplazable; la pérdida de uno no detiene el motor |
 | Error | 1 | no | evidencia puntual, no estado permanente |
-| Comando | 1 | no | `start`, `stop` o `reset` pertenece a una época concreta |
+| Comando | 1 | no | `start`, `stop`, `reset` o `step` pertenece a una época concreta |
+| Entrada externa | 1 | no | inyección hacia un `service` propietario en la época activa |
 
-Antes de publicar una época nueva, el controlador limpia los retained del despliegue anterior o publica payload vacío en sus tópicos retenidos.
+Antes de publicar una época nueva, el controlador limpia los retained del despliegue anterior o publica payload vacío (`b""`) en sus tópicos retenidos. Todo worker trata un payload vacío como limpieza de mensaje retenido y lo descarta sin error.
 
 ## 4. Manifiesto y fragmentos
 
-El manifiesto contiene versión de protocolo, proyecto, despliegue, época, modelo, mapa `elementId → ownerExecutorId`, resumen de fragmentos y rutas remotas. Cada resumen incluye SHA-256, tamaño canónico UTF-8 y elementos propietarios.
+El manifiesto contiene versión de protocolo, proyecto, despliegue, época, modelo, mapa `elementId → ownerExecutorId`, resumen de fragmentos y rutas remotas. Cada resumen incluye SHA-256, tamaño canónico UTF-8 y elementos propietarios. Cada ruta remota preserva `retardo_ms` (cuando es mayor a `0`) y `capacidad_cola` (para canales `dch`) de la conexión original para mantener la misma semántica que una conexión local.
 
 El fragmento contiene:
 
@@ -66,9 +68,9 @@ El fragmento contiene:
 - rutas remotas de entrada y salida;
 - proyecto, despliegue, época, fragmento y propietario.
 
-El JSON canónico ordena claves de objetos y conserva arreglos previamente ordenados por ID. El hash cubre el fragmento completo. Un worker solo acepta el fragmento si coinciden `executor_id` y `owner_executor_id`, soporta IR v2, el hash anunciado es correcto y el tamaño cabe en sus capacidades. Un rechazo conserva el fragmento activo anterior.
+El JSON canónico ordena claves de objetos, omite propiedades `undefined` y conserva arreglos previamente ordenados por ID. El publicador transmite exactamente esos bytes UTF-8 canónicos como payload del fragmento; cada worker verifica `SHA-256(raw_payload)` directamente sobre los bytes recibidos (y soporta también el cálculo canónico en memoria cuando el fragmento se construye localmente). Un worker solo acepta el fragmento si coinciden `executor_id` y `owner_executor_id`, soporta IR v2, el hash anunciado es correcto y el tamaño cabe en sus capacidades (la Pico W anuncia `max_fragment_bytes = 30000` y `max_elementos = 64`). Un rechazo conserva el fragmento activo anterior.
 
-No se envía `start` hasta recibir ACK positivo de todos los fragmentos obligatorios de la misma época.
+No se envía `start` hasta recibir ACK positivo de todos los fragmentos obligatorios de la misma época. Tras `start`, cada worker avanza su reloj cooperativo local según su intervalo configurado (o un único paso ante `step`) y aplica las entradas remotas recibidas al inicio del paso siguiente.
 
 ## 5. Particionado determinista
 

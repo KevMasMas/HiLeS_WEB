@@ -36,7 +36,7 @@ export interface MensajeSnapshotParcialV3 {
   elements: Record<string, unknown>;
 }
 
-export type ComandoDespliegueV3 = 'start' | 'stop' | 'reset';
+export type ComandoDespliegueV3 = 'start' | 'stop' | 'reset' | 'step';
 
 export interface MensajeComandoDespliegueV3 {
   protocol_version: 3;
@@ -44,6 +44,32 @@ export interface MensajeComandoDespliegueV3 {
   deployment_id: string;
   epoch: number;
   command: ComandoDespliegueV3;
+  id_mensaje?: string;
+}
+
+export interface MensajeEntradaDistribuidaV3 {
+  protocol_version: 3;
+  project_id: string;
+  deployment_id: string;
+  epoch: number;
+  servicio_id: string;
+  valor: MensajeCanalDistribuidoV3['value'];
+  id_mensaje?: string;
+}
+
+export interface MensajeErrorDistribuidoV3 {
+  protocol_version: 3;
+  project_id: string;
+  deployment_id: string;
+  epoch: number;
+  executor_id: string;
+  codigo: string;
+  mensaje: string;
+  fragment_id?: string;
+  connection_id?: string;
+  element_id?: string;
+  stage?: 'manifest' | 'fragment' | 'channel' | 'command' | 'input' | 'runtime' | 'transport';
+  id_mensaje?: string;
 }
 
 export type MensajeEjecucionDistribuidaV3 =
@@ -53,4 +79,6 @@ export type MensajeEjecucionDistribuidaV3 =
   | MensajeEstadoEjecutorV3
   | MensajeAckFragmentoV3
   | MensajeSnapshotParcialV3
-  | MensajeComandoDespliegueV3;
+  | MensajeComandoDespliegueV3
+  | MensajeEntradaDistribuidaV3
+  | MensajeErrorDistribuidoV3;

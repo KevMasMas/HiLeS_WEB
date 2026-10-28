@@ -25,17 +25,18 @@ function porId<T extends { id: string }>(a: T, b: T): number {
   return a.id.localeCompare(b.id);
 }
 
-function serializarCanonico(valor: unknown): string {
+export function serializarCanonico(valor: unknown): string {
   if (valor === null || typeof valor !== 'object') return JSON.stringify(valor);
   if (Array.isArray(valor)) return `[${valor.map(serializarCanonico).join(',')}]`;
   const objeto = valor as Record<string, unknown>;
   return `{${Object.keys(objeto)
+    .filter((clave) => objeto[clave] !== undefined)
     .sort()
     .map((clave) => `${JSON.stringify(clave)}:${serializarCanonico(objeto[clave])}`)
     .join(',')}}`;
 }
 
-async function sha256(valor: unknown): Promise<string> {
+export async function sha256(valor: unknown): Promise<string> {
   const bytes = encoder.encode(serializarCanonico(valor));
   const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(digest), (byte) =>
@@ -373,7 +374,7 @@ export async function particionarIrV2Distribuida(
       continue;
     }
     const canal = conexion as IrConexionCanalV2;
-    rutas.push({
+    const ruta: RutaRemotaV3 = {
       connection_id: canal.id,
       tipo: canal.tipo,
       tipo_dato: tipoOrigen,
@@ -386,7 +387,14 @@ export async function particionarIrV2Distribuida(
       topic: topicsDistribuidosV3.channel(projectId, deploymentId, canal.id),
       qos: 1,
       retain: false,
-    });
+    };
+    if (typeof canal.retardo_ms === 'number' && canal.retardo_ms > 0) {
+      ruta.retardo_ms = canal.retardo_ms;
+    }
+    if (canal.tipo === 'dch' && typeof canal.capacidad_cola === 'number') {
+      ruta.capacidad_cola = canal.capacidad_cola;
+    }
+    rutas.push(ruta);
   }
 
   if (errores.length > 0) {

@@ -35,7 +35,7 @@ class HilesEngineV2:
     conserva el modelo activo anterior.
     """
 
-    def __init__(self, modelo, time_source=None):
+    def __init__(self, modelo, time_source=None, inbound_routes=(), outbound_routes=(), remote_sink=None):
         self.modelo = modelo
         self.elementos = [build_element_v2(definicion) for definicion in modelo["elementos"]]
         self._por_id = {}
@@ -65,6 +65,15 @@ class HilesEngineV2:
             + [e for e in topologico if not isinstance(e, (ServiceV2, TransitionV2))]
         )
         self.bus = ChannelBus(self._por_id, modelo["conexiones"])
+        self._inbound_routes_by_id = {}
+        for route in inbound_routes or ():
+            self.bus.add_remote_inbound(route)
+            self._inbound_routes_by_id[route["connection_id"]] = route
+        if outbound_routes:
+            if not callable(remote_sink):
+                raise ValueError("remote_sink debe ser invocable cuando hay outbound_routes")
+            for route in outbound_routes:
+                self.bus.add_remote_outbound(route, remote_sink)
 
         self._time_source = time_source
         self._last_tick = None
@@ -127,6 +136,27 @@ class HilesEngineV2:
             )
         servicio.set_value(valor)
         self.bus.register_service_sample(servicio_id, valor)
+
+    def inject_remote_channel(self, connection_id, valor):
+        """Valida y encola un valor de un canal remoto hacia un puerto de entrada local."""
+
+        if not es_texto(connection_id):
+            raise InputError("connection_id debe ser un texto no vacío.")
+        route = self._inbound_routes_by_id.get(connection_id)
+        if route is None:
+            raise InputError(
+                "No existe la ruta remota de entrada {} en el fragmento activo.".format(connection_id)
+            )
+        tipo_dato = route.get("tipo_dato")
+        try:
+            validate_runtime_value(valor, tipo_dato, "valor")
+            valor_clonado = clone_runtime_value(valor)
+        except RuntimeValueError as error:
+            raise InputError(
+                "La ruta remota {} espera {}: {}".format(connection_id, tipo_dato, error.mensaje),
+                ENTRADA_HILES_RECHAZADA,
+            )
+        self.bus.inject_remote(connection_id, valor_clonado)
 
     # ------------------------------------------------------------------
     # Paso.

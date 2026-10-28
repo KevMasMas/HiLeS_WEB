@@ -42,4 +42,7 @@ export const topicsDistribuidosV3 = {
   command(projectId: string, deploymentId: string): string {
     return `${baseProyectoV3(projectId)}/deployments/${validarSegmentoTopicV3(deploymentId, 'deploymentId')}/command`;
   },
+  input(projectId: string, deploymentId: string): string {
+    return `${baseProyectoV3(projectId)}/deployments/${validarSegmentoTopicV3(deploymentId, 'deploymentId')}/input`;
+  },
 };

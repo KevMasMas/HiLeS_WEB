@@ -63,6 +63,8 @@ export interface RutaRemotaV3 {
   topic: string;
   qos: 1;
   retain: false;
+  retardo_ms?: number;
+  capacidad_cola?: number;
 }
 
 export interface FragmentoDespliegueV3 {

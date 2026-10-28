@@ -40,24 +40,45 @@ def build_default_application(config=None, clock=None, machine_module=None,
 
     try:
         from devices.led_task import APAGADO, LedTask
+        from hiles.distributed_worker import DistributedWorker
         from hiles.engine_task_v2 import EngineTaskV2
         from devices.watchdog_task import WatchdogTask
-        from platform.hardware import create_led_output
+        from platform.hardware import create_led_output, resolve_device_id
         from platform.mqtt_client import create_mqtt_client
         from platform.wifi import WifiConnection
         from pubsub.mqtt_transport import MqttTransport
         from pubsub.node import Node
-        from pubsub.topics import ERROR, LED_COMANDO, LED_ESTADO
+        from pubsub.topics import (
+            ERROR,
+            LED_COMANDO,
+            LED_ESTADO,
+            build_executor_id,
+            build_v1_prefix,
+        )
     except ImportError:  # Permite construir la aplicación desde las pruebas de escritorio.
         from .devices.led_task import APAGADO, LedTask
+        from .hiles.distributed_worker import DistributedWorker
         from .hiles.engine_task_v2 import EngineTaskV2
         from .devices.watchdog_task import WatchdogTask
-        from .platform.hardware import create_led_output
+        from .platform.hardware import create_led_output, resolve_device_id
         from .platform.mqtt_client import create_mqtt_client
         from .platform.wifi import WifiConnection
         from .pubsub.mqtt_transport import MqttTransport
         from .pubsub.node import Node
-        from .pubsub.topics import ERROR, LED_COMANDO, LED_ESTADO
+        from .pubsub.topics import (
+            ERROR,
+            LED_COMANDO,
+            LED_ESTADO,
+            build_executor_id,
+            build_v1_prefix,
+        )
+
+    device_id = resolve_device_id(config=config, machine_module=machine_module)
+    client_id = getattr(config, "MQTT_CLIENT_ID", None) or device_id
+    team_id = getattr(config, "HILES_TEAM_ID", "equipo1")
+    topic_prefix = getattr(config, "TOPIC_PREFIX", None) or build_v1_prefix(device_id, team_id)
+    executor_id = getattr(config, "EXECUTOR_ID", None) or build_executor_id(device_id, "pico")
+    project_id = getattr(config, "HILES_PROJECT_ID", "default")
 
     scheduler = Scheduler(clock=clock)
     node = Node()
@@ -121,24 +142,42 @@ def build_default_application(config=None, clock=None, machine_module=None,
         node,
         wifi,
         client_factory,
-        client_id=config.MQTT_CLIENT_ID,
+        client_id=client_id,
         host=config.MQTT_HOST,
         port=config.MQTT_PORT,
         username=config.MQTT_USERNAME,
         password=config.MQTT_PASSWORD,
+        prefix=topic_prefix,
         connect_timeout_seconds=getattr(config, "MQTT_CONNECT_TIMEOUT_SECONDS", 2),
     )
     watchdog_task = WatchdogTask(
         scheduler,
         node,
-        device_id=config.MQTT_CLIENT_ID,
+        device_id=device_id,
         period_ms=getattr(config, "WATCHDOG_PERIOD_MS", 5000),
     )
+    worker_task = DistributedWorker(
+        scheduler,
+        mqtt_transport,
+        engine_task,
+        project_id=project_id,
+        executor_id=executor_id,
+        device_id=device_id,
+        max_fragment_bytes=getattr(config, "WORKER_MAX_FRAGMENT_BYTES", 30000),
+        max_elementos=getattr(config, "WORKER_MAX_ELEMENTS", 64),
+        status_period_ms=getattr(config, "WORKER_STATUS_PERIOD_MS", 5000),
+        period_ms=getattr(config, "ENGINE_PERIOD_MS", 20),
+    )
     scheduler.components = {
+        "device_id": device_id,
+        "executor_id": executor_id,
+        "project_id": project_id,
+        "topic_prefix": topic_prefix,
         "node": node,
         "wifi": wifi,
         "led": led_task,
         "engine": engine_task,
+        "worker": worker_task,
         "watchdog": watchdog_task,
         "led_command_handle": led_command_handle,
         "mqtt": mqtt_transport,

@@ -13,6 +13,16 @@ MQTT_PASSWORD = "CAMBIAR_CONTRASENA_MQTT"
 MQTT_CLIENT_ID = "pico01"
 MQTT_CONNECT_TIMEOUT_SECONDS = 2
 
+# Identidad y despliegue distribuido v3 (multi-Pico).
+# DEVICE_ID identifica esta placa de forma única; si es None se deriva del ID
+# único de hardware o de MQTT_CLIENT_ID. El ejecutor v3 es "pico:<DEVICE_ID>".
+DEVICE_ID = "pico01"
+HILES_TEAM_ID = "equipo1"
+HILES_PROJECT_ID = "default"
+WORKER_MAX_FRAGMENT_BYTES = 30000
+WORKER_MAX_ELEMENTS = 64
+WORKER_STATUS_PERIOD_MS = 5000
+
 # Ritmo cooperativo del motor. No son esperas bloqueantes.
 ENGINE_PERIOD_MS = 20
 ENGINE_STEP_INTERVAL_MS = 1000

@@ -1,9 +1,13 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { HilesModelDocument } from '../../domain/modelDocument';
 import { fixturesDistribucionV3, topicsDistribuidosV3 } from '../distributed';
 import {
   particionarIrV2Distribuida,
   resolverAsignacionesDistribuidasV3,
+  serializarCanonico,
 } from './particionarIr';
 import type {
   EjecutorDisponibleV3,
@@ -163,6 +167,9 @@ describe('protocolo de ejecución distribuida v3', () => {
       'udfjc/hiles/v3/projects/demo/deployments/deploy-1/channels/conn-a-b',
     );
     expect(() => topicsDistribuidosV3.manifest('proyecto/#')).toThrow(/segmento MQTT/);
+    expect(topicsDistribuidosV3.input('demo', 'deploy-1')).toBe(
+      'udfjc/hiles/v3/projects/demo/deployments/deploy-1/input',
+    );
   });
 
   it('hereda destino del Structural Block y permite override del Functional Block', () => {
@@ -293,5 +300,124 @@ describe('protocolo de ejecución distribuida v3', () => {
       codigo: 'DISTRIBUCION_ARCO_REMOTO',
       conexion_id: 'arc',
     }));
+  });
+
+  it('preserva retardo_ms y capacidad_cola en las rutas remotas cuando una conexión DCH/CCH cruza ejecutores', async () => {
+    const modeloConRetardo: IrModeloV2 = {
+      ...modelo,
+      conexiones: [
+        {
+          id: 'conn-a-b',
+          tipo: 'dch',
+          origen: 'service-a',
+          puerto_origen: 'out',
+          destino: 'fb-b',
+          puerto_destino: 'in',
+          capacidad_cola: 12,
+          retardo_ms: 250,
+        },
+        {
+          id: 'conn-b-c',
+          tipo: 'cch',
+          origen: 'fb-b',
+          puerto_origen: 'out',
+          destino: 'hold-c',
+          puerto_destino: 'in',
+          retardo_ms: 100,
+        },
+        {
+          id: 'conn-c-d',
+          tipo: 'cch',
+          origen: 'hold-c',
+          puerto_origen: 'out',
+          destino: 'hold-d',
+          puerto_destino: 'in',
+        },
+      ],
+    };
+    const resuelto = resolver({
+      structural_blocks: {
+        'block-a': 'pico:a',
+        'block-c': 'browser:c',
+        'block-d': 'pico:d',
+      },
+      functional_blocks: { 'fb-b': 'browser:b' },
+    });
+    const resultado = await particionarIrV2Distribuida({
+      project_id: 'fixture-v3-4',
+      deployment_id: 'deploy-4',
+      epoch: 1,
+      modelo: modeloConRetardo,
+      ejecutores: [
+        executor('pico:a', 'pico'),
+        executor('browser:b', 'browser'),
+        executor('browser:c', 'browser'),
+        executor('pico:d', 'pico'),
+      ],
+      asignaciones: resuelto.asignaciones,
+    });
+    expect(resultado.ok).toBe(true);
+    if (!resultado.ok) return;
+    const rutaDch = resultado.manifest.routes.find((r) => r.connection_id === 'conn-a-b');
+    const rutaCch = resultado.manifest.routes.find((r) => r.connection_id === 'conn-b-c');
+    const rutaSinRetardo = resultado.manifest.routes.find((r) => r.connection_id === 'conn-c-d');
+    expect(rutaDch).toEqual(
+      expect.objectContaining({ capacidad_cola: 12, retardo_ms: 250 }),
+    );
+    expect(rutaCch).toEqual(expect.objectContaining({ retardo_ms: 100 }));
+    expect(rutaSinRetardo?.retardo_ms).toBeUndefined();
+    expect(rutaSinRetardo?.capacidad_cola).toBeUndefined();
+  });
+
+  it('mantiene sincronizados los vectores de conformidad v3 compartidos con MicroPython', async () => {
+    const dirActual = dirname(fileURLToPath(import.meta.url));
+    const dirVectores = resolve(dirActual, '../../../../docs/mqtt/vectores_v3');
+    mkdirSync(dirVectores, { recursive: true });
+
+    const escenarios = await Promise.all(
+      fixturesDistribucionV3.map(async (fixture) => {
+        const resuelto = resolver(fixture.plan);
+        const ejecutores = fixture.ejecutores.map((item) =>
+          executor(item.executor_id, item.tipo),
+        );
+        const resultado = await particionarIrV2Distribuida({
+          project_id: fixture.project_id,
+          deployment_id: fixture.deployment_id,
+          epoch: fixture.epoch,
+          modelo,
+          ejecutores,
+          asignaciones: resuelto.asignaciones,
+        });
+        expect(resultado.ok).toBe(true);
+        if (!resultado.ok) {
+          throw new Error(`Fallo inesperado en fixture ${fixture.nombre}`);
+        }
+        return {
+          nombre: fixture.nombre,
+          project_id: fixture.project_id,
+          deployment_id: fixture.deployment_id,
+          epoch: fixture.epoch,
+          ejecutores,
+          plan: fixture.plan,
+          asignaciones: resuelto.asignaciones,
+          manifest: resultado.manifest,
+          fragments: resultado.fragments,
+          canonical_fragments: Object.fromEntries(
+            resultado.fragments.map((fragmento) => [
+              fragmento.executor_id,
+              serializarCanonico(fragmento),
+            ]),
+          ),
+        };
+      }),
+    );
+
+    const archivo = resolve(dirVectores, '01_fixtures_distribucion_v3.json');
+    const contenidoEsperado = `${JSON.stringify({ version_contrato: 3, modelo, escenarios }, null, 2)}\n`;
+    if (!existsSync(archivo)) {
+      writeFileSync(archivo, contenidoEsperado, 'utf8');
+    }
+    const contenidoEnDisco = readFileSync(archivo, 'utf8').replace(/\r\n/g, '\n');
+    expect(contenidoEnDisco).toBe(contenidoEsperado);
   });
 });

@@ -244,14 +244,14 @@ frontend/src/services/ir/*.test.ts
 
 #### Tareas
 
-- [ ] Sustituir el prefijo fijo `pico01` por identidad derivada de configuración.
-- [ ] Publicar presencia, capacidades, versión, memoria y estado del worker.
-- [ ] Suscribirse solamente a manifiestos y fragmentos dirigidos al dispositivo.
-- [ ] Cargar y liberar fragmentos conservando el modelo anterior ante rechazo.
-- [ ] Publicar salidas de conexiones remotas y consumir entradas de otros ejecutores.
-- [ ] Descartar mensajes de otra época, proyecto o despliegue.
-- [ ] Recuperar suscripciones y fragmento después de una reconexión.
-- [ ] Mantener scheduler, Watchdog, LED y MQTT no bloqueantes.
+- [x] Sustituir el prefijo fijo `pico01` por identidad derivada de configuración.
+- [x] Publicar presencia, capacidades, versión, memoria y estado del worker.
+- [x] Suscribirse solamente a manifiestos y fragmentos dirigidos al dispositivo.
+- [x] Cargar y liberar fragmentos conservando el modelo anterior ante rechazo.
+- [x] Publicar salidas de conexiones remotas y consumir entradas de otros ejecutores.
+- [x] Descartar mensajes de otra época, proyecto o despliegue.
+- [x] Recuperar suscripciones y fragmento después de una reconexión.
+- [x] Mantener scheduler, Watchdog, LED y MQTT no bloqueantes.
 - [ ] Probar dos Pico W si están disponibles; si no, una Pico y un doble de protocolo.
 
 #### Archivos propios previstos
@@ -268,10 +268,18 @@ firmware/tests/test_mqtt_transport.py
 
 #### Criterios de cierre
 
-- [ ] Dos workers no consumen fragmentos ajenos.
-- [ ] Un worker publica exactamente una vez cada salida lógica aunque MQTT repita el mensaje.
-- [ ] Reiniciar un worker no cambia la propiedad de los demás.
-- [ ] Perder el broker deja el runtime en un estado observable y recuperable.
+- [x] Dos workers no consumen fragmentos ajenos.
+- [x] Un worker publica exactamente una vez cada salida lógica aunque MQTT repita el mensaje.
+- [x] Reiniciar un worker no cambia la propiedad de los demás.
+- [x] Perder el broker deja el runtime en un estado observable y recuperable.
+
+#### Resultado comprobado — 28 de octubre
+
+- Identidad dinámica multi-Pico (`DEVICE_ID` → `machine.unique_id()` → `MQTT_CLIENT_ID` → `"pico01"`), prefijo v1 parametrizado y `executorId` canónico `pico:<deviceId>` compuesto en `firmware/pico/main.py`.
+- Transporte MQTT cooperativo (`firmware/pico/pubsub/mqtt_transport.py`) extendido con suscripciones/publicaciones absolutas v3, modo `raw=True` para verificar `SHA-256` sin duplicar el payload en RAM, Last Will retenido en `offline`, descarte limpio de retaineds vacíos (`b""`) y reconexión limpia síncrona al cambiar `deployment_id`.
+- Puertos remotos de entrada y salida en `ChannelBus` y `HilesEngineV2` que preservan exactamente la semántica local `CCH`/`DCH`/`LCH`, `retardo_ms` y `capacidad_cola` sin acoplar `hiles/` con MQTT.
+- Tarea cooperativa `DistributedWorker` (`firmware/pico/hiles/distributed_worker.py`) con carga/liberación atómica de fragmentos, paridad bit a bit de JSON canónico y SHA-256 contra TypeScript (`docs/mqtt/vectores_v3/01_fixtures_distribucion_v3.json`), validación de los 7 pasos en canales remotos, ventana de deduplicación acotada, outbox con reintento tras reconexión y resincronización desde mensajes retenidos.
+- Regresión completa: 165 pruebas de firmware aprobadas (`test_distributed_worker.py` con 8 pruebas integrales multi-worker y `FakeBroker`, incluyendo pipeline de 3 Pico W) y 10 pruebas en `particionarIr.test.ts` aprobadas; queda pendiente únicamente la prueba física en placas reales cuando se conecten las Pico W.
 
 ---
 
@@ -533,8 +541,8 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 
 | Evidencia | Responsable | Estado inicial |
 |---|---|---|
-| Protocolo y particionado | Persona 1 | Hecho: contrato v3, particionador, fixtures y 8 pruebas nuevas aprobadas |
-| Worker Pico | Persona 2 | Pendiente |
+| Protocolo y particionado | Persona 1 | Hecho: contrato v3, particionador, fixtures y 10 pruebas aprobadas |
+| Worker Pico | Persona 2 | Hecho en software: `DistributedWorker`, canales remotos, paridad SHA-256 y 165 pruebas aprobadas (pendiente corrida en placas físicas) |
 | Worker browser, colaboración y UX | Persona 3 | Pendiente |
 | Prototipo Three.js | Persona 4 | Pendiente |
 | Automatización física | Persona 5 | Pendiente |
