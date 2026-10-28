@@ -65,10 +65,10 @@ La matriz ideal usa cuatro ejecutores para cuatro semáforos. Si no hay cuatro P
 
 ### P0 — obligatorio
 
-- [ ] Contrato de ejecutores, manifiesto de despliegue y tópicos MQTT v3.
+- [x] Contrato de ejecutores, manifiesto de despliegue y tópicos MQTT v3.
 - [ ] Identidad dinámica y presencia de múltiples Pico/navegadores ejecutores.
-- [ ] Propiedad de despliegue en Structural Blocks y Functional Blocks.
-- [ ] Particionado determinista del modelo en fragmentos válidos.
+- [x] Propiedad de despliegue en Structural Blocks y Functional Blocks.
+- [x] Particionado determinista del modelo en fragmentos válidos.
 - [ ] Ejecutor Pico capaz de cargar solamente su fragmento.
 - [ ] Ejecutor navegador compatible con el mismo contrato de fragmento.
 - [ ] Puentes MQTT entre conexiones cuyos extremos viven en ejecutores distintos.
@@ -198,15 +198,15 @@ El token es una propuesta auditable, no una regla que deba codificarse en el fir
 
 #### Tareas
 
-- [ ] Definir `executorId`, tipos `pico`/`browser`, capacidades y estados.
-- [ ] Definir `deploymentId`, `epoch`, manifiesto y reglas de propiedad.
-- [ ] Definir herencia de destino desde Structural Block y sobreescritura por Functional Block.
-- [ ] Diseñar tópicos de registro, manifiesto, fragmentos, canales, snapshots y errores.
-- [ ] Definir mensajes de conexión distribuida, secuencia, QoS, retención y deduplicación.
-- [ ] Implementar el particionador puro `modelo → fragmentos + rutas`.
-- [ ] Validar conexiones locales, remotas y destinos inexistentes.
-- [ ] Crear fixtures de dos, tres y cuatro ejecutores.
-- [ ] Documentar las decisiones y entregarlas antes de que Personas 2 y 3 integren.
+- [x] Definir `executorId`, tipos `pico`/`browser`, capacidades y estados.
+- [x] Definir `deploymentId`, `epoch`, manifiesto y reglas de propiedad.
+- [x] Definir herencia de destino desde Structural Block y sobreescritura por Functional Block.
+- [x] Diseñar tópicos de registro, manifiesto, fragmentos, canales, snapshots y errores.
+- [x] Definir mensajes de conexión distribuida, secuencia, QoS, retención y deduplicación.
+- [x] Implementar el particionador puro `modelo → fragmentos + rutas`.
+- [x] Validar conexiones locales, remotas y destinos inexistentes.
+- [x] Crear fixtures de dos, tres y cuatro ejecutores.
+- [x] Documentar las decisiones y entregarlas antes de que Personas 2 y 3 integren.
 
 #### Archivos propios previstos
 
@@ -220,10 +220,19 @@ frontend/src/services/ir/*.test.ts
 
 #### Criterios de cierre
 
-- [ ] El mismo documento siempre produce los mismos fragmentos.
-- [ ] Cada elemento ejecutable tiene un solo propietario.
-- [ ] Una conexión remota tiene ruta y contrato de dato verificables.
-- [ ] Un destino ausente impide desplegar y genera un error legible.
+- [x] El mismo documento siempre produce los mismos fragmentos.
+- [x] Cada elemento ejecutable tiene un solo propietario.
+- [x] Una conexión remota tiene ruta y contrato de dato verificables.
+- [x] Un destino ausente impide desplegar y genera un error legible.
+
+#### Resultado comprobado — 28 de octubre
+
+- Contrato v3 congelado en `docs/mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md` y tipos compartidos en `frontend/src/services/ir/tiposIrDistribuida.ts`.
+- Tópicos y mensajes reutilizables publicados desde `frontend/src/services/distributed/`.
+- Resolución de herencia para Structural Blocks anidados, override de Functional Block y asignación directa de elementos raíz.
+- Particionador sin stores, reloj, red ni broker: valida IR v2, propiedad única, workers disponibles, tipos remotos, arcos Petri, capacidades, tamaños y SHA-256.
+- Fixtures exportables para dos, tres y cuatro ejecutores; 8 pruebas nuevas aprobadas.
+- Regresión completa: 18 archivos y 112 pruebas frontend aprobadas; ESLint y build de producción aprobados.
 
 ---
 
@@ -416,7 +425,7 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 
 ### Lunes 26 — contratos y esqueletos
 
-- [ ] Persona 1 congela protocolo, manifiesto y fixtures.
+- [x] Persona 1 congela protocolo, manifiesto y fixtures.
 - [ ] Persona 2 prepara registro dinámico y worker Pico.
 - [ ] Persona 3 prepara store/panel y worker navegador.
 - [ ] Persona 4 entrega escena Three.js con datos simulados.
@@ -424,7 +433,7 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 
 ### Martes 27 — ejecución por fragmentos
 
-- [ ] Particionador y validadores aprobados.
+- [x] Particionador y validadores aprobados.
 - [ ] Fragmento local ejecuta en Pico.
 - [ ] Fragmento local ejecuta en navegador.
 - [ ] Primera conexión remota atraviesa MQTT.
@@ -524,7 +533,7 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 
 | Evidencia | Responsable | Estado inicial |
 |---|---|---|
-| Protocolo y particionado | Persona 1 | Pendiente |
+| Protocolo y particionado | Persona 1 | Hecho: contrato v3, particionador, fixtures y 8 pruebas nuevas aprobadas |
 | Worker Pico | Persona 2 | Pendiente |
 | Worker browser, colaboración y UX | Persona 3 | Pendiente |
 | Prototipo Three.js | Persona 4 | Pendiente |
