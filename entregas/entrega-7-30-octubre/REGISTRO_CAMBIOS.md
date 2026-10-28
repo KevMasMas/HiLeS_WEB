@@ -83,7 +83,7 @@ Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integ
 
 - **Objetivo:** permitir que un navegador sea ejecutor con el mismo contrato v3 que una Pico W y hacer comprensible la distribución: asignar bloques, desplegar, observar el estado agregado, colaborar y aprender a usar HiLeS sin conocimiento previo.
 - **Estado:** [x] Hecho en software y probado en escritorio. [!] Pendientes: ensayo con Mosquitto real y dos o más navegadores o Pico W, verificación visual en el navegador y prueba del tutorial con un usuario nuevo.
-- **Commit o rama:** `mqtt-pico`, trabajo preparado sobre `f0ccc39`; commit pendiente al momento de este registro.
+- **Commit o rama:** `mqtt-pico`, commit `9135cf0` (preparado sobre `f0ccc39`).
 - **Archivos modificados:**
   - **Creados, propios de Persona 3:**
     - `frontend/src/services/distributed/BrowserWorker.ts` y `BrowserWorker.test.ts`
