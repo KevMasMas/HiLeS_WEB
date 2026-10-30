@@ -10,8 +10,12 @@
 .collab-avatar.is-desconectado::after { background: #94a3b8; }
 .collab-avatar--self::after { display: none; }
 
-.collab__popover { position: absolute; z-index: 95; top: calc(100% + 10px); right: 0; width: 330px; padding: 10px; border: 1px solid var(--hiles-border); border-radius: 10px; background: var(--hiles-surface); color: var(--hiles-ink); box-shadow: 0 18px 40px rgba(15,23,42,.28); text-transform: none; font: 500 var(--hiles-text-sm)/1.4 var(--hiles-font); }
+.collab__popover { position: absolute; z-index: 95; top: calc(100% + 10px); right: 0; width: 330px; padding: 10px; border: 1px solid var(--hiles-border); border-radius: 10px; background: var(--hiles-surface); color: var(--hiles-ink); box-shadow: 0 18px 40px rgba(15,23,42,.28); font: 500 var(--hiles-text-sm)/1.4 var(--hiles-font); text-transform: none; white-space: normal; }
 .collab__popover header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; font-size: var(--hiles-text-md); }
+.collab__self { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 8px; margin-bottom: 8px; padding: 7px; border: 1px solid #bfdbfe; border-radius: 8px; background: #eff6ff; }
+.collab__self > span:last-child { min-width: 0; display: grid; }
+.collab__self strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collab__self small { color: var(--hiles-muted); font-size: 10px; }
 .collab__close { width: 26px; height: 26px; border: 1px solid var(--hiles-border); border-radius: 6px; background: #fff; cursor: pointer; font-size: 16px; }
 .collab__empty { margin: 4px 0; color: var(--hiles-muted); }
 .collab__popover ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
@@ -41,3 +45,28 @@
 .share-dialog__field input { padding: 8px 10px; border: 1px solid var(--hiles-border); border-radius: 6px; font: 600 var(--hiles-text-sm)/1.2 ui-monospace, monospace; color: var(--hiles-ink); }
 .share-dialog__field input:focus-visible { outline: none; box-shadow: var(--hiles-focus); }
 .share-dialog__status { min-height: 18px; margin: 0; color: var(--hiles-success); font-size: var(--hiles-text-sm); font-weight: 700; }
+
+.identity-backdrop { z-index: 160; padding: 16px; box-sizing: border-box; background: radial-gradient(circle at top, rgba(37,99,235,.3), rgba(15,23,42,.78)); }
+.identity-dialog { width: min(420px, 100%); gap: 14px; }
+.identity-dialog h2 { margin: 0 0 4px; font-size: 22px; }
+.identity-dialog__mark { width: fit-content; padding: 5px 10px; border-radius: 8px; background: #0f172a; color: #fff; font-size: 13px; font-weight: 900; letter-spacing: .02em; }
+.identity-dialog__field { display: grid; gap: 6px; color: var(--hiles-muted); font-size: var(--hiles-text-sm); font-weight: 800; }
+.identity-dialog__field input { width: 100%; min-height: 44px; padding: 9px 11px; box-sizing: border-box; border: 1px solid var(--hiles-border); border-radius: 8px; color: var(--hiles-ink); font: 650 16px/1.2 var(--hiles-font); }
+.identity-dialog__field input:focus-visible { outline: none; box-shadow: var(--hiles-focus); }
+.identity-dialog__field input[aria-invalid="true"] { border-color: var(--hiles-danger); }
+.identity-dialog__help, .identity-dialog__error { min-height: 18px; margin: -6px 0 0; font-size: var(--hiles-text-xs); }
+.identity-dialog__help { color: var(--hiles-muted); }
+.identity-dialog__error { color: var(--hiles-danger); font-weight: 800; }
+
+@media (max-width: 760px) {
+  .collab__popover { position: fixed; top: auto; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); left: 8px; width: auto; max-height: min(70dvh, 520px); overflow-y: auto; }
+  .collab__following { display: none; }
+  .modal-backdrop { align-items: end; }
+  .modal { width: 100%; max-height: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box; border-radius: 16px 16px 0 0; padding: 18px 16px max(18px, env(safe-area-inset-bottom)); }
+  .identity-backdrop { align-items: center; }
+  .identity-dialog { border-radius: 16px; padding-bottom: 18px; }
+  .identity-dialog .btn { min-height: 46px; }
+  .collab__person { grid-template-columns: auto minmax(0, 1fr); }
+  .collab__actions { grid-column: 1 / -1; }
+  .collab__actions button { min-height: 38px; flex: 1; }
+}

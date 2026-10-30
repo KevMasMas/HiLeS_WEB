@@ -7,7 +7,8 @@ import { PanelDock } from './PanelDock';
 import { TopBar } from './TopBar';
 import { getNextDockPanel, type DockPanel } from './panelState';
 import { Participants } from '../collaboration/Participants';
-import { useProjectStore } from '../../stores/useProjectStore';
+import { DisplayNameDialog } from '../collaboration/DisplayNameDialog';
+import { getStoredDisplayName, saveDisplayName, useProjectStore } from '../../stores/useProjectStore';
 import './editor.css';
 
 export const Editor: React.FC = () => {
@@ -31,6 +32,7 @@ export const Editor: React.FC = () => {
   const [projectId, setProjectId] = useState(() => asegurarProjectIdEnUrl());
   const [projectDraft, setProjectDraft] = useState(projectId);
   const [fileName, setFileName] = useState('Untitled model');
+  const [displayName, setDisplayName] = useState<string | null>(() => getStoredDisplayName());
   const projectReady = useProjectStore((state) => state.ready);
 
   useEffect(() => {
@@ -38,7 +40,10 @@ export const Editor: React.FC = () => {
     setPaletteOpen(false);
   }, [loadAutosave, setPaletteOpen]);
 
-  useEffect(() => useProjectStore.getState().start(projectId), [projectId]);
+  useEffect(() => {
+    if (!displayName) return;
+    return useProjectStore.getState().start(projectId, displayName);
+  }, [projectId, displayName]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -116,6 +121,7 @@ export const Editor: React.FC = () => {
         onTogglePanel={togglePanel}
       />
       <Participants />
+      {!displayName && <DisplayNameDialog onConfirm={(name) => setDisplayName(saveDisplayName(name))} />}
       <input ref={importInput} type="file" accept="application/json,.json" onChange={uploadJson} hidden />
 
       <main className="editor-workspace">

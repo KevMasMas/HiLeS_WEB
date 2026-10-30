@@ -124,6 +124,30 @@ const CanvasInner: React.FC = () => {
     } else store.addNode(type, flowPosition);
   }, [nodes, nodesById, screenToFlowPosition, store]);
 
+  useEffect(() => {
+    const addElement = (event: Event) => {
+      const type = (event as CustomEvent<{ type?: HilesElementType }>).detail?.type;
+      if (!type || !Object.values(HilesElementType).includes(type) || type === HilesElementType.TOKEN || type === HilesElementType.PORT) return;
+      const wrapper = reactFlowWrapper.current;
+      if (!wrapper) return;
+      const selectedParent = useEditorStore.getState().nodes.find((node) =>
+        node.id === useEditorStore.getState().selectedElementId
+        && node.data.hilesType === HilesElementType.STRUCTURAL_BLOCK
+        && !node.data.properties.collapsed,
+      );
+      if (selectedParent) {
+        const childCount = useEditorStore.getState().nodes.filter((node) => node.parentId === selectedParent.id).length;
+        store.addNode(type, { x: 28 + (childCount % 3) * 100, y: 62 + Math.floor(childCount / 3) * 90 }, { parentId: selectedParent.id });
+        return;
+      }
+      const bounds = wrapper.getBoundingClientRect();
+      const center = screenToFlowPosition({ x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 });
+      store.addNode(type, center);
+    };
+    window.addEventListener('hiles:add-element', addElement);
+    return () => window.removeEventListener('hiles:add-element', addElement);
+  }, [screenToFlowPosition, store]);
+
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => store.setSelectedElement(node.id), [store]);
   const onEdgeClick: EdgeMouseHandler = useCallback((_, edge) => store.setSelectedConnection(edge.id), [store]);
   const onPaneClick = useCallback(() => { store.setSelectedElement(null); store.clearConnectionError(); }, [store]);
@@ -221,7 +245,7 @@ const CanvasInner: React.FC = () => {
         onNodeDragStart={onNodeDragStart} onNodeDragStop={onNodeDragStop}
         onDrop={onDrop} onDragOver={onDragOver} onViewportChange={(viewport) => setZoom(viewport.zoom)}
         nodeTypes={nodeTypes} edgeTypes={edgeTypes} connectionMode={ConnectionMode.Loose} connectOnClick minZoom={MIN_ZOOM} maxZoom={2.5} defaultViewport={{ x: 0, y: 0, zoom: 1 }} snapToGrid snapGrid={[1, 1]}
-        panOnDrag={[2]} selectionOnDrag={false}
+        panOnDrag={[0, 2]} selectionOnDrag={false}
         deleteKeyCode={null}
       >
         <Background color="#cbd5e1" gap={20} />
@@ -234,7 +258,7 @@ const CanvasInner: React.FC = () => {
           <span>➤</span><small style={{ background: cursor.color }}>{cursor.usuario}</small>
         </div>;
       })}
-      <div style={styles.zoomHint}>{zoom < DETAIL_ZOOM ? 'Vista resumida · Acércate para ver la lógica interna' : 'Vista detallada · Los elementos internos están visibles'}</div>
+      <div className="canvas-zoom-hint" style={styles.zoomHint}>{zoom < DETAIL_ZOOM ? 'Vista resumida · Acércate para ver la lógica interna' : 'Vista detallada · Los elementos internos están visibles'}</div>
       {store.connectionError && <button style={styles.error} onClick={store.clearConnectionError}>⚠ {store.connectionError} <strong>×</strong></button>}
     </div>
   );

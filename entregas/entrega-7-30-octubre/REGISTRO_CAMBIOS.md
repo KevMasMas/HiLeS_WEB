@@ -202,3 +202,49 @@ Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integ
   - Falta ejecutar el flujo con Mosquitto y las placas, capturar evidencia visual, probar el tutorial con un usuario nuevo y completar la demo vial segura.
 - **Handoff para el ensayo físico:** iniciar Mosquitto con WebSockets, ejecutar primero `--mode=mqtt`, conectar las Pico, correr el runner físico en `Inventory` y `Backup`, revisar el reporte, y solo después usar `Deploy`. Registrar versiones, memoria/RSSI, desconexión, reconexión, checksum y capturas sin modificar este resultado histórico.
 - **Cómo revertir o recuperar:** eliminar los dos scripts nuevos, revertir las dos conversiones de tipo en `assignmentSync.test.ts` y restaurar esta entrada y las casillas de Persona 5 del plan. No existen migraciones ni estado persistente en el repositorio.
+
+### [2026-10-29 21:16] — Persona 5 (Juan David Romero) — Responsive móvil, identidad colaborativa y validación LAN
+
+- **Objetivo:** permitir que el editor colaborativo se use de forma práctica desde celular y tablet, identificar a cada participante con un nombre elegido antes de sincronizar y verificar la colaboración navegador↔navegador sobre el broker local real.
+- **Estado:** [x] Hecho y validado en software. La ejecución física con Pico W continúa fuera del alcance de esta mejora.
+- **Commit o rama:** rama `mqtt-pico`; commit en español y push preparados después de este registro, sin crear otra rama.
+- **Archivos creados:**
+  - `frontend/src/features/collaboration/DisplayNameDialog.tsx`
+- **Archivos modificados:**
+  - `frontend/src/stores/useProjectStore.ts`
+  - `frontend/src/features/editor/Editor.tsx`
+  - `frontend/src/features/editor/Canvas.tsx`
+  - `frontend/src/features/editor/Palette.tsx`
+  - `frontend/src/features/editor/editor.css`
+  - `frontend/src/features/collaboration/Participants.tsx`
+  - `frontend/src/features/collaboration/collaboration.css`
+  - `frontend/src/features/distributed/distributed.css`
+  - `entregas/entrega-7-30-octubre/PLAN_IMPLEMENTACION_ENTREGA_30.md`
+  - `entregas/entrega-7-30-octubre/REGISTRO_CAMBIOS.md`
+- **Qué se implementó:**
+  1. **Nombre antes de sincronizar:** un diálogo obligatorio solicita un nombre de hasta 40 caracteres, normaliza espacios y solo inicia `ProjectSyncClient` después de confirmarlo. El nombre y `clientId` se conservan por sesión de pestaña, sin autenticación ficticia.
+  2. **Identidad visible:** el avatar propio usa iniciales y el panel de colaboradores muestra nombre, estado «Tú · conectado», cursores y selección remota. «Ir» mantiene el enfoque puntual y «Seguir» centra la vista cuando la otra persona cambia de selección.
+  3. **Topbar responsive:** en celular se distribuye en dos niveles, conserva proyecto y colaboradores, usa botones táctiles de 42 px y permite desplazar horizontalmente las acciones sin una barra visual invasiva. En tablet mantiene acceso al panel de participantes.
+  4. **Paneles móviles:** Propiedades, Simulación, MQTT y Ejecutores se presentan como hojas inferiores con altura limitada, scroll interno, controles de cierre grandes y respeto por `safe-area`.
+  5. **Paleta táctil:** los componentes se pueden arrastrar en escritorio o tocar para insertarlos al centro del viewport; si hay un Structural Block seleccionado, se agregan como hijos. En móvil la paleta se cierra después de insertar.
+  6. **Canvas táctil:** se habilitó paneo con botón principal/un dedo, se ocultó el minimapa en celular, se ampliaron controles y se evitó que la pista de zoom tape los botones.
+  7. **Broker y LAN local:** Mosquitto 2.1.2 quedó escuchando WebSockets autenticados en `192.168.1.8:9001`; Vite se expone con `--host 0.0.0.0`. `frontend/.env.local` contiene la configuración local, está cubierto por `*.local` y no se incluye en Git ni en este commit.
+- **Decisiones tomadas y motivo:**
+  - La identidad es un nombre de presencia, no una cuenta ni autorización. Se guarda en `sessionStorage` para diferenciar pestañas y no crear persistencia de usuario engañosa.
+  - Se añadió interacción por toque además del drag-and-drop porque HTML5 drag no es fiable en pantallas táctiles.
+  - Los paneles se convierten en hojas inferiores solamente hasta 760 px; escritorio conserva el flujo lateral existente.
+  - El broker se limita a la IP LAN y exige usuario/contraseña. No se versionan credenciales ni se abre un broker público.
+- **Pruebas y evidencia:**
+  - `npm run test:run` con `TEMP`/`TMP` dentro del workspace → **23 archivos y 144 pruebas aprobadas**.
+  - `npm run lint` → **0 errores**.
+  - `npm run build` → **aprobado**, 283 módulos transformados; permanecen únicamente los avisos conocidos de Pyodide y tamaño del chunk principal.
+  - `git diff --check` → aprobado, sin errores de espacios.
+  - Verificación visual e interactiva en viewport **390×844**: diálogo de nombre, topbar, toque para añadir Functional Block, cierre automático de paleta, panel inferior de Propiedades y nombre propio en colaboradores.
+  - Verificación visual en viewport **820×1180**: topbar, proyecto, estados, colaboradores, canvas y paleta accesibles sin desbordamiento crítico.
+  - `http://192.168.1.8:5173/` → HTTP **200**; listener MQTT `192.168.1.8:9001` activo y conexión WebSocket autenticada aprobada.
+- **Riesgos o limitaciones:**
+  - El nombre es declarativo y cualquier participante de la LAN puede elegirlo; no reemplaza autenticación de usuarios.
+  - En pantallas pequeñas las acciones de la topbar se recorren horizontalmente.
+  - El PC que ejecuta Vite y Mosquitto debe permanecer encendido; la IP `192.168.1.8` puede cambiar si el router no tiene reserva DHCP.
+  - No se validó ejecución MicroPython ni matriz física porque no había Pico W disponible.
+- **Cómo revertir:** revertir esta entrada y los archivos enumerados. Eliminar `frontend/.env.local` solo si también se desea retirar la configuración local; el archivo no pertenece al historial Git.

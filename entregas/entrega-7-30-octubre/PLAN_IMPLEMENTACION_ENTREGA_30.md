@@ -396,6 +396,8 @@ docs/experiments/THREE_JS_GEMELO_DIGITAL.md
 - [ ] Completar la matriz Pico↔Pico, Pico↔browser y browser↔browser: se aprobó Pico simulada→browser→browser→Pico simulada con cuatro ejecutores; falta el enlace Pico↔Pico y toda la matriz física.
 - [x] Ejecutar suites completas, lint, tipos y build.
 - [x] Preparar y ensayar la guía de demostración sin hardware; ensayo con Mosquitto/Pico pendiente.
+- [x] Validar colaboración navegador↔navegador sobre Mosquitto WebSocket autenticado en la red local.
+- [x] Adaptar y verificar el frontend para celular y tablet, incluyendo controles táctiles, paneles inferiores y nombre visible del colaborador.
 
 #### Tareas documentales
 
@@ -465,6 +467,7 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 - [x] Reconexión, deduplicación y cambio de época probados con cuatro ejecutores simulados.
 - [x] Matriz de cuatro ejecutores aprobada en memoria; la matriz física permanece abierta.
 - [x] Tutorial y colaboración mejorada integrados.
+- [x] Colaboración real por LAN, identificación por nombre y responsive móvil/tablet verificados por Persona 5.
 - [ ] Three.js consume el adapter acordado o queda documentado como aislado.
 
 ### Jueves 29 — hardware, regresión y documentación
@@ -562,6 +565,7 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 | Pico↔browser | Personas 2, 3 y 5 | Aprobado con ejecutor Pico simulado y browser; ensayo físico pendiente |
 | Semáforos distribuidos seguros | Personas 1, 2, 3 y 5 | Pendiente |
 | Suites, lint, tipos y build | Persona 5 | Hecho: frontend 144/144, firmware 166/166, lint y build aprobados |
+| Responsive y colaboración LAN | Persona 5 | Hecho: nombre solicitado antes de sincronizar; paleta táctil, paneles móviles, seguimiento y presencia verificados en 390×844 y 820×1180; HTTP LAN 200 y MQTT WebSocket autenticado |
 | Informe acumulado en este plan y registro | Persona 5 | Actualizado con alcance, comandos, evidencia y límites sin hardware |
 
 ### 9.3 Ensayo repetible disponible sin hardware — Persona 5
@@ -583,7 +587,7 @@ Cuando Mosquitto esté activo en el listener WebSocket configurado en `frontend/
 node scripts/test-distributed-mqtt.mjs --mode=mqtt --timeout=8000
 ```
 
-En este equipo el intento de red produjo `ECONNREFUSED 127.0.0.1:9001` porque Mosquitto no está instalado ni escuchando. Esto no se registra como evidencia MQTT aprobada. Tampoco se registra evidencia física hasta disponer de las placas.
+El intento inicial de red produjo `ECONNREFUSED 127.0.0.1:9001`. Posteriormente se instaló Mosquitto 2.1.2, se configuró un listener WebSocket autenticado en `192.168.1.8:9001`, se comprobó conexión MQTT y colaboración entre navegadores, y el frontend respondió HTTP 200 desde la dirección LAN. La configuración y `frontend/.env.local` son locales, están ignorados por Git y no contienen evidencia física de Pico.
 
 Regresión utilizada para el cierre de software:
 
@@ -641,7 +645,8 @@ Este mismo plan funciona como documento maestro de la entrega. Persona 5 debe ma
 3. **28 de octubre, Persona 2:** worker MicroPython multi-Pico y paridad de fragmentos.
 4. **28 de octubre, Persona 3:** worker navegador, asignaciones, colaboración, tutorial y UX.
 5. **29 de octubre, Persona 5 — Juan David Romero:** arnés MQTT en memoria/red, runner físico seguro, matriz simulada, regresión y cierre documental sin hardware.
-6. **Pendiente:** Persona 4 (Three.js), Mosquitto real, placas físicas, matriz Pico↔Pico/Pico↔browser y ensayo final.
+6. **29 de octubre, Persona 5 — Juan David Romero:** broker Mosquitto LAN autenticado, colaboración navegador↔navegador real, identificación por nombre y frontend responsive validado en celular y tablet.
+7. **Pendiente:** Persona 4 (Three.js), placas físicas, matriz Pico↔Pico/Pico↔browser y ensayo final con hardware.
 
 ### Aportes históricos y responsabilidad actual
 

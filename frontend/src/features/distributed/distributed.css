@@ -68,3 +68,11 @@
 .error-item strong { color: #991b1b; font-family: ui-monospace, monospace; font-size: 11px; }
 .error-item em { color: #1e3a8a; font-style: normal; font-weight: 700; }
 .error-item small { color: var(--hiles-muted); }
+
+@media (max-width: 760px) {
+  .dist-panel { top: auto; right: 0; bottom: 0; left: 0; width: 100%; height: min(82dvh, 720px); padding-bottom: max(14px, env(safe-area-inset-bottom)); border-width: 1px 0 0; border-radius: 16px 16px 0 0; }
+  .dist-panel__close { width: 40px; height: 40px; }
+  .assignment-row, .input-form { grid-template-columns: 1fr; }
+  .assignment-select { width: 100%; max-width: none; min-height: 42px; }
+  .input-form .btn { min-height: 42px; }
+}

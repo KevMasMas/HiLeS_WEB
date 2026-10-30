@@ -46,6 +46,7 @@ export const Participants: React.FC = () => {
   const [, setReloj] = useState(0);
   const todos = useProjectStore((state) => state.collaborators);
   const propioId = useProjectStore((state) => state.clientId);
+  const nombrePropio = useProjectStore((state) => state.displayName) ?? 'Tú';
   const nodos = useEditorStore((state) => state.nodes);
   const siguiendo = useFollowStore((state) => state.siguiendo);
   const seguir = useFollowStore((state) => state.seguir);
@@ -76,7 +77,7 @@ export const Participants: React.FC = () => {
         aria-label={`${remotos.length + 1} personas en el proyecto. Ver colaboradores`}
         onClick={() => setAbierto((valor) => !valor)}
       >
-        <span className="collab-avatar collab-avatar--self" aria-hidden="true">Tú</span>
+        <span className="collab-avatar collab-avatar--self" title={`${nombrePropio} (tú)`} aria-hidden="true">{iniciales(nombrePropio)}</span>
         {remotos.slice(0, 4).map((persona) => (
           <span
             key={persona.clientId}
@@ -96,6 +97,10 @@ export const Participants: React.FC = () => {
             <strong>Colaboradores</strong>
             <button type="button" className="collab__close" aria-label="Cerrar lista de colaboradores" onClick={() => setAbierto(false)}>×</button>
           </header>
+          <div className="collab__self">
+            <span className="collab-avatar collab-avatar--self" aria-hidden="true">{iniciales(nombrePropio)}</span>
+            <span><strong>{nombrePropio}</strong><small>Tú · conectado</small></span>
+          </div>
           {remotos.length === 0 && (
             <p className="collab__empty">Solo estás tú. Usa <b>Compartir</b> para invitar a alguien con el enlace del proyecto.</p>
           )}

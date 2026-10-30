@@ -19,7 +19,7 @@
   --hiles-focus: 0 0 0 3px rgba(34, 211, 238, .55);
 }
 
-.editor-shell { display: flex; flex-direction: column; width: 100vw; height: 100vh; overflow: hidden; background: #e2e8f0; color: #172033; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.editor-shell { display: flex; flex-direction: column; width: 100vw; height: 100vh; height: 100dvh; overflow: hidden; background: #e2e8f0; color: #172033; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 .editor-workspace { position: relative; display: flex; flex: 1; min-height: 0; overflow: hidden; background: #f8fafc; }
 
 .topbar { position: relative; z-index: 50; min-height: 56px; flex: 0 0 auto; display: flex; align-items: center; gap: 10px; padding: 7px 12px; box-sizing: border-box; border-bottom: 1px solid #1e293b; background: #0f172a; color: #f8fafc; box-shadow: 0 4px 16px rgba(15,23,42,.18); }
@@ -74,15 +74,37 @@
   .topbar { gap: 6px; padding-inline: 8px; }
   .topbar__brand > span:last-child, .topbar__file, .topbar__save-status { display: none; }
   .topbar__project { min-width: 120px; max-width: 145px; flex-basis: 145px; grid-template-columns: auto minmax(70px, 1fr); }
-  .topbar__status .topbar-chip:nth-child(2), .topbar__collaboration-slot { display: none; }
+  .topbar__status .topbar-chip:nth-child(2) { display: none; }
+  .topbar__groups { scrollbar-width: none; }
+  .topbar__groups::-webkit-scrollbar { display: none; }
   .panel-dock { top: 12px; right: 12px; bottom: 12px; }
 }
 
 @media (max-width: 760px) {
-  .topbar__project, .topbar__status { display: none; }
-  .topbar__groups { gap: 4px; }
-  .topbar__group { padding-right: 4px; }
-  .panel-dock { left: 12px; width: auto; }
+  .topbar { min-height: 102px; flex-wrap: wrap; align-content: center; gap: 5px 6px; padding: max(6px, env(safe-area-inset-top)) 8px 6px; }
+  .topbar__brand { flex-basis: 30px; }
+  .topbar__logo { width: 30px; height: 30px; }
+  .topbar__project { min-width: 118px; max-width: none; flex: 1 1 150px; display: grid; grid-template-columns: auto minmax(60px, 1fr); }
+  .topbar__status { display: flex; flex: 0 0 auto; }
+  .topbar__status > .topbar-chip { display: none; }
+  .topbar__collaboration-slot { min-width: 42px; min-height: 36px; display: inline-flex; padding: 2px 4px; border-style: solid; }
+  .topbar__groups { order: 4; width: 100%; flex: 1 0 100%; gap: 4px; padding: 1px 0 2px; scroll-snap-type: x proximity; }
+  .topbar__groups { scrollbar-width: none; }
+  .topbar__groups::-webkit-scrollbar { display: none; }
+  .topbar__group { padding-right: 4px; scroll-snap-align: start; }
+  .topbar-button { min-width: 42px; min-height: 42px; padding: 7px 9px; font-size: 17px; touch-action: manipulation; }
+  .panel-dock { top: auto; right: 0; bottom: 0; left: 0; width: 100%; height: min(72dvh, 620px); border-width: 1px 0 0; border-radius: 16px 16px 0 0; box-shadow: 0 -14px 38px rgba(15,23,42,.24); transform: translateY(0); }
+  .panel-dock.is-closed { transform: translateY(calc(100% + 24px)); }
+  .panel-dock__header { min-height: 50px; padding: 5px 8px; }
+  .panel-dock__tabs { overflow-x: auto; }
+  .panel-dock__tabs button { min-height: 40px; padding: 8px 10px; }
+  .panel-dock__close { width: 40px; height: 40px; }
+  .hiles-palette { top: auto !important; right: 0 !important; bottom: 0 !important; left: 0 !important; width: 100% !important; height: min(72dvh, 620px); border-radius: 16px 16px 0 0 !important; padding-bottom: max(14px, env(safe-area-inset-bottom)) !important; }
+  .react-flow__minimap { display: none; }
+  .react-flow__controls { bottom: 12px !important; }
+  .react-flow__controls button { width: 38px; height: 38px; }
+  .canvas-zoom-hint { right: 10px !important; left: 62px !important; max-width: calc(100vw - 72px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hiles-edge-waypoint, .hiles-port, .hiles-petri-handle { touch-action: none; }
 }
 
 .react-flow__node-hilesNode { transition: opacity .18s ease, filter .18s ease; }
