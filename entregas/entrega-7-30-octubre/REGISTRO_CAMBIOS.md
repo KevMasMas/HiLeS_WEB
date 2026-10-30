@@ -155,3 +155,50 @@ Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integ
   2. Restaurar con `git checkout` `TopBar.tsx`, `editor.css`, `Participants.tsx`, `Canvas.tsx`, `ProjectSyncClient.ts` y `vitest.config.ts`.
   3. Revertir esta entrada y las casillas de Persona 3 del plan.
   - La propiedad `deploymentTarget` en documentos ya guardados es inofensiva para versiones anteriores, porque se ignora al compilar.
+
+### [2026-10-29 19:51] — Persona 5 (Juan David Romero) — Integración, automatización segura y cierre sin hardware
+
+- **Objetivo:** integrar y verificar de forma repetible los entregables distribuidos de Personas 1, 2 y 3 sin presentar evidencia física inexistente; dejar listos los runners para repetir la matriz sobre Mosquitto y Pico W cuando el hardware esté disponible.
+- **Estado:** [x] Hecho para el alcance de software sin hardware. [!] Pendientes externos: Mosquitto real, Pico W, matriz física Pico↔Pico/Pico↔browser, memoria/RSSI de placa, demo vial física y ensayo visual con varios navegadores.
+- **Commit o rama:** rama `mqtt-pico`, cambios locales sobre `6d02a02`; pendiente de commit y push al momento de este registro.
+- **Archivos creados:**
+  - `scripts/test-distributed-mqtt.mjs`
+  - `scripts/test-distributed-physical.ps1`
+- **Archivos modificados:**
+  - `entregas/entrega-7-30-octubre/PLAN_IMPLEMENTACION_ENTREGA_30.md`
+  - `entregas/entrega-7-30-octubre/REGISTRO_CAMBIOS.md`
+  - `frontend/src/features/distributed/assignmentSync.test.ts` (corrección mínima de tipos en prueba de Persona 3; no cambia producción).
+- **Qué se implementó:**
+  1. **Runner de integración distribuida (`test-distributed-mqtt.mjs`):** modo `memory` autónomo y modo `mqtt` para el listener WebSocket configurado en `frontend/.env.local`. Usa el fixture v3 de cuatro ejecutores, recalcula SHA-256 después de aislar el `projectId`, registra workers, publica manifiesto/fragmentos, exige cuatro ACK, inyecta entrada, ejecuta pasos, recoge snapshots, verifica tres canales remotos, época/deduplicación, desconexión/recuperación y liberación. Puede guardar un informe JSON mediante `--report` y nunca imprime usuario o contraseña.
+  2. **Métricas y errores trazables:** el informe registra heap antes/después, duración total y por etapa, snapshots, mensajes aceptados/descartados y reconexiones. Un fallo incluye etapa, dispositivo lógico, fragmento y conexiones involucradas.
+  3. **Runner físico seguro (`test-distributed-physical.ps1`):** modos `DryRun`, `Inventory`, `Backup` y `Deploy`; inventario tolerante a permisos CIM restringidos; soporte de `-DevicePath` para filesystem montado o doble de prueba; respaldo obligatorio antes de desplegar; manifiesto de tamaños/hashes; hashes de configuración/secretos redactados; copia exclusiva de firmware `.py`; exclusión y verificación de integridad de `config_local.py`; salida JSON y reporte opcional.
+  4. **Guion sin hardware:** comandos y resultados esperados añadidos al documento maestro, junto con la variante futura sobre Mosquitto y los límites reales.
+  5. **Cierre acumulativo:** asignación formal de Persona 5 a Juan David Romero, cronología de Personas 1–5, evidencia actualizada y separación explícita entre pruebas simuladas, de broker y físicas.
+- **Decisiones tomadas y motivo:**
+  - El modo por defecto es `memory` para que el ensayo no dependa de credenciales, red, broker o placa y pueda ejecutarse desde un checkout normal.
+  - El modo MQTT reutiliza `mqtt` desde las dependencias del frontend y carga `.env.local` sin mostrar valores sensibles.
+  - El runner físico no escribe en ningún dispositivo con el modo por defecto; `Deploy` debe solicitarse explícitamente y siempre crea primero un respaldo en una ruta única.
+  - No se agregó lógica de semáforos ni se modificaron workers de producción. Los cuatro ejecutores del arnés son dobles del contrato; la implementación real continúa cubierta por las suites de `BrowserWorker` y `DistributedWorker`.
+- **Pruebas ejecutadas y resultado exacto:**
+  - `node --check scripts/test-distributed-mqtt.mjs` → aprobado.
+  - `node scripts/test-distributed-mqtt.mjs --mode=memory --timeout=5000` → **6 etapas aprobadas** con 4 ejecutores, 4 ACK, entrada `5`, salida final `6`, 20 snapshots, 2 mensajes antiguos/duplicados descartados, 1 reconexión y 4 fragmentos liberados; duración **161 ms** en la ejecución final registrada.
+  - `scripts/test-distributed-physical.ps1 -Mode DryRun -AllowNoDevice` → aprobado en **68 ms**; `hardware_available: false`, sin credenciales ni falso positivo físico.
+  - Prueba del runner físico con un filesystem temporal y `-Mode Deploy` → **33 archivos desplegados**, respaldo previo creado y `config_local.py` conservado byte a byte; 1 dispositivo simulado aprobado.
+  - Frontend: `npm run test:run -- --maxWorkers=1 --isolate=false` → **23 archivos y 144 pruebas aprobadas**. La ejecución paralela inicial perdió artefactos SSR temporales del sandbox (`ENOENT`); no fue un fallo de aserción y la repetición no aislada aprobó todo.
+  - Frontend: `npm run lint` → **0 errores**.
+  - Frontend: `npm run build` → **aprobado**, 282 módulos transformados. Se mantienen los avisos conocidos de Pyodide externalizado y chunk principal mayor de 500 kB.
+  - Firmware con el Python incluido por Codex: `python -m unittest discover -s firmware/tests -t .` → **166 pruebas aprobadas en 0,453 s**. El alias `WindowsApps/python.exe` local no tenía permisos, por lo que se usó el intérprete real del runtime.
+  - Modo MQTT real: el intento autorizado alcanzó `127.0.0.1:9001` y devolvió `ECONNREFUSED`; Mosquitto no está instalado ni escuchando en este equipo. El runner devolvió el fallo estructurado con etapa `conexion-broker`, dispositivo lógico, fragmento y conexiones; la prueba no se marca como aprobada.
+- **Error de integración encontrado y corrección:** `npm run build` detectó dos conversiones directas de `HilesNodeProperties` a `Record<string, unknown>` en `assignmentSync.test.ts`. Se aplicó exactamente el cast intermedio `unknown` recomendado por TypeScript 6. No cambió lógica, datos ni archivos de producción; después aprobaron build, lint y las 144 pruebas.
+- **Evidencia obtenida:** salida JSON estructurada de ambos runners y resultados completos en consola. No se guardaron credenciales, respaldos ni informes generados dentro del repositorio; el respaldo de la prueba quedó en el directorio temporal del sistema.
+- **Impacto sobre otros integrantes:**
+  - **Personas 1–3:** sus contratos y workers no se modificaron. El runner consume los fixtures, tópicos, hashes y mensajes ya congelados.
+  - **Persona 4:** Three.js continúa aislado y no bloquea el cierre de P0.
+  - **Equipo de demo:** puede repetir primero el modo memoria y, al disponer de Mosquitto/Pico, usar los mismos runners cambiando únicamente el modo y las rutas de dispositivo.
+- **Riesgos o limitaciones:**
+  - Los ejecutores `pico:*` del modo memoria son dobles de protocolo, no MicroPython ejecutándose en una placa.
+  - El modo memoria no valida sockets, QoS real, retained del broker, Last Will de red, Wi-Fi, memoria MicroPython ni GPIO.
+  - El modo físico sobre filesystem temporal valida seguridad de archivos, no `mpremote`, puerto serial ni reinicio de una Pico real.
+  - Falta ejecutar el flujo con Mosquitto y las placas, capturar evidencia visual, probar el tutorial con un usuario nuevo y completar la demo vial segura.
+- **Handoff para el ensayo físico:** iniciar Mosquitto con WebSockets, ejecutar primero `--mode=mqtt`, conectar las Pico, correr el runner físico en `Inventory` y `Backup`, revisar el reporte, y solo después usar `Deploy`. Registrar versiones, memoria/RSSI, desconexión, reconexión, checksum y capturas sin modificar este resultado histórico.
+- **Cómo revertir o recuperar:** eliminar los dos scripts nuevos, revertir las dos conversiones de tipo en `assignmentSync.test.ts` y restaurar esta entrada y las casillas de Persona 5 del plan. No existen migraciones ni estado persistente en el repositorio.

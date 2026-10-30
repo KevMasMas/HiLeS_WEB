@@ -14,7 +14,7 @@
 | Persona 2 | Worker MicroPython multi-Pico |
 | Persona 3 (Juan Ramos) | Worker web, colaboración y UX |
 | Persona 4 | Investigación Three.js |
-| Persona 5 | Integración, automatización física y documentación |
+| Persona 5 (Juan David Romero) | Integración, automatización física y documentación |
 
 ## 1. Interpretación del requerimiento
 
@@ -66,16 +66,16 @@ La matriz ideal usa cuatro ejecutores para cuatro semáforos. Si no hay cuatro P
 ### P0 — obligatorio
 
 - [x] Contrato de ejecutores, manifiesto de despliegue y tópicos MQTT v3.
-- [ ] Identidad dinámica y presencia de múltiples Pico/navegadores ejecutores.
+- [x] Identidad dinámica y presencia de múltiples Pico/navegadores ejecutores.
 - [x] Propiedad de despliegue en Structural Blocks y Functional Blocks.
 - [x] Particionado determinista del modelo en fragmentos válidos.
-- [ ] Ejecutor Pico capaz de cargar solamente su fragmento.
+- [x] Ejecutor Pico capaz de cargar solamente su fragmento (aprobado en pruebas de software; placa real pendiente).
 - [x] Ejecutor navegador compatible con el mismo contrato de fragmento.
 - [ ] Puentes MQTT entre conexiones cuyos extremos viven en ejecutores distintos.
 - [ ] Estado agregado y diagnóstico visible para todos los colaboradores.
 - [ ] Prueba con al menos dos ejecutores reales y un enlace entre ellos.
 - [ ] Automatización segura de la prueba física.
-- [ ] Informe técnico y registro individual actualizados.
+- [x] Informe técnico y registro individual actualizados.
 
 ### P1 — debe entrar si P0 está estable
 
@@ -379,30 +379,32 @@ docs/experiments/THREE_JS_GEMELO_DIGITAL.md
 
 ### Persona 5 — integración, automatización física, demo y documentación
 
+**Responsable:** Juan David Romero.
+
 **Dependencias:** entregables de Personas 1 a 4.
 
 **Responsabilidad:** integrar sin invadir módulos ajenos y producir evidencia repetible.
 
 #### Tareas de integración y pruebas
 
-- [ ] Crear un runner que inventarie Pico conectadas y nunca muestre credenciales.
-- [ ] Respaldar cada placa antes de desplegar y conservar un manifiesto de hashes.
-- [ ] Desplegar fragmentos de prueba sin sobrescribir `config_local.py`.
-- [ ] Automatizar conexión, carga, entrada, paso, snapshot, telemetría y liberación.
-- [ ] Registrar memoria antes/después, duración de tareas y recuperación de MQTT.
-- [ ] Probar desconexión de un ejecutor y rechazo de mensajes de época anterior.
-- [ ] Ejecutar matriz Pico↔Pico, Pico↔browser y browser↔browser según hardware disponible.
-- [ ] Ejecutar suites completas, lint, tipos y build.
-- [ ] Preparar y ensayar la guía de demostración.
+- [x] Crear un runner que inventarie Pico conectadas y nunca muestre credenciales (modo seco aprobado; sin Pico conectada).
+- [x] Respaldar cada placa antes de desplegar y conservar un manifiesto de hashes (flujo validado con filesystem simulado; ejecución física pendiente).
+- [x] Desplegar fragmentos de prueba sin sobrescribir `config_local.py` (fragmentos v3 en memoria y firmware sobre doble de filesystem; placa real pendiente).
+- [x] Automatizar conexión, carga, entrada, paso, snapshot, telemetría y liberación en el arnés sin hardware.
+- [x] Registrar memoria antes/después, duración de tareas y recuperación del transporte simulado; memoria y MQTT de la Pico quedan pendientes.
+- [x] Probar desconexión de un ejecutor y rechazo de mensajes de época anterior.
+- [ ] Completar la matriz Pico↔Pico, Pico↔browser y browser↔browser: se aprobó Pico simulada→browser→browser→Pico simulada con cuatro ejecutores; falta el enlace Pico↔Pico y toda la matriz física.
+- [x] Ejecutar suites completas, lint, tipos y build.
+- [x] Preparar y ensayar la guía de demostración sin hardware; ensayo con Mosquitto/Pico pendiente.
 
 #### Tareas documentales
 
-- [ ] Mantener este plan como documento maestro técnico y de cierre.
-- [ ] Recibir de cada persona objetivo, archivos, pruebas, decisiones, errores y capturas.
-- [ ] Actualizar diagramas, estado, limitaciones y glosario.
-- [ ] Completar el registro diario sin marcar trabajo no probado.
-- [ ] Preparar una sección por integrante y una cronología de entregas.
-- [ ] Dejar espacios claramente marcados para resultados posteriores.
+- [x] Mantener este plan como documento maestro técnico y de cierre.
+- [x] Recibir de cada persona objetivo, archivos, pruebas, decisiones, errores y evidencia disponible.
+- [x] Actualizar diagramas, estado, limitaciones y glosario.
+- [x] Completar el registro diario sin marcar trabajo no probado.
+- [x] Preparar una sección por integrante y una cronología de entregas.
+- [x] Dejar espacios claramente marcados para resultados físicos posteriores.
 
 #### Archivos propios previstos
 
@@ -415,10 +417,10 @@ entregas/entrega-7-30-octubre/PLAN_IMPLEMENTACION_ENTREGA_30.md
 
 #### Criterios de cierre
 
-- [ ] La prueba automatizada puede repetirse sin editar código ni revelar secretos.
-- [ ] Cada fallo indica dispositivo, fragmento, conexión y etapa.
-- [ ] El informe permite entender qué hizo cada integrante y cómo reproducirlo.
-- [ ] La demo parte de un checkout limpio y sigue pasos explícitos.
+- [x] La prueba automatizada puede repetirse sin editar código ni revelar secretos.
+- [x] Cada fallo indica dispositivo, fragmento, conexión y etapa.
+- [x] El informe permite entender qué hizo cada integrante y cómo reproducirlo.
+- [ ] La demo de software ya sigue pasos explícitos; falta repetirla desde un checkout limpio después del commit de cierre.
 
 ## 7. Dependencias y trabajo paralelo
 
@@ -444,10 +446,10 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 ### Lunes 26 — contratos y esqueletos
 
 - [x] Persona 1 congela protocolo, manifiesto y fixtures.
-- [ ] Persona 2 prepara registro dinámico y worker Pico.
+- [x] Persona 2 prepara registro dinámico y worker Pico.
 - [x] Persona 3 prepara store/panel y worker navegador.
 - [ ] Persona 4 entrega escena Three.js con datos simulados.
-- [ ] Persona 5 prepara runner, plantilla de evidencia e informe.
+- [x] Persona 5 prepara runner, plantilla de evidencia e informe.
 
 ### Martes 27 — ejecución por fragmentos
 
@@ -460,8 +462,8 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 ### Miércoles 28 — integración distribuida
 
 - [ ] Estado agregado visible en colaboradores.
-- [ ] Reconexión, deduplicación y cambio de época probados.
-- [ ] Matriz de dos o más ejecutores aprobada.
+- [x] Reconexión, deduplicación y cambio de época probados con cuatro ejecutores simulados.
+- [x] Matriz de cuatro ejecutores aprobada en memoria; la matriz física permanece abierta.
 - [x] Tutorial y colaboración mejorada integrados.
 - [ ] Three.js consume el adapter acordado o queda documentado como aislado.
 
@@ -469,17 +471,17 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 
 - [ ] Ejecutar automatización física completa.
 - [ ] Ejecutar demo vial distribuida.
-- [ ] Corregir solamente defectos P0.
-- [ ] Ejecutar todas las suites y build.
-- [ ] Completar informe, registro y guía.
+- [x] Corregir solamente defectos P0 (dos conversiones de tipo en una prueba; sin cambios de producción).
+- [x] Ejecutar todas las suites y build.
+- [x] Completar informe, registro y guía para el alcance sin hardware.
 
 ### Viernes 30 — congelación y entrega
 
 - [ ] Ensayo completo desde checkout limpio.
 - [ ] Registrar métricas, versiones, commit y checksum.
-- [ ] Demostrar pérdida y recuperación de un ejecutor.
+- [x] Demostrar pérdida y recuperación de un ejecutor en el arnés simulado.
 - [ ] Congelar código y documentos.
-- [ ] Presentar límites reales y trabajo futuro.
+- [x] Presentar límites reales y trabajo futuro.
 
 ## 9. Matriz de aceptación
 
@@ -555,12 +557,46 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 | Worker Pico | Persona 2 | Hecho en software: `DistributedWorker`, canales remotos, paridad SHA-256 y 165 pruebas aprobadas (pendiente corrida en placas físicas) |
 | Worker browser, colaboración y UX | Persona 3 | Hecho en software: `BrowserWorker`, paridad con la Pico (vector 02), panel de ejecutores, colaboración, tutorial y UX; pendiente ensayo con broker real y usuario nuevo |
 | Prototipo Three.js | Persona 4 | Pendiente |
-| Automatización física | Persona 5 | Pendiente |
+| Automatización física | Persona 5 | Runner seguro implementado: modo seco sin hardware y respaldo/despliegue verificados con filesystem simulado; placa real pendiente |
 | Pico↔Pico | Personas 2 y 5 | Pendiente según hardware |
-| Pico↔browser | Personas 2, 3 y 5 | Pendiente |
+| Pico↔browser | Personas 2, 3 y 5 | Aprobado con ejecutor Pico simulado y browser; ensayo físico pendiente |
 | Semáforos distribuidos seguros | Personas 1, 2, 3 y 5 | Pendiente |
-| Suites, lint, tipos y build | Persona 5 | Pendiente |
-| Informe acumulado en este plan y registro | Persona 5 | En curso |
+| Suites, lint, tipos y build | Persona 5 | Hecho: frontend 144/144, firmware 166/166, lint y build aprobados |
+| Informe acumulado en este plan y registro | Persona 5 | Actualizado con alcance, comandos, evidencia y límites sin hardware |
+
+### 9.3 Ensayo repetible disponible sin hardware — Persona 5
+
+Desde la raíz del repositorio, el flujo de integración se reproduce sin editar archivos ni configurar credenciales:
+
+```powershell
+node scripts/test-distributed-mqtt.mjs --mode=memory --timeout=5000
+powershell -ExecutionPolicy Bypass -File scripts/test-distributed-physical.ps1 -Mode DryRun -AllowNoDevice
+```
+
+El primer comando levanta un broker en memoria y cuatro ejecutores de protocolo (`pico:a`, `browser:b`, `browser:c`, `pico:d`). Verifica registro, manifiesto, hashes, cuatro ACK, entrada, cuatro pasos, veinte snapshots, tres enlaces remotos, rechazo de época anterior y duplicado, desconexión/recuperación y liberación. La entrada `5` debe llegar como `6` al último ejecutor por el Functional Block intermedio.
+
+El segundo comando inventaría hardware sin fallar cuando no hay Pico, no imprime valores de configuración y deja la limitación en JSON. Para comprobar respaldo y despliegue de forma segura se puede pasar un directorio temporal mediante `-DevicePath`; el runner respalda antes de copiar, excluye `config_local.py` y verifica que su hash no cambie.
+
+Cuando Mosquitto esté activo en el listener WebSocket configurado en `frontend/.env.local`, el mismo escenario se ejecuta sobre red real:
+
+```powershell
+node scripts/test-distributed-mqtt.mjs --mode=mqtt --timeout=8000
+```
+
+En este equipo el intento de red produjo `ECONNREFUSED 127.0.0.1:9001` porque Mosquitto no está instalado ni escuchando. Esto no se registra como evidencia MQTT aprobada. Tampoco se registra evidencia física hasta disponer de las placas.
+
+Regresión utilizada para el cierre de software:
+
+```powershell
+cd frontend
+npm run test:run -- --maxWorkers=1 --isolate=false
+npm run lint
+npm run build
+cd ..
+python -m unittest discover -s firmware/tests -t .
+```
+
+En el entorno Codex se usó el Python incluido por la aplicación porque el alias `WindowsApps/python.exe` no tenía permisos. La primera ejecución paralela de Vitest perdió artefactos temporales del sandbox; la repetición no aislada aprobó los 23 archivos y 144 pruebas.
 
 ## 10. Exclusiones de esta entrega
 
@@ -596,6 +632,16 @@ Este mismo plan funciona como documento maestro de la entrega. Persona 5 debe ma
 - **Runtime MicroPython:** Task, Scheduler, pub/sub, transporte, IR, motor y snapshots oficiales.
 - **Entrega del 20 de octubre:** IR v2, Python remoto, canales, retardos, Watchdog, colaboración, presencia, cursores y frontend reorganizado.
 - **Cierre físico del 25 de octubre:** flujo navegador → broker → Pico → navegadores confirmado; 153 pruebas firmware y 104 frontend aprobadas en `baadff6`.
+- **Entrega del 30 de octubre, software:** Personas 1–3 entregaron protocolo/particionado, worker Pico y worker navegador/UX. Persona 5 añadió runners repetibles, integración simulada de cuatro ejecutores, regresión completa y documentación; Mosquitto y Pico físicas quedan pendientes.
+
+### Cronología de la entrega del 30 de octubre
+
+1. **25 de octubre:** creación del plan y cierre de la línea base generalizada.
+2. **28 de octubre, Persona 1:** protocolo v3, manifiesto, particionador y fixtures.
+3. **28 de octubre, Persona 2:** worker MicroPython multi-Pico y paridad de fragmentos.
+4. **28 de octubre, Persona 3:** worker navegador, asignaciones, colaboración, tutorial y UX.
+5. **29 de octubre, Persona 5 — Juan David Romero:** arnés MQTT en memoria/red, runner físico seguro, matriz simulada, regresión y cierre documental sin hardware.
+6. **Pendiente:** Persona 4 (Three.js), Mosquitto real, placas físicas, matriz Pico↔Pico/Pico↔browser y ensayo final.
 
 ### Aportes históricos y responsabilidad actual
 
@@ -605,7 +651,7 @@ Este mismo plan funciona como documento maestro de la entrega. Persona 5 debe ma
 | Persona 2 | IR v2, compilador, canales y protocolo colaborativo | Worker MicroPython multi-Pico |
 | Persona 3 | Motor MicroPython v2, Sample/Hold, retardos y demo general | Worker navegador, colaboración y UX |
 | Persona 4 | Topbar, paneles y aprovechamiento del canvas | Prototipo Three.js |
-| Persona 5 | Integración, colaboración, cuatro navegadores, empaquetado y guías | Automatización física, integración y documentación |
+| Persona 5 — Juan David Romero | Integración, colaboración, cuatro navegadores, empaquetado y guías | Automatización física, integración y documentación |
 
 ### Sección que se actualiza por cada persona
 
