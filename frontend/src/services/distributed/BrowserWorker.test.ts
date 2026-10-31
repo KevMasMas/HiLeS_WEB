@@ -226,6 +226,21 @@ describe('BrowserWorker — paridad con el motor MicroPython de la Pico', () => 
     }
   });
 
+  it('aplica en el mismo paso el último de varios mensajes CCH recibidos juntos', async () => {
+    const esc = escenario('dos ejecutores: Pico y navegador');
+    const fragmento = esc.fragments.find((item) => item.executor_id === 'browser:b')!;
+    const motor = new MotorFragmentoNavegador(fragmento, () => undefined);
+
+    motor.inyectarRemoto('conn-b-c', 10);
+    motor.inyectarRemoto('conn-b-c', 20);
+    await motor.paso(0);
+
+    expect(motor.snapshot()['hold-c']).toMatchObject({
+      valor_retenido: 20,
+      salida: 20,
+    });
+  });
+
   it('agrega un proxy por ruta de entrada sin exponerlo en el snapshot', () => {
     const fragmento = escenario(TRES).fragments.find((item) => item.executor_id === 'browser:b')!;
     const modelo = construirModeloEjecutable(fragmento);

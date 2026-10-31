@@ -798,10 +798,16 @@ export class MotorSimulacion {
             entradasActuales,
             entradasTipadas,
           );
-          const resultadoBruto = await ejecutarPython(codigo, {
-            ...entradasActuales,
-            ...(entradasNormalizadas as unknown as EntradasRuntime),
-          });
+          // Pyodide invoca `calcular(**inputs)`: enviar también las claves
+          // internas de puerto (por ejemplo `ejemplo-sumar-in`) produce un
+          // argumento inesperado aunque la variable pública sea `x`.
+          // El perfil IR v2 ya validó y normalizó exactamente la firma que el
+          // código Python puede recibir, por lo que solo esas variables deben
+          // cruzar el límite del Worker.
+          const resultadoBruto = await ejecutarPython(
+            codigo,
+            entradasNormalizadas as unknown as EntradasRuntime,
+          );
           const salidasDict = normalizarSalidasPython(
             resultadoBruto,
             salidasTipadas,
@@ -848,7 +854,9 @@ export class MotorSimulacion {
 
     // Manejar retardo de ejecución (`retardo_ms` / `executionDelay`) sin bloqueo
     const retardoMs = meta?.retardoMs ?? 0;
-    if (retardoMs > 0) {
+    // En una Transition el retardo ya se aplica al habilitado Petri. Retardar
+    // también su salida de acción duplicaría el tiempo configurado.
+    if (retardoMs > 0 && !(elemento instanceof ElementoTransicion)) {
       const timerExistente = this.timersElementos.get(elementoId);
       if (timerExistente && this.relojMs >= timerExistente.venceEnMs) {
         this.timersElementos.delete(elementoId);

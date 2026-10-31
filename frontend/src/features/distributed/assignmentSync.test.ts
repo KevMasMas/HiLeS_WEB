@@ -32,7 +32,7 @@ describe('asignación colaborativa de ejecutores', () => {
     const una = aplicarOperacionIncrementalADocumento(antes, operacion);
     const dos = aplicarOperacionIncrementalADocumento(una, operacion);
     const destino = (documento: HilesModelDocument) =>
-      (documento.allElements.find((item) => item.id === 'ejemplo-proceso')!.properties as unknown as Record<string, unknown>)[CLAVE_DESTINO];
+      documento.allElements.find((item) => item.id === 'ejemplo-proceso')!.properties[CLAVE_DESTINO];
     expect(destino(una)).toBe('browser:abc');
     expect(dos).toEqual(una);
     expect(calcularOperacionesEntreDocumentos(una, dos)).toEqual([]);
@@ -44,6 +44,6 @@ describe('asignación colaborativa de ejecutores', () => {
     const operaciones = calcularOperacionesEntreDocumentos(asignado, libre);
     expect(operaciones).toHaveLength(1);
     const aplicado = aplicarOperacionIncrementalADocumento(asignado, operaciones[0]);
-    expect((aplicado.allElements.find((item) => item.id === 'ejemplo-sensor')!.properties as unknown as Record<string, unknown>)[CLAVE_DESTINO]).toBeUndefined();
+    expect(aplicado.allElements.find((item) => item.id === 'ejemplo-sensor')!.properties[CLAVE_DESTINO]).toBeUndefined();
   });
 });

@@ -198,8 +198,34 @@ class MqttBroker {
       },
       async end(abrupt = false) {
         if (!this.connected) return;
-        await new Promise((resolve) => raw.end(Boolean(abrupt), {}, resolve));
         this.connected = false;
+        const stream = raw.stream;
+        const destroy = () => {
+          try { raw.removeAllListeners(); } catch { /* cliente ya cerrado */ }
+          try { stream?.destroy(); } catch { /* socket ya cerrado */ }
+        };
+        if (abrupt) {
+          try { raw.end(true); } finally { destroy(); }
+          return;
+        }
+        await new Promise((resolve) => {
+          let finished = false;
+          const finish = () => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(fallback);
+            destroy();
+            resolve();
+          };
+          // MQTT.js puede esperar indefinidamente por publicaciones QoS al
+          // cerrar de forma limpia. Un runner automatizado debe terminar aun
+          // si el broker no confirma el último paquete.
+          const fallback = setTimeout(() => {
+            try { raw.end(true); } catch { /* el socket ya puede estar cerrado */ }
+            finish();
+          }, 1500);
+          try { raw.end(Boolean(abrupt), {}, finish); } catch { finish(); }
+        });
       },
       async reconnect() { throw new Error('La reconexión se prueba creando de nuevo el cliente MQTT.'); },
     };
@@ -210,7 +236,10 @@ class MqttBroker {
     return client;
   }
 
-  async close() { await Promise.all(this.clients.map((client) => client.end(false))); }
+  // La limpieza retenida ya se publicó antes de llegar aquí. Cerramos los
+  // sockets de prueba de forma forzada para no esperar indefinidamente ACK QoS
+  // de clientes que acaban de procesar la liberación del despliegue.
+  async close() { await Promise.all(this.clients.map((client) => client.end(true))); }
 }
 
 class VirtualExecutor {
@@ -351,6 +380,13 @@ const waitUntil = (predicate, description) => new Promise((resolve, reject) => {
   check();
 });
 
+const settleWithin = async (promise, milliseconds) => {
+  await Promise.race([
+    Promise.resolve(promise).catch(() => undefined),
+    new Promise((resolve) => setTimeout(resolve, milliseconds)),
+  ]);
+};
+
 const report = {
   run_id: runId,
   mode,
@@ -455,8 +491,13 @@ try {
   started = Date.now();
   const released = { ...manifest, epoch: manifest.epoch + 1, fragments: [], owners: {}, routes: [] };
   await monitor.publish(topics.manifest, released, { qos: 1, retain: true });
-  await waitUntil(() => workers.every((item) => item.fragment === null), 'liberación de fragmentos');
-  stage('liberacion', started, { released_workers: workers.length });
+  const connectedWorkers = workers.filter((item) => item.client.connected);
+  const offlineWorkers = workers.filter((item) => !item.client.connected);
+  await waitUntil(() => connectedWorkers.every((item) => item.fragment === null), 'liberación de fragmentos conectados');
+  stage('liberacion', started, {
+    released_workers: connectedWorkers.length,
+    offline_workers_pending_retained_sync: offlineWorkers.map((item) => item.executorId),
+  });
 
   report.ok = true;
 } catch (error) {
@@ -480,11 +521,14 @@ try {
   }
   if (mode === 'mqtt' && monitor) {
     for (const topic of [topics.manifest, ...Object.keys(fragments).map(topics.fragment), ...Object.keys(fragments).map(topics.status)]) {
-      try { await monitor.publish(topic, '', { qos: 1, retain: true }); } catch { /* limpieza best-effort */ }
+      await settleWithin(monitor.publish(topic, '', { qos: 1, retain: true }), 1000);
     }
   }
-  await broker.close();
+  await settleWithin(broker.close(), 2000);
   console.log(JSON.stringify(report, null, 2));
 }
 
-if (!report.ok) process.exitCode = 1;
+// Es un runner CLI autocontenido. MQTT.js puede conservar handles internos de
+// WebSocket incluso después de destruir el stream; la salida explícita evita
+// que una ejecución ya reportada bloquee CI o la demostración.
+process.exit(report.ok ? 0 : 1);

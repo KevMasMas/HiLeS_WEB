@@ -242,9 +242,10 @@ Los ejemplos se importan desde el botón **Import JSON**:
 | `output/demo-2-humedad-token.json` | Control de humedad con umbrales y movimiento de tokens |
 | `output/demo-parqueadero-converters.json` | Ejemplo de parqueadero con `Sample` y `Hold` |
 | `output/figure-29-hiles-wsn.json` | Modelo HiLeS basado en una red de sensores |
-| `output/demo-4-semaforos-inteligentes.json` | Cruce coordinado Norte–Sur / Este–Oeste con cuatro semáforos |
+| `output/demo-4-semaforos-distribuidos.json` | Cuatro semáforos autónomos en anillo: un token, verde → amarillo → rojo y ocho cesiones remotas |
+| `output/demo-4-semaforos-inteligentes.json` | Ejemplo legacy de un cruce coordinado por una única red de Petri |
 
-El ejemplo de cuatro semáforos representa un solo cruce coordinado. Agrupa las fases Norte–Sur y Este–Oeste y sus transiciones atómicas impiden que ambos ejes queden verdes simultáneamente. Los cuatro navegadores de la demostración son cuatro vistas de este mismo proyecto y estado oficial; no son cuatro procesos independientes.
+El ejemplo distribuido representa un cruce con cuatro procesos independientes. Cada acceso decide solamente con su fila local y un único token circula Norte → Este → Sur → Oeste. Un turno con demanda recorre verde durante 3 s, amarillo durante 1 s y rojo antes de ceder; sin demanda se cede desde rojo. Al asignar cada Structural Block a un ejecutor distinto se obtienen cuatro fragmentos y ocho rutas MQTT entre ellos. La arquitectura y sus límites están descritos en `docs/traffic/PROTOCOLO_SEMAFOROS.md`.
 
 `output/Ejemplo_pico.json` está reservado y actualmente no contiene un modelo utilizable.
 
@@ -303,18 +304,25 @@ Preparación general de la placa:
 
 1. Instalar MicroPython en la Pico W.
 2. Instalar `umqtt.simple`.
-3. Copiar `config_local.example.py` como `config_local.py` en la placa.
-4. Completar SSID, contraseña Wi-Fi, host y credenciales MQTT.
-5. Para repetir la demostración anterior, copiar `examples/led_mqtt.py` a la placa con el nombre `main.py`.
-6. Reiniciar la Pico.
+3. Generar `output/hiles-pico-w-deploy.zip` con `scripts/prepare-pico-deployment.ps1`.
+4. Copiar la plantilla como `config_local.py` y completar red, broker, un `DEVICE_ID`/`MQTT_CLIENT_ID` único y el `HILES_PROJECT_ID` compartido.
+5. Subir `main.py`, `core/`, `devices/`, `hiles/`, `platform/` y `pubsub/` conservando la estructura.
+6. Validar imports y reiniciar la Pico.
 
 `config_local.py` no debe agregarse al repositorio.
+
+El procedimiento para placas nuevas, actualización con respaldo, Thonny,
+`mpremote` y la matriz multi-Pico está en
+[`docs/mqtt/GUIA_PRUEBA_PICO_W.md`](docs/mqtt/GUIA_PRUEBA_PICO_W.md).
 
 La implementación actual de la placa:
 
 - se conecta al Wi-Fi con timeout;
 - se conecta a Mosquitto por `1883`;
-- se suscribe a `led/comando`;
+- se registra como ejecutor distribuido `pico:<DEVICE_ID>`;
+- recibe únicamente el fragmento IR v2 asignado a la placa;
+- transporta conexiones remotas CCH/DCH/LCH por MQTT;
+- se suscribe también a `led/comando` para diagnóstico;
 - ejecuta `encender`, `apagar` y `titilar`;
 - publica `led/estado`, `estado/conexion` y `error`;
 - utiliza Last Will, keepalive, ping periódico y reintentos.
@@ -325,6 +333,14 @@ Prefijo actual:
 
 ```text
 udfjc/hiles/v1/equipo1/pico01/
+```
+
+El prefijo v1 usa el `DEVICE_ID` real en lugar de `pico01`. La ejecución
+distribuida usa además:
+
+```text
+udfjc/hiles/v3/projects/<HILES_PROJECT_ID>/executors/pico:<DEVICE_ID>/status
+udfjc/hiles/v3/projects/<HILES_PROJECT_ID>/deployments/...
 ```
 
 Topics principales:

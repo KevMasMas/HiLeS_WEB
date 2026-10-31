@@ -199,7 +199,7 @@
         "sem1-rojo": { "tokens": 0 },
         "sem1-verde": { "tokens": 1 },
         "sem1-amarillo": { "tokens": 0 },
-        "sem1-t-verde": { "habilitada": true, "disparada": true },
+        "sem1-t-verde": { "habilitada": false, "disparada": true },
         "sem1-t-amarillo": { "habilitada": false, "disparada": false },
         "sem1-t-rojo": { "habilitada": false, "disparada": false }
       }
@@ -215,7 +215,7 @@
         "sem1-verde": { "tokens": 0 },
         "sem1-amarillo": { "tokens": 1 },
         "sem1-t-verde": { "habilitada": false, "disparada": false },
-        "sem1-t-amarillo": { "habilitada": true, "disparada": true },
+        "sem1-t-amarillo": { "habilitada": false, "disparada": true },
         "sem1-t-rojo": { "habilitada": false, "disparada": false }
       }
     },
@@ -231,7 +231,7 @@
         "sem1-amarillo": { "tokens": 0 },
         "sem1-t-verde": { "habilitada": false, "disparada": false },
         "sem1-t-amarillo": { "habilitada": true, "disparada": false },
-        "sem1-t-rojo": { "habilitada": true, "disparada": true }
+        "sem1-t-rojo": { "habilitada": false, "disparada": true }
       }
     }
   ]

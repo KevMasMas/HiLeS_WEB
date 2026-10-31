@@ -36,7 +36,7 @@ Registrar únicamente trabajo comprobable. No reemplazar resultados anteriores n
 
 Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integrante debe registrar su propia evidencia antes del handoff.
 
-### [2026-10-28 09:25] — Persona 1 (Kevin Rincon) — Protocolo y particionador de ejecución distribuida v3
+### [2026-10-28 09:25] — Persona 1 — Protocolo y particionador de ejecución distribuida v3
 
 - **Objetivo:** congelar el contrato que permite asignar elementos de un mismo modelo a varias Pico W y navegadores, y producir un fragmento IR v2 válido para cada ejecutor.
 - **Estado:** [x] Hecho.
@@ -79,7 +79,7 @@ Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integ
 - **Handoff entregado a:** Persona 3 (worker de navegador, panel de ejecutores e inyección distribuida en `deployments/<deploymentId>/input` y `command`) y Persona 5 (automatización física multi-Pico y pruebas integradas).
 - **Cómo revertir o recuperar:** eliminar `firmware/pico/hiles/distributed_worker.py`, `firmware/tests/test_distributed_worker.py` y `docs/mqtt/vectores_v3/01_fixtures_distribucion_v3.json`, y restaurar con `git checkout` los archivos listados en esta entrada.
 
-### [2026-10-28 15:13] — Persona 3 (Juan Ramos) — Worker de navegador, colaboración y experiencia de usuario
+### [2026-10-28 15:13] — Persona 3 — Worker de navegador, colaboración y experiencia de usuario
 
 - **Objetivo:** permitir que un navegador sea ejecutor con el mismo contrato v3 que una Pico W y hacer comprensible la distribución: asignar bloques, desplegar, observar el estado agregado, colaborar y aprender a usar HiLeS sin conocimiento previo.
 - **Estado:** [x] Hecho en software y probado en escritorio. [!] Pendientes: ensayo con Mosquitto real y dos o más navegadores o Pico W, verificación visual en el navegador y prueba del tutorial con un usuario nuevo.
@@ -137,7 +137,7 @@ Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integ
   - `frontend/src/features/editor/Canvas.tsx`: se agregó un `useEffect` que escucha el evento `hiles:enfocar-elemento` y llama `setCenter` (seguir colaborador, «Ir a…», errores). La pista de zoom se tradujo al español. No se cambió ninguna otra lógica del lienzo.
   - `frontend/vitest.config.ts`: se agregó `src/features/**/*.test.ts` al `include` para que corran las pruebas de `features/distributed`, `collaboration` y `onboarding`.
   - `docs/mqtt/vectores_v3/`: se agregó el archivo `02_...` sin tocar el `01_...` de Personas 1 y 2.
-  - `PLAN_IMPLEMENTACION_ENTREGA_30.md` (Persona 5): se registró a Juan Ramos como Persona 3 y se marcaron sus casillas, P1/P0 propios y cronograma, junto con la fila de evidencia. Quedan abiertos los criterios del tutorial con un usuario real y la verificación visual de estados.
+  - `PLAN_IMPLEMENTACION_ENTREGA_30.md` (Persona 5): se registró el trabajo de Persona 3 y se marcaron sus casillas, P1/P0 propios y cronograma, junto con la fila de evidencia. Quedan abiertos los criterios del tutorial con un usuario real y la verificación visual de estados.
 - **Riesgos o limitaciones:**
   - Sin ensayo con broker real: la conexión mqtt.js del worker, el Last Will y los retenidos solo se probaron con un broker simulado.
   - Los Functional Blocks Python en el navegador usan Pyodide; el fixture de paridad usa Hold, por lo que la paridad de Python navegador ↔ Pico no está cubierta por el vector 02.
@@ -156,7 +156,7 @@ Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integ
   3. Revertir esta entrada y las casillas de Persona 3 del plan.
   - La propiedad `deploymentTarget` en documentos ya guardados es inofensiva para versiones anteriores, porque se ignora al compilar.
 
-### [2026-10-29 19:51] — Persona 5 (Juan David Romero) — Integración, automatización segura y cierre sin hardware
+### [2026-10-29 19:51] — Persona 5 — Integración, automatización segura y cierre sin hardware
 
 - **Objetivo:** integrar y verificar de forma repetible los entregables distribuidos de Personas 1, 2 y 3 sin presentar evidencia física inexistente; dejar listos los runners para repetir la matriz sobre Mosquitto y Pico W cuando el hardware esté disponible.
 - **Estado:** [x] Hecho para el alcance de software sin hardware. [!] Pendientes externos: Mosquitto real, Pico W, matriz física Pico↔Pico/Pico↔browser, memoria/RSSI de placa, demo vial física y ensayo visual con varios navegadores.
@@ -173,7 +173,7 @@ Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integ
   2. **Métricas y errores trazables:** el informe registra heap antes/después, duración total y por etapa, snapshots, mensajes aceptados/descartados y reconexiones. Un fallo incluye etapa, dispositivo lógico, fragmento y conexiones involucradas.
   3. **Runner físico seguro (`test-distributed-physical.ps1`):** modos `DryRun`, `Inventory`, `Backup` y `Deploy`; inventario tolerante a permisos CIM restringidos; soporte de `-DevicePath` para filesystem montado o doble de prueba; respaldo obligatorio antes de desplegar; manifiesto de tamaños/hashes; hashes de configuración/secretos redactados; copia exclusiva de firmware `.py`; exclusión y verificación de integridad de `config_local.py`; salida JSON y reporte opcional.
   4. **Guion sin hardware:** comandos y resultados esperados añadidos al documento maestro, junto con la variante futura sobre Mosquitto y los límites reales.
-  5. **Cierre acumulativo:** asignación formal de Persona 5 a Juan David Romero, cronología de Personas 1–5, evidencia actualizada y separación explícita entre pruebas simuladas, de broker y físicas.
+  5. **Cierre acumulativo:** cronología de Personas 1–5, evidencia actualizada y separación explícita entre pruebas simuladas, de broker y físicas.
 - **Decisiones tomadas y motivo:**
   - El modo por defecto es `memory` para que el ensayo no dependa de credenciales, red, broker o placa y pueda ejecutarse desde un checkout normal.
   - El modo MQTT reutiliza `mqtt` desde las dependencias del frontend y carga `.env.local` sin mostrar valores sensibles.
@@ -203,7 +203,7 @@ Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integ
 - **Handoff para el ensayo físico:** iniciar Mosquitto con WebSockets, ejecutar primero `--mode=mqtt`, conectar las Pico, correr el runner físico en `Inventory` y `Backup`, revisar el reporte, y solo después usar `Deploy`. Registrar versiones, memoria/RSSI, desconexión, reconexión, checksum y capturas sin modificar este resultado histórico.
 - **Cómo revertir o recuperar:** eliminar los dos scripts nuevos, revertir las dos conversiones de tipo en `assignmentSync.test.ts` y restaurar esta entrada y las casillas de Persona 5 del plan. No existen migraciones ni estado persistente en el repositorio.
 
-### [2026-10-29 21:16] — Persona 5 (Juan David Romero) — Responsive móvil, identidad colaborativa y validación LAN
+### [2026-10-29 21:16] — Persona 5 — Responsive móvil, identidad colaborativa y validación LAN
 
 - **Objetivo:** permitir que el editor colaborativo se use de forma práctica desde celular y tablet, identificar a cada participante con un nombre elegido antes de sincronizar y verificar la colaboración navegador↔navegador sobre el broker local real.
 - **Estado:** [x] Hecho y validado en software. La ejecución física con Pico W continúa fuera del alcance de esta mejora.
@@ -248,3 +248,67 @@ Agregar cada entrada debajo de este encabezado en orden cronológico. Cada integ
   - El PC que ejecuta Vite y Mosquitto debe permanecer encendido; la IP `192.168.1.8` puede cambiar si el router no tiene reserva DHCP.
   - No se validó ejecución MicroPython ni matriz física porque no había Pico W disponible.
 - **Cómo revertir:** revertir esta entrada y los archivos enumerados. Eliminar `frontend/.env.local` solo si también se desea retirar la configuración local; el archivo no pertenece al historial Git.
+### [2026-10-28 15:55] — Persona 1 — Revisión de integración de Personas 2 y 3
+
+- **Objetivo:** comprobar el pull completo, auditar los cambios de Persona 2 sobre el contrato de Persona 1 y verificar que los workers Pico/navegador consuman el mismo protocolo.
+- **Estado:** [x] Hecho en escritorio; [!] pruebas con Mosquitto y Pico W físicas continúan pendientes.
+- **Commit o rama:** `mqtt-pico`, revisión sobre `6d02a02`; correcciones locales pendientes de commit.
+- **Archivos modificados:** `frontend/src/types/hiles.ts`; `frontend/src/features/distributed/assignments.ts`; `frontend/src/features/distributed/assignmentSync.test.ts`; `frontend/src/stores/useDistributedExecutionStore.ts`; `frontend/src/services/ir/particionarIr.test.ts`; `frontend/src/services/distributed/BrowserWorker.ts`; `frontend/src/services/distributed/BrowserWorker.test.ts`; este plan y este registro.
+- **Decisiones tomadas y motivo:** se conservaron los cambios cruzados de Persona 2 porque cierran requisitos reales del contrato: JSON canónico compatible con MicroPython, SHA-256 sobre bytes publicados, preservación de `retardo_ms`/`capacidad_cola`, entrada externa, comando `step` y vectores TS↔MicroPython. Se tipó `deploymentTarget` como propiedad opcional del documento para eliminar casts inseguros y garantizar su sincronización colaborativa.
+- **Pruebas ejecutadas y resultado exacto:** firmware con el Python de Thonny: **166/166 aprobadas**; frontend: **23 archivos y 145/145 aprobadas**; ESLint: **aprobado**; TypeScript y build Vite: **aprobados, 282 módulos transformados**.
+- **Evidencia física o visual:** no se ejecutó hardware ni inspección visual en navegador durante esta revisión.
+- **Errores encontrados y corrección:** el primer build falló con dos errores `TS2352` en `assignmentSync.test.ts` porque `deploymentTarget` no existía en `HilesNodeProperties`; se añadió el campo opcional y se retiraron los casts. La prueba del particionador podía crear silenciosamente el vector v3 si faltaba; ahora exige que el archivo esté versionado y falla si no existe. El worker navegador convertía entradas CCH remotas en DCH, por lo que dos valores recibidos antes de un paso se repartían en dos pasos; ahora conserva CCH y aplica el último valor en el mismo paso, como la Pico, con una prueba de regresión. También se retiraron nombres propios de los documentos de la entrega.
+- **Riesgos o limitaciones:** falta validar broker Mosquitto real, Pico↔Pico, Pico↔browser, memoria real y recuperación física. El panel aún no muestra RSSI ni el modelo activo, por lo que su criterio P1 permanece abierto. El bundle principal supera 500 kB y Vite mantiene una advertencia de tamaño, sin impedir el build.
+- **Entrada que recibe:** contrato/particionador de Persona 1, worker MicroPython de Persona 2 y worker navegador/UX de Persona 3.
+- **Handoff entregado a:** Persona 5 para pruebas físicas, integración y documentación final.
+- **Cómo revertir o recuperar:** restaurar los siete archivos TypeScript modificados en esta revisión y retirar esta entrada; los commits `d2b8e81`, `f0ccc39`, `9135cf0` y `6d02a02` permanecen intactos.
+
+### [2026-10-28 16:42] — Persona 1 — Prueba real sin Pico y corrección de Python distribuido
+
+- **Objetivo:** comprobar que el proyecto se puede compartir y ejecutar sin hardware, usando dos navegadores como ejecutores independientes sobre Mosquitto real.
+- **Estado:** [x] Browser↔browser aprobado; [!] combinaciones con Pico continúan pendientes.
+- **Commit o rama:** `mqtt-pico`, cambios locales pendientes de commit.
+- **Archivos modificados:** `frontend/src/engine/MotorSimulacion.ts`; `frontend/src/engine/__tests__/MotorSimulacionIrV2.test.ts`; este plan y este registro.
+- **Prueba real y resultado:** se abrió `?project=prueba-sin-pico-20261028` en dos sesiones; ambas conectaron a MQTT, mostraron dos colaboradores y anunciaron ejecutores distintos. Se asignó `Sensor` al primer navegador y `Proceso`/`Sumar uno` al segundo. El despliegue produjo dos fragmentos y dos ACK. Al inyectar `41`, el CCH cruzó MQTT y ambos colaboradores mostraron `Entrada = 41`, `Sumar uno = 42` y `Resultado = 42`.
+- **Recuperación:** tras recargar ambas sesiones, los ejecutores conservaron sus identidades de pestaña, recuperaron el manifiesto y fragmentos retenidos, volvieron a estado `Listo` y reanudaron la ejecución.
+- **Error encontrado y corrección:** el motor entregaba a Pyodide las variables públicas y también las claves internas de puerto; `calcular(**inputs)` rechazaba identificadores como `ejemplo-sumar-in`. Ahora el Worker recibe únicamente `normalizarEntradasPython`, es decir, la firma IR v2 validada. Se añadió una regresión que exige exactamente `['x']`.
+- **Pruebas ejecutadas:** frontend **23 archivos, 146/146**; firmware **166/166**; ESLint **aprobado**; TypeScript y build Vite **aprobados, 282 módulos**. Persiste únicamente el aviso no bloqueante del chunk principal mayor de 500 kB.
+- **Limitaciones pendientes:** no se probó Pico↔browser ni Pico↔Pico; tampoco un segundo PC físico ni un usuario nuevo siguiendo el tutorial.
+
+### [2026-10-30 08:20] — Persona 1 — Integración del pull y auditoría de cierre
+
+- **Objetivo:** recuperar los cambios locales que no se habían subido, traer los commits compartidos más recientes, resolver los conflictos sin perder trabajo y revisar el estado completo de la entrega.
+- **Estado:** [x] Integración y validación de software completadas; [!] las combinaciones con Pico física permanecen pendientes.
+- **Commit o rama:** rama `mqtt-pico`, actualizada por avance rápido hasta `a3302a9`; cambios integrados todavía sin commit ni push.
+- **Archivos modificados:** este plan y registro; correcciones locales de protocolo/worker/Python distribuidos; `scripts/test-distributed-mqtt.mjs`; y el texto de ejemplo de `frontend/src/features/collaboration/DisplayNameDialog.tsx`.
+- **Integración realizada:** se creó un stash de recuperación, se ejecutó `pull --ff-only` y se reaplicaron los cambios locales. Se resolvieron tres conflictos en el plan, el registro y `assignmentSync.test.ts`. El campo `deploymentTarget` se conservó tipado y los documentos quedaron sin nombres propios, usando solamente `Persona N`.
+- **Pruebas ejecutadas y resultado exacto:** frontend **23 archivos, 146/146**; firmware **166/166**; ESLint aprobado; build Vite aprobado con **283 módulos**; runner en memoria con **6/6 etapas**, cuatro ACK, `5 → 6`, veinte snapshots, dos descartes, una reconexión y cuatro liberaciones; runner físico `DryRun -AllowNoDevice` aprobado y reportando correctamente que no había hardware.
+- **Evidencia MQTT real:** el runner de red aprobó **6/6 etapas** sobre el listener WebSocket configurado localmente: cuatro ejecutores registrados, cuatro ACK, entrada `5`, salida `6`, veinte snapshots, dos mensajes descartados y desconexión observada. Terminó con código `0` sin imprimir credenciales.
+- **Errores encontrados y corrección:** el runner esperaba liberar también el fragmento del worker que había desconectado deliberadamente, condición imposible antes de una reconexión; además MQTT.js mantenía recursos WebSocket durante el cierre. Se limitó la liberación a workers conectados, se informa el worker offline pendiente de sincronización retained, se acotó la limpieza y se destruyen los streams al cerrar. El diálogo de identidad también cambió su ejemplo a `Persona 1` para cumplir la regla documental.
+- **Riesgos o limitaciones:** no existe evidencia nueva de Pico↔Pico ni Pico↔browser con placas reales; faltan memoria/RSSI reales, la demo física de semáforos, el prototipo Three.js y una prueba guiada con usuario nuevo. El build conserva los avisos no bloqueantes de Pyodide y del chunk principal mayor de 500 kB. Los cambios móviles y el diálogo de nombre no añadieron pruebas unitarias específicas, aunque pasan build, lint y la regresión existente.
+- **Estado de entrega:** sólida para demostración distribuida sin hardware y por LAN con navegadores; no debe presentarse todavía como matriz física completa.
+- **Recuperación:** el stash `codex-respaldo-antes-integrar-2026-10-30` se mantiene temporalmente hasta confirmar el commit final; no se hizo push en esta revisión.
+
+### [2026-10-30 08:55] — Persona 1 — Cuatro semáforos pares sin controlador central
+
+- **Objetivo:** convertir el ejemplo vial en una demostración real de ejecución distribuida donde cuatro Functional Blocks, potencialmente en cuatro dispositivos, calculan sus colores sin un quinto bloque orquestador.
+- **Estado:** [x] Demo software con token y temporización completa y probada; [!] hardware físico y lease/fail-safe pendientes.
+- **Arquitectura:** cuatro Structural Blocks contienen un Service local, un Functional Block de decisión, cinco Places y cinco Transitions. Un token circula Norte→Este→Sur→Oeste; al distribuir un bloque por ejecutor se obtienen cuatro fragmentos y ocho rutas MQTT remotas.
+- **Decisión y motivo:** cada par conoce solamente su fila. Con demanda consume el permiso y recorre verde 3 s → amarillo 1 s → rojo; sin demanda permanece rojo y cede. La exclusión mutua proviene del token y el estado Petri explícito, no de un ganador global.
+- **Archivos modificados:** generador y JSON de `demo-4-semaforos-distribuidos`; fixture IR v2; protocolo y matriz vial; pruebas del compilador, particionador, `PythonExecutor` y `EngineTaskV2`; este plan y registro.
+- **Pruebas funcionales:** compilación oficial con cuatro Functional Blocks, cuatro Services, veinte Places, veinte Transitions y ochenta conexiones; particionado aprobado en cuatro fragmentos con ocho rutas remotas; `N=0, E=5, S=0, O=0` hace que Norte ceda, Este pase verde → amarillo → rojo y entregue exactamente un token a Sur.
+- **Regresión exacta:** frontend **24 archivos y 148/148 pruebas**; firmware **167/167 pruebas**; ESLint aprobado; TypeScript y build Vite aprobados con 284 módulos.
+- **Visualización:** los Places `🔴 Rojo`, `🟢 Verde`, `🟡 Amarillo` y `● Token local` muestran el marcado real; el runtime conserva además indicadores genéricos para valores de color.
+- **Límites honestos:** amarillo y duración mínima ya están implementados. Faltan token con lease/vencimiento, heartbeat, regeneración sin duplicados y fail-safe físico en rojo ante caída de un ejecutor.
+- **Alternativas consideradas:** parqueadero distribuido, banda transportadora y habitaciones HVAC. El cruce se conservó porque hace más visibles los canales remotos, el consenso y una violación de seguridad.
+
+### [2026-10-30 19:20] — Persona 1 — Preparación física multi-Pico y paquete actualizado
+
+- **Objetivo:** dejar instrucciones reproducibles para preparar Pico nuevas, actualizar la placa actual sin perder credenciales y probar las matrices Pico↔Pico/Pico↔browser.
+- **Estado:** [x] Guías, plantilla y paquete preparados/verificados; [!] ejecución sobre placas reales pendiente.
+- **Cambios:** se reescribió `docs/mqtt/GUIA_PRUEBA_PICO_W.md`, se actualizó la guía completa, la ficha MQTT, la arquitectura y README. Se documentaron Thonny y `mpremote`, respaldo, instalación de `umqtt.simple`, identidades únicas, proyecto compartido, estructura remota, validación de imports, presencia v3, LED, despliegue, token y recuperación.
+- **Error preventivo encontrado:** el ZIP anterior no incluía `hiles/distributed_worker.py` aunque `main.py` lo importaba. `prepare-pico-deployment.ps1` ahora exige ese módulo, Watchdog, motor v2, PythonExecutor y topics v3 antes de aceptar el paquete.
+- **Compatibilidad corregida:** la regresión detectó que el motor MicroPython v1 no consumía la guarda al disparar, a diferencia del navegador y del motor v2. Se alineó `hiles/elements.py`; las 167 pruebas de firmware volvieron a aprobar.
+- **Paquete generado:** `output/hiles-pico-w-deploy.zip`, 32 archivos, SHA-256 `7A18DFFB697E07DF3AA68618A4BEEFF0E4784ED308E88E2CFBCF6DD8A162172F`. No contiene `config_local.py`, credenciales, bytecode ni ejemplos.
+- **Verificación:** los 32 entries se compararon por SHA-256 con sus fuentes; no hubo diferencias. La carpeta extraída versionada también se sincronizó y su `config_local.py` sigue siendo únicamente una plantilla sin secretos.
+- **Limitación honesta:** el runner físico automatiza inventario/respaldo sobre filesystem y modo seco, pero la transferencia serie real se realizará con Thonny o `mpremote`. No se marca Pico↔Pico ni Pico↔browser como aprobado hasta ejecutar la guía con hardware.

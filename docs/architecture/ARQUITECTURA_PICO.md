@@ -25,9 +25,24 @@ platform → APIs de MicroPython
 
 El núcleo no debe importar los adaptadores de plataforma. Para ejecutar pruebas en un computador se sustituyen reloj, GPIO y transporte por dobles controlables.
 
-## Ejecución remota
+## Ejecución remota y distribuida
 
-Los navegadores editan, compilan y representan el circuito. En modo remoto envían modelo, entradas y comandos, pero no calculan el siguiente estado. La Pico publica la instantánea oficial y cada navegador la aplica solamente si coinciden la sesión, el modelo y la versión, y si su secuencia es posterior a la última recibida.
+El modo legacy permite que una Pico ejecute un modelo completo. En el protocolo
+v3, el navegador compila el documento, publica un manifiesto y entrega a cada
+Pico únicamente el fragmento que le pertenece. `DistributedWorker` valida
+proyecto, despliegue, época, propietario, tamaño, hash e IR antes de activar el
+fragmento. Los canales que cruzan ejecutores viajan por MQTT y cada Pico publica
+solo su snapshot parcial; el frontend compone el estado agregado.
+
+Cada placa se identifica como `pico:<DEVICE_ID>`. `DEVICE_ID` y
+`MQTT_CLIENT_ID` son únicos, mientras `HILES_PROJECT_ID` es común al modelo y
+coincide con `?project=`. La desaparición de un ejecutor vuelve obsoleto su
+estado; al reconectar debe resincronizar manifiesto y época antes de procesar
+canales.
+
+El firmware no contiene reglas de semáforos ni mapas GPIO de la demo. Los
+Services se inyectan desde el editor y cualquier adaptación física futura debe
+ser genérica y permanecer separada del motor.
 
 ## Multitarea
 

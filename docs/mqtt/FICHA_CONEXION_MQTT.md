@@ -24,7 +24,10 @@ MQTT_HOST = "192.168.137.106"
 MQTT_PORT = 1883
 MQTT_USERNAME = "RECIBIR_POR_PRIVADO"
 MQTT_PASSWORD = "RECIBIR_POR_PRIVADO"
-MQTT_CLIENT_ID = "pico01"
+MQTT_CLIENT_ID = "hiles-pico-norte"  # único por placa
+DEVICE_ID = "pico-norte"             # único por placa
+HILES_TEAM_ID = "equipo1"
+HILES_PROJECT_ID = "semaforos-fisico" # igual que ?project=
 ```
 
 ## Aplicación web
@@ -49,10 +52,10 @@ El archivo real debe llamarse `frontend/.env.local` y no debe subirse a Git.
 
 ## Topics
 
-Prefijo común:
+Prefijo de diagnóstico v1 para la placa Norte:
 
 ```text
-udfjc/hiles/v1/equipo1/pico01/
+udfjc/hiles/v1/equipo1/pico-norte/
 ```
 
 Principales topics:
@@ -62,6 +65,16 @@ Principales topics:
 - `estado/conexion`: disponibilidad de la Pico.
 - `telemetria`: datos de diagnóstico.
 - `error`: errores de JSON o ejecución.
+
+La ejecución distribuida multi-Pico usa:
+
+```text
+udfjc/hiles/v3/projects/semaforos-fisico/executors/#
+udfjc/hiles/v3/projects/semaforos-fisico/deployments/#
+```
+
+Cada Pico anuncia `pico:<DEVICE_ID>`. Dos placas no pueden compartir
+`MQTT_CLIENT_ID`, porque el broker desconectaría una cuando entre la otra.
 
 ## Entrega segura de credenciales
 

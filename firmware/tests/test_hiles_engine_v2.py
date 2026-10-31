@@ -286,28 +286,42 @@ class EngineTaskV2Tests(unittest.TestCase):
         self.assertEqual(self.task.local_inputs_ignored, 2)
         self.assertEqual(self.task.stats()["ir_version"], 2)
 
-    def test_manual_services_demo_ir_runs(self):
-        modelo = json.loads(DEMO_IR.read_text(encoding="utf-8"))
-        confirmacion = self.load(modelo)
-        self.assertTrue(confirmacion["aceptado"])
+    def test_manual_services_demo_passes_one_token_green_yellow_red(self):
+        modelo = validate_ir_v2(json.loads(DEMO_IR.read_text(encoding="utf-8")))
+        motor = HilesEngineV2(modelo)
         for sentido in ("norte", "sur", "este", "oeste"):
-            self.task.submit_local_input("sensor-" + sentido, 5 if sentido == "este" else 0)
-        self.drain()
-        self.task.engine.step(1000)
-        estado = self.task.engine.snapshot()
-        self.assertEqual(estado["lamparas-norte"]["salidas"]["lamparas-norte-rojo"], True)
-        self.assertEqual(estado["lamparas-este"]["salidas"]["lamparas-este-solicitud"], True)
-        self.assertEqual(estado["seguridad-cruce"]["salidas"], {"seguridad-seguro": True, "seguridad-eje": "todo-rojo"})
+            motor.set_input("sensor-" + sentido, 5 if sentido == "este" else 0)
+
+        # Norte inicia con el único token, pero sin demanda lo entrega a Este.
+        self.assertEqual(motor.step(0)["disparada"], "norte-ceder-sin-demanda")
+        self.assertEqual(motor.step(0)["disparada"], "este-recibir-token")
+        self.assertEqual(motor.step(0)["disparada"], "este-iniciar-verde")
+        estado = motor.snapshot()
+        self.assertEqual(estado["este-verde"]["tokens"], 1)
+        self.assertEqual(sum(estado[s + "-token"]["tokens"] for s in ("norte", "sur", "este", "oeste")), 0)
+
+        # El permiso está representado por el verde mientras dura el turno.
+        motor.step(0)
+        motor.step(2999)
+        self.assertEqual(motor.snapshot()["este-verde"]["tokens"], 1)
+        self.assertEqual(motor.step(1)["disparada"], "este-verde-a-amarillo", motor.snapshot())
+        estado = motor.snapshot()
+        self.assertEqual(estado["este-verde"]["tokens"], 0)
+        self.assertEqual(estado["este-amarillo"]["tokens"], 1)
+
+        motor.step(0)
+        motor.step(999)
+        self.assertEqual(motor.snapshot()["este-amarillo"]["tokens"], 1)
+        self.assertEqual(motor.step(1)["disparada"], "este-amarillo-a-rojo")
+        self.assertEqual(motor.snapshot()["este-rojo"]["tokens"], 1)
+
+        # La acción del rojo entrega un solo token al siguiente nodo del anillo.
+        self.assertEqual(motor.step(0)["disparada"], "sur-recibir-token", motor.snapshot())
+        estado = motor.snapshot()
+        self.assertEqual(estado["sur-token"]["tokens"], 1)
+        self.assertEqual(sum(estado[s + "-token"]["tokens"] for s in ("norte", "sur", "este", "oeste")), 1)
         for elemento in estado.values():
             self.assertNotIn("error", elemento)
-
-        self.task.engine.set_input("luz-norte", "verde")
-        self.task.engine.set_input("luz-este", "amarillo")
-        self.task.engine.step(1000)
-        self.assertEqual(
-            self.task.engine.snapshot()["seguridad-cruce"]["salidas"],
-            {"seguridad-seguro": False, "seguridad-eje": "conflicto"},
-        )
 
 
 if __name__ == "__main__":

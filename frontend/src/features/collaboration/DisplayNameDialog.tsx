@@ -36,7 +36,7 @@ export const DisplayNameDialog: React.FC<DisplayNameDialogProps> = ({ onConfirm 
             maxLength={40}
             autoComplete="name"
             inputMode="text"
-            placeholder="Ej. Juan David Romero"
+            placeholder="Ej. Persona 1"
             aria-describedby="identity-help"
             aria-invalid={attempted && !name}
             onChange={(event) => setValue(event.target.value)}

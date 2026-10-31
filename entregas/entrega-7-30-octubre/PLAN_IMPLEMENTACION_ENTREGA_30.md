@@ -12,9 +12,9 @@
 |---|---|
 | Persona 1 | Protocolo y particionador distribuido |
 | Persona 2 | Worker MicroPython multi-Pico |
-| Persona 3 (Juan Ramos) | Worker web, colaboración y UX |
+| Persona 3 | Worker web, colaboración y UX |
 | Persona 4 | Investigación Three.js |
-| Persona 5 (Juan David Romero) | Integración, automatización física y documentación |
+| Persona 5 | Integración, automatización física y documentación |
 
 ## 1. Interpretación del requerimiento
 
@@ -29,7 +29,7 @@ La unidad preferida de despliegue será el `Structural Block`. Los Functional Bl
 
 El sistema seguirá siendo colaborativo: todos los navegadores del mismo `projectId` deben ver el documento, los colaboradores, la asignación de ejecutores y el estado agregado de la ejecución.
 
-En el ejemplo de los semáforos no habrá un controlador vial codificado en `main.py` ni un proceso central que decida todas las luces. Cada semáforo será un bloque independiente y se coordinará con los demás mediante mensajes del modelo. Para evitar verdes incompatibles se propone un token lógico distribuido: solamente el bloque que posee el token puede habilitar verde y, ante pérdida de comunicación, cada nodo entra en rojo seguro.
+En el ejemplo de los semáforos no hay un controlador vial codificado en `main.py` ni un proceso central que decida todas las luces. Cuatro pares autónomos forman un anillo y comparten un único token. Cada nodo decide solo con su fila local: con demanda ejecuta verde 3 s → amarillo 1 s → rojo; sin demanda cede desde rojo. El lease del token y el rojo seguro ante pérdida de comunicación siguen pendientes.
 
 ## 2. Resultado mínimo demostrable
 
@@ -71,10 +71,10 @@ La matriz ideal usa cuatro ejecutores para cuatro semáforos. Si no hay cuatro P
 - [x] Particionado determinista del modelo en fragmentos válidos.
 - [x] Ejecutor Pico capaz de cargar solamente su fragmento (aprobado en pruebas de software; placa real pendiente).
 - [x] Ejecutor navegador compatible con el mismo contrato de fragmento.
-- [ ] Puentes MQTT entre conexiones cuyos extremos viven en ejecutores distintos.
-- [ ] Estado agregado y diagnóstico visible para todos los colaboradores.
-- [ ] Prueba con al menos dos ejecutores reales y un enlace entre ellos.
-- [ ] Automatización segura de la prueba física.
+- [x] Puentes MQTT entre conexiones cuyos extremos viven en ejecutores distintos.
+- [x] Estado agregado y diagnóstico visible para todos los colaboradores (comprobado con dos navegadores y Mosquitto real: entrada `41`, Functional Block Python y salida `42`).
+- [x] Prueba con dos ejecutores navegador reales y un enlace MQTT entre ellos; combinaciones con Pico física pendientes.
+- [x] Automatización segura preparada y validada en modo seco/filesystem simulado; ejecución sobre placas reales pendiente.
 - [x] Informe técnico y registro individual actualizados.
 
 ### P1 — debe entrar si P0 está estable
@@ -84,7 +84,7 @@ La matriz ideal usa cuatro ejecutores para cuatro semáforos. Si no hay cuatro P
 - [x] Mejoras de colaboración: selección remota, “seguir colaborador”, estados claros y enlace para invitar.
 - [x] Tutorial guiado, ayuda contextual y estado vacío para usuarios nuevos.
 - [x] Revisión visual general: logo, consistencia de idioma, espaciado, iconos, mensajes y accesibilidad (quedan textos en inglés en archivos de otros integrantes, listados en `docs/ux/REVISION_VISUAL_Y_ACCESIBILIDAD.md`).
-- [ ] Demo distribuido de semáforos con token lógico y modo seguro.
+- [x] Demo distribuida de semáforos con token lógico y fases verde → amarillo → rojo (modo seguro ante caída pendiente).
 
 ### P2 — investigación aislada, no bloquea P0
 
@@ -285,8 +285,6 @@ firmware/tests/test_mqtt_transport.py
 
 ### Persona 3 — worker web, colaboración y experiencia de usuario
 
-**Responsable:** Juan Ramos.
-
 **Dependencias:** contratos de Persona 1 y estados del worker de Persona 2.
 
 **Responsabilidad:** permitir ejecución en navegador y hacer comprensible la distribución.
@@ -326,9 +324,9 @@ frontend/src/assets/brand/**
 #### Criterios de cierre
 
 - [x] Un bloque asignado a browser produce el mismo resultado observable que en la Pico para el fixture elegido (vector `docs/mqtt/vectores_v3/02_paridad_worker_navegador.json`, verificado en TypeScript y en Python).
-- [x] Cambiar la asignación es colaborativo y no genera operaciones duplicadas (probado a nivel de operaciones del protocolo v2; falta ensayo con dos navegadores y broker real).
+- [x] Cambiar la asignación es colaborativo y no genera operaciones duplicadas (probado con dos navegadores y Mosquitto real; ambos reflejaron los mismos destinos).
 - [ ] Un usuario nuevo puede completar el tutorial sin conocer previamente HiLeS (tutorial y ejemplo implementados y probados; falta la prueba con un usuario real).
-- [ ] Los estados desconectado, desplegando, ejecutando y error son distinguibles sin abrir la consola (lógica `describirFase` probada; falta verificación visual en navegador con broker).
+- [x] Los estados desconectado, listo y ejecutando se verificaron visualmente con broker real; el estado de error también apareció durante la detección del defecto Python antes de corregirlo.
 
 #### Resultado comprobado — 28 de octubre
 
@@ -336,7 +334,8 @@ frontend/src/assets/brand/**
 - Paridad: el vector 02, generado con el motor MicroPython, se reproduce paso a paso en el navegador (`BrowserWorker.test.ts`) y en la Pico (`test_paridad_worker_navegador.py`).
 - Asignaciones en el documento compartido (`properties.deploymentTarget`), panel de ejecutores, mapa de asignaciones, despliegue con espera de ACK, estado agregado sobre el canvas y diagnóstico con recomendaciones.
 - Colaboración: selección remota, estado de cada persona, «seguir colaborador» y diálogo para compartir. Además, tutorial de 7 pasos con ejemplo mínimo, ayuda contextual, estado vacío, logo, paleta y accesibilidad.
-- Regresión: frontend con 23 archivos y 144 pruebas aprobadas; ESLint, TypeScript y build aprobados; firmware con 166 pruebas aprobadas.
+- Regresión actual: frontend con 24 archivos y 148 pruebas aprobadas; ESLint, TypeScript y build aprobados; firmware con 167 pruebas aprobadas.
+- Integración real browser↔browser: dos colaboradores y dos ejecutores independientes sobre Mosquitto; asignación sincronizada, dos ACK, recuperación desde retenidos tras recargar, canal CCH remoto y estado agregado `41 → 42` visibles en ambas sesiones.
 
 ---
 
@@ -379,7 +378,7 @@ docs/experiments/THREE_JS_GEMELO_DIGITAL.md
 
 ### Persona 5 — integración, automatización física, demo y documentación
 
-**Responsable:** Juan David Romero.
+**Responsable:** Persona 5.
 
 **Dependencias:** entregables de Personas 1 a 4.
 
@@ -395,7 +394,7 @@ docs/experiments/THREE_JS_GEMELO_DIGITAL.md
 - [x] Probar desconexión de un ejecutor y rechazo de mensajes de época anterior.
 - [ ] Completar la matriz Pico↔Pico, Pico↔browser y browser↔browser: se aprobó Pico simulada→browser→browser→Pico simulada con cuatro ejecutores; falta el enlace Pico↔Pico y toda la matriz física.
 - [x] Ejecutar suites completas, lint, tipos y build.
-- [x] Preparar y ensayar la guía de demostración sin hardware; ensayo con Mosquitto/Pico pendiente.
+- [x] Preparar la guía física completa para Pico nuevas/actuales y regenerar el paquete multi-Pico verificado; ensayo sobre placas reales pendiente.
 - [x] Validar colaboración navegador↔navegador sobre Mosquitto WebSocket autenticado en la red local.
 - [x] Adaptar y verificar el frontend para celular y tablet, incluyendo controles táctiles, paneles inferiores y nombre visible del colaborador.
 
@@ -456,16 +455,16 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 ### Martes 27 — ejecución por fragmentos
 
 - [x] Particionador y validadores aprobados.
-- [ ] Fragmento local ejecuta en Pico.
+- [x] Fragmento local ejecuta en Pico (pruebas de escritorio; validación física pendiente).
 - [x] Fragmento local ejecuta en navegador (pruebas de escritorio con broker simulado).
-- [ ] Primera conexión remota atraviesa MQTT.
+- [x] Primera conexión remota atraviesa MQTT (browser↔browser sobre Mosquitto real, `41 → 42`).
 - [x] UI muestra ejecutores y asignación.
 
 ### Miércoles 28 — integración distribuida
 
-- [ ] Estado agregado visible en colaboradores.
+- [x] Estado agregado visible en dos colaboradores reales (`41 → 42`).
 - [x] Reconexión, deduplicación y cambio de época probados con cuatro ejecutores simulados.
-- [x] Matriz de cuatro ejecutores aprobada en memoria; la matriz física permanece abierta.
+- [x] Matriz de cuatro ejecutores aprobada en memoria y de dos navegadores sobre Mosquitto real; la matriz física permanece abierta.
 - [x] Tutorial y colaboración mejorada integrados.
 - [x] Colaboración real por LAN, identificación por nombre y responsive móvil/tablet verificados por Persona 5.
 - [ ] Three.js consume el adapter acordado o queda documentado como aislado.
@@ -558,15 +557,15 @@ Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales
 |---|---|---|
 | Protocolo y particionado | Persona 1 | Hecho: contrato v3, particionador, fixtures y 10 pruebas aprobadas |
 | Worker Pico | Persona 2 | Hecho en software: `DistributedWorker`, canales remotos, paridad SHA-256 y 165 pruebas aprobadas (pendiente corrida en placas físicas) |
-| Worker browser, colaboración y UX | Persona 3 | Hecho en software: `BrowserWorker`, paridad con la Pico (vector 02), panel de ejecutores, colaboración, tutorial y UX; pendiente ensayo con broker real y usuario nuevo |
+| Worker browser, colaboración y UX | Persona 3 | Hecho y probado con Mosquitto real en dos navegadores: asignación colaborativa, fragmentos, ACK, recuperación retenida, canal remoto, Python en Pyodide y estado agregado; pendiente ensayo con usuario nuevo |
 | Prototipo Three.js | Persona 4 | Pendiente |
 | Automatización física | Persona 5 | Runner seguro implementado: modo seco sin hardware y respaldo/despliegue verificados con filesystem simulado; placa real pendiente |
 | Pico↔Pico | Personas 2 y 5 | Pendiente según hardware |
 | Pico↔browser | Personas 2, 3 y 5 | Aprobado con ejecutor Pico simulado y browser; ensayo físico pendiente |
-| Semáforos distribuidos seguros | Personas 1, 2, 3 y 5 | Pendiente |
-| Suites, lint, tipos y build | Persona 5 | Hecho: frontend 144/144, firmware 166/166, lint y build aprobados |
+| Semáforos distribuidos seguros | Personas 1, 2, 3 y 5 | Demo software hecha: cuatro pares, un token, cuatro fragmentos y ocho cesiones remotas; verde 3 s → amarillo 1 s → rojo probado; lease, fail-safe físico y ensayo con placas pendientes |
+| Suites, lint, tipos y build | Persona 5 | Hecho: frontend 148/148, firmware 167/167, lint y build aprobados |
 | Responsive y colaboración LAN | Persona 5 | Hecho: nombre solicitado antes de sincronizar; paleta táctil, paneles móviles, seguimiento y presencia verificados en 390×844 y 820×1180; HTTP LAN 200 y MQTT WebSocket autenticado |
-| Informe acumulado en este plan y registro | Persona 5 | Actualizado con alcance, comandos, evidencia y límites sin hardware |
+| Informe acumulado en este plan y registro | Persona 5 | Actualizado con alcance, comandos, evidencia y límites actuales |
 
 ### 9.3 Ensayo repetible disponible sin hardware — Persona 5
 
@@ -587,7 +586,9 @@ Cuando Mosquitto esté activo en el listener WebSocket configurado en `frontend/
 node scripts/test-distributed-mqtt.mjs --mode=mqtt --timeout=8000
 ```
 
-El intento inicial de red produjo `ECONNREFUSED 127.0.0.1:9001`. Posteriormente se instaló Mosquitto 2.1.2, se configuró un listener WebSocket autenticado en `192.168.1.8:9001`, se comprobó conexión MQTT y colaboración entre navegadores, y el frontend respondió HTTP 200 desde la dirección LAN. La configuración y `frontend/.env.local` son locales, están ignorados por Git y no contienen evidencia física de Pico.
+El intento inicial de red produjo `ECONNREFUSED 127.0.0.1:9001`. Posteriormente se instaló Mosquitto 2.1.2, se configuró un listener WebSocket autenticado en la LAN y se comprobaron tanto la colaboración entre navegadores como las seis etapas del runner en modo `mqtt`. La ejecución real obtuvo cuatro ACK, entrada `5`, salida final `6`, veinte snapshots, dos mensajes antiguos/duplicados descartados y recuperación de una desconexión. El frontend respondió HTTP 200 desde la LAN. La configuración y `frontend/.env.local` son locales, están ignorados por Git y no constituyen evidencia física de Pico.
+
+Durante esta ejecución se corrigieron dos defectos del arnés, no del runtime distribuido: la liberación esperaba a un worker que el propio escenario había dejado desconectado y MQTT.js conservaba handles WebSocket durante el cierre. La liberación ahora se verifica sobre los workers conectados, registra explícitamente el worker pendiente de resincronización retained y acota/destruye los recursos de cierre, por lo que el comando termina con código `0`.
 
 Regresión utilizada para el cierre de software:
 
@@ -600,7 +601,7 @@ cd ..
 python -m unittest discover -s firmware/tests -t .
 ```
 
-En el entorno Codex se usó el Python incluido por la aplicación porque el alias `WindowsApps/python.exe` no tenía permisos. La primera ejecución paralela de Vitest perdió artefactos temporales del sandbox; la repetición no aislada aprobó los 23 archivos y 144 pruebas.
+En el entorno Codex se usó el Python incluido por la aplicación porque el alias `WindowsApps/python.exe` no tenía permisos. La primera ejecución paralela de Vitest perdió artefactos temporales del sandbox; la repetición no aislada aprobó todo. La regresión posterior, que incluye el ejemplo vial distribuido y su color runtime visible, elevó el total a 148 pruebas frontend y 167 de firmware.
 
 ## 10. Exclusiones de esta entrega
 
@@ -636,7 +637,7 @@ Este mismo plan funciona como documento maestro de la entrega. Persona 5 debe ma
 - **Runtime MicroPython:** Task, Scheduler, pub/sub, transporte, IR, motor y snapshots oficiales.
 - **Entrega del 20 de octubre:** IR v2, Python remoto, canales, retardos, Watchdog, colaboración, presencia, cursores y frontend reorganizado.
 - **Cierre físico del 25 de octubre:** flujo navegador → broker → Pico → navegadores confirmado; 153 pruebas firmware y 104 frontend aprobadas en `baadff6`.
-- **Entrega del 30 de octubre, software:** Personas 1–3 entregaron protocolo/particionado, worker Pico y worker navegador/UX. Persona 5 añadió runners repetibles, integración simulada de cuatro ejecutores, regresión completa y documentación; Mosquitto y Pico físicas quedan pendientes.
+- **Entrega del 30 de octubre, software:** Personas 1–3 entregaron protocolo/particionado, worker Pico y worker navegador/UX. Persona 5 añadió runners repetibles, integración simulada de cuatro ejecutores, prueba real sobre Mosquitto, regresión completa y documentación; las Pico físicas quedan pendientes.
 
 ### Cronología de la entrega del 30 de octubre
 
@@ -644,9 +645,11 @@ Este mismo plan funciona como documento maestro de la entrega. Persona 5 debe ma
 2. **28 de octubre, Persona 1:** protocolo v3, manifiesto, particionador y fixtures.
 3. **28 de octubre, Persona 2:** worker MicroPython multi-Pico y paridad de fragmentos.
 4. **28 de octubre, Persona 3:** worker navegador, asignaciones, colaboración, tutorial y UX.
-5. **29 de octubre, Persona 5 — Juan David Romero:** arnés MQTT en memoria/red, runner físico seguro, matriz simulada, regresión y cierre documental sin hardware.
-6. **29 de octubre, Persona 5 — Juan David Romero:** broker Mosquitto LAN autenticado, colaboración navegador↔navegador real, identificación por nombre y frontend responsive validado en celular y tablet.
-7. **Pendiente:** Persona 4 (Three.js), placas físicas, matriz Pico↔Pico/Pico↔browser y ensayo final con hardware.
+5. **29 de octubre, Persona 5:** arnés MQTT en memoria/red, runner físico seguro, matriz simulada, regresión y cierre documental sin hardware.
+6. **29 de octubre, Persona 5:** broker Mosquitto LAN autenticado, colaboración navegador↔navegador real, identificación por nombre y frontend responsive validado en celular y tablet.
+7. **30 de octubre, Persona 1:** pull de los commits compartidos, resolución de tres conflictos, regresión completa y corrección del cierre del runner MQTT real.
+8. **30 de octubre, Persona 1:** demo de cuatro semáforos en anillo, cuatro fragmentos y ocho rutas remotas; token único y verde → amarillo → rojo probados en navegador y firmware.
+9. **Pendiente:** Persona 4 (Three.js), lease/fail-safe del token, placas físicas, matriz Pico↔Pico/Pico↔browser y ensayo final con hardware.
 
 ### Aportes históricos y responsabilidad actual
 
@@ -656,7 +659,7 @@ Este mismo plan funciona como documento maestro de la entrega. Persona 5 debe ma
 | Persona 2 | IR v2, compilador, canales y protocolo colaborativo | Worker MicroPython multi-Pico |
 | Persona 3 | Motor MicroPython v2, Sample/Hold, retardos y demo general | Worker navegador, colaboración y UX |
 | Persona 4 | Topbar, paneles y aprovechamiento del canvas | Prototipo Three.js |
-| Persona 5 — Juan David Romero | Integración, colaboración, cuatro navegadores, empaquetado y guías | Automatización física, integración y documentación |
+| Persona 5 | Integración, colaboración, cuatro navegadores, empaquetado y guías | Automatización física, integración y documentación |
 
 ### Sección que se actualiza por cada persona
 

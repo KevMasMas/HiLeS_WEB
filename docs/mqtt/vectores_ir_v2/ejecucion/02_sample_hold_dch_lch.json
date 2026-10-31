@@ -153,7 +153,7 @@
         "sensor-analogico": { "valor": 42.5 },
         "gatillo": { "valor": true },
         "place-espera": { "tokens": 0 },
-        "trans-capturar": { "habilitada": true, "disparada": true },
+        "trans-capturar": { "habilitada": false, "disparada": true },
         "place-capturado": { "tokens": 1 },
         "sample-1": {},
         "hold-1": { "evento_pendiente": false }

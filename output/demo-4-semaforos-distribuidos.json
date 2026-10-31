@@ -1,18 +1,17 @@
 {
   "schemaVersion": 2,
   "metadata": {
-    "savedAt": "2026-10-18T22:00:00-05:00",
-    "description": "Semáforo inteligente: el usuario inyecta solo cantidades y el controlador asigna verde al eje con más vehículos."
+    "savedAt": "2026-10-30T10:00:00-05:00",
+    "description": "Cuatro semáforos autónomos comparten un token; cada turno pasa verde, amarillo y rojo antes de cederlo."
   },
   "network": {
-    "topology": null,
-    "protocol": null,
+    "topology": "token-ring",
+    "protocol": "hiles-distributed-v3",
     "nodes": [
       "norte-block",
-      "sur-block",
       "este-block",
-      "oeste-block",
-      "control-block"
+      "sur-block",
+      "oeste-block"
     ]
   },
   "allElements": [
@@ -21,14 +20,14 @@
       "type": "STRUCTURAL_BLOCK",
       "name": "Semáforo Norte",
       "layout": {
-        "x": 80,
-        "y": 80,
-        "width": 640,
-        "height": 340
+        "x": 60,
+        "y": 60,
+        "width": 780,
+        "height": 520
       },
       "ports": [],
       "properties": {
-        "description": "Recibe el número de vehículos del sentido Norte y muestra el color decidido automáticamente.",
+        "description": "Nodo autónomo Norte: usa o cede el token y lo entrega a este.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -47,16 +46,16 @@
     {
       "id": "sensor-norte",
       "type": "SERVICE",
-      "name": "🚗 Sensor Norte",
+      "name": "Carros esperando · Norte",
       "parentId": "norte-block",
       "layout": {
-        "x": 40,
-        "y": 60
+        "x": 35,
+        "y": 65
       },
       "ports": [
         {
           "id": "sensor-norte-out",
-          "name": "vehiculos_esperando",
+          "name": "vehiculos_locales",
           "direction": "output",
           "dataType": "integer",
           "nature": "continuous",
@@ -65,7 +64,7 @@
         }
       ],
       "properties": {
-        "description": "Cantidad de vehículos detenidos esperando paso en el sentido Norte.",
+        "description": "Entrada manual de demanda local.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -82,72 +81,54 @@
       }
     },
     {
-      "id": "lamparas-norte",
+      "id": "decision-norte",
       "type": "FUNCTIONAL_BLOCK",
-      "name": "Lámparas Norte",
+      "name": "Decisión local · Norte",
       "parentId": "norte-block",
       "layout": {
-        "x": 330,
-        "y": 110
+        "x": 225,
+        "y": 65
       },
       "ports": [
         {
-          "id": "lamparas-norte-luz",
-          "name": "luz",
-          "direction": "input",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.3
-        },
-        {
-          "id": "lamparas-norte-vehiculos",
-          "name": "vehiculos_esperando",
+          "id": "decision-norte-cars",
+          "name": "vehiculos_locales",
           "direction": "input",
           "dataType": "integer",
           "nature": "continuous",
           "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "decision-norte-demand",
+          "name": "hay_demanda",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "right",
+          "offset": 0.35
+        },
+        {
+          "id": "decision-norte-skip",
+          "name": "sin_demanda",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "right",
           "offset": 0.7
         },
         {
-          "id": "lamparas-norte-rojo",
-          "name": "rojo",
+          "id": "decision-norte-cycle",
+          "name": "ciclo_activo",
           "direction": "output",
           "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.2
-        },
-        {
-          "id": "lamparas-norte-amarillo",
-          "name": "amarillo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.4
-        },
-        {
-          "id": "lamparas-norte-verde",
-          "name": "verde",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.6
-        },
-        {
-          "id": "lamparas-norte-vehiculos-out",
-          "name": "vehiculos",
-          "direction": "output",
-          "dataType": "integer",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.8
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
         }
       ],
       "properties": {
-        "description": "Convierte la decisión automática en las señales rojo, amarillo y verde.",
+        "description": "Toma el token si hay carros; de lo contrario lo cede conservando rojo.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -162,22 +143,48 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'vehiculos': vehiculos_esperando,\n    }"
+        "code": "def calcular(vehiculos_locales):\n    return {\n        'hay_demanda': vehiculos_locales > 0,\n        'sin_demanda': vehiculos_locales <= 0,\n        'ciclo_activo': True,\n    }"
       }
     },
     {
-      "id": "sur-block",
-      "type": "STRUCTURAL_BLOCK",
-      "name": "Semáforo Sur",
+      "id": "norte-rojo",
+      "type": "PLACE",
+      "name": "🔴 Rojo",
+      "parentId": "norte-block",
       "layout": {
-        "x": 820,
-        "y": 80,
-        "width": 640,
-        "height": 340
+        "x": 90,
+        "y": 270
       },
       "ports": [],
       "properties": {
-        "description": "Recibe el número de vehículos del sentido Sur y muestra el color decidido automáticamente.",
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "norte-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 330,
+        "y": 270
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -194,109 +201,117 @@
       }
     },
     {
-      "id": "sensor-sur",
-      "type": "SERVICE",
-      "name": "🚗 Sensor Sur",
-      "parentId": "sur-block",
+      "id": "norte-amarillo",
+      "type": "PLACE",
+      "name": "🟡 Amarillo",
+      "parentId": "norte-block",
       "layout": {
-        "x": 40,
-        "y": 60
+        "x": 570,
+        "y": 270
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "norte-token",
+      "type": "PLACE",
+      "name": "● Token local",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 210,
+        "y": 410
+      },
+      "ports": [],
+      "properties": {
+        "description": "Permiso exclusivo para iniciar un turno.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "norte-listo",
+      "type": "PLACE",
+      "name": "Listo para recibir",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 570,
+        "y": 410
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "norte-iniciar-verde",
+      "type": "TRANSITION",
+      "name": "Token + demanda → verde",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 210,
+        "y": 265
       },
       "ports": [
         {
-          "id": "sensor-sur-out",
-          "name": "vehiculos_esperando",
+          "id": "norte-iniciar-verde-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "norte-iniciar-verde-action",
+          "name": "accion",
           "direction": "output",
-          "dataType": "integer",
-          "nature": "continuous",
-          "side": "right",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
           "offset": 0.5
         }
       ],
       "properties": {
-        "description": "Cantidad de vehículos detenidos esperando paso en el sentido Sur.",
-        "collapsed": false,
-        "locked": false,
-        "visible": true,
-        "expression": "",
-        "executionDelay": 0,
-        "enabled": true,
-        "tokens": 0,
-        "maxTokens": 1,
-        "delay": 0,
-        "condition": "",
-        "heldValue": "0",
-        "operatorDirection": "right",
-        "rotation": 0
-      }
-    },
-    {
-      "id": "lamparas-sur",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Lámparas Sur",
-      "parentId": "sur-block",
-      "layout": {
-        "x": 330,
-        "y": 110
-      },
-      "ports": [
-        {
-          "id": "lamparas-sur-luz",
-          "name": "luz",
-          "direction": "input",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.3
-        },
-        {
-          "id": "lamparas-sur-vehiculos",
-          "name": "vehiculos_esperando",
-          "direction": "input",
-          "dataType": "integer",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.7
-        },
-        {
-          "id": "lamparas-sur-rojo",
-          "name": "rojo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.2
-        },
-        {
-          "id": "lamparas-sur-amarillo",
-          "name": "amarillo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.4
-        },
-        {
-          "id": "lamparas-sur-verde",
-          "name": "verde",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.6
-        },
-        {
-          "id": "lamparas-sur-vehiculos-out",
-          "name": "vehiculos",
-          "direction": "output",
-          "dataType": "integer",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.8
-        }
-      ],
-      "properties": {
-        "description": "Convierte la decisión automática en las señales rojo, amarillo y verde.",
+        "description": "Token + demanda → verde",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -309,9 +324,191 @@
         "condition": "",
         "heldValue": "",
         "operatorDirection": "right",
-        "rotation": 0,
-        "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'vehiculos': vehiculos_esperando,\n    }"
+        "rotation": 0
+      }
+    },
+    {
+      "id": "norte-verde-a-amarillo",
+      "type": "TRANSITION",
+      "name": "Verde 3s → amarillo",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 450,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "norte-verde-a-amarillo-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "norte-verde-a-amarillo-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Verde 3s → amarillo",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 3000,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "norte-amarillo-a-rojo",
+      "type": "TRANSITION",
+      "name": "Amarillo 1s → rojo y ceder",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 690,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "norte-amarillo-a-rojo-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "norte-amarillo-a-rojo-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Amarillo 1s → rojo y ceder",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 1000,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "norte-ceder-sin-demanda",
+      "type": "TRANSITION",
+      "name": "Sin carros → ceder token",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 380,
+        "y": 405
+      },
+      "ports": [
+        {
+          "id": "norte-ceder-sin-demanda-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "norte-ceder-sin-demanda-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Sin carros → ceder token",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "norte-recibir-token",
+      "type": "TRANSITION",
+      "name": "Recibir token del anterior",
+      "parentId": "norte-block",
+      "layout": {
+        "x": 690,
+        "y": 405
+      },
+      "ports": [
+        {
+          "id": "norte-recibir-token-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "norte-recibir-token-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Recibir token del anterior",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
       }
     },
     {
@@ -319,14 +516,14 @@
       "type": "STRUCTURAL_BLOCK",
       "name": "Semáforo Este",
       "layout": {
-        "x": 80,
-        "y": 520,
-        "width": 640,
-        "height": 340
+        "x": 900,
+        "y": 60,
+        "width": 780,
+        "height": 520
       },
       "ports": [],
       "properties": {
-        "description": "Recibe el número de vehículos del sentido Este y muestra el color decidido automáticamente.",
+        "description": "Nodo autónomo Este: usa o cede el token y lo entrega a sur.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -345,16 +542,16 @@
     {
       "id": "sensor-este",
       "type": "SERVICE",
-      "name": "🚗 Sensor Este",
+      "name": "Carros esperando · Este",
       "parentId": "este-block",
       "layout": {
-        "x": 40,
-        "y": 60
+        "x": 35,
+        "y": 65
       },
       "ports": [
         {
           "id": "sensor-este-out",
-          "name": "vehiculos_esperando",
+          "name": "vehiculos_locales",
           "direction": "output",
           "dataType": "integer",
           "nature": "continuous",
@@ -363,7 +560,7 @@
         }
       ],
       "properties": {
-        "description": "Cantidad de vehículos detenidos esperando paso en el sentido Este.",
+        "description": "Entrada manual de demanda local.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -380,72 +577,54 @@
       }
     },
     {
-      "id": "lamparas-este",
+      "id": "decision-este",
       "type": "FUNCTIONAL_BLOCK",
-      "name": "Lámparas Este",
+      "name": "Decisión local · Este",
       "parentId": "este-block",
       "layout": {
-        "x": 330,
-        "y": 110
+        "x": 225,
+        "y": 65
       },
       "ports": [
         {
-          "id": "lamparas-este-luz",
-          "name": "luz",
-          "direction": "input",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.3
-        },
-        {
-          "id": "lamparas-este-vehiculos",
-          "name": "vehiculos_esperando",
+          "id": "decision-este-cars",
+          "name": "vehiculos_locales",
           "direction": "input",
           "dataType": "integer",
           "nature": "continuous",
           "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "decision-este-demand",
+          "name": "hay_demanda",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "right",
+          "offset": 0.35
+        },
+        {
+          "id": "decision-este-skip",
+          "name": "sin_demanda",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "right",
           "offset": 0.7
         },
         {
-          "id": "lamparas-este-rojo",
-          "name": "rojo",
+          "id": "decision-este-cycle",
+          "name": "ciclo_activo",
           "direction": "output",
           "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.2
-        },
-        {
-          "id": "lamparas-este-amarillo",
-          "name": "amarillo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.4
-        },
-        {
-          "id": "lamparas-este-verde",
-          "name": "verde",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.6
-        },
-        {
-          "id": "lamparas-este-vehiculos-out",
-          "name": "vehiculos",
-          "direction": "output",
-          "dataType": "integer",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.8
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
         }
       ],
       "properties": {
-        "description": "Convierte la decisión automática en las señales rojo, amarillo y verde.",
+        "description": "Toma el token si hay carros; de lo contrario lo cede conservando rojo.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -460,7 +639,868 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'vehiculos': vehiculos_esperando,\n    }"
+        "code": "def calcular(vehiculos_locales):\n    return {\n        'hay_demanda': vehiculos_locales > 0,\n        'sin_demanda': vehiculos_locales <= 0,\n        'ciclo_activo': True,\n    }"
+      }
+    },
+    {
+      "id": "este-rojo",
+      "type": "PLACE",
+      "name": "🔴 Rojo",
+      "parentId": "este-block",
+      "layout": {
+        "x": 90,
+        "y": 270
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "este-block",
+      "layout": {
+        "x": 330,
+        "y": 270
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-amarillo",
+      "type": "PLACE",
+      "name": "🟡 Amarillo",
+      "parentId": "este-block",
+      "layout": {
+        "x": 570,
+        "y": 270
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-token",
+      "type": "PLACE",
+      "name": "● Token local",
+      "parentId": "este-block",
+      "layout": {
+        "x": 210,
+        "y": 410
+      },
+      "ports": [],
+      "properties": {
+        "description": "Permiso exclusivo para iniciar un turno.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-listo",
+      "type": "PLACE",
+      "name": "Listo para recibir",
+      "parentId": "este-block",
+      "layout": {
+        "x": 570,
+        "y": 410
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-iniciar-verde",
+      "type": "TRANSITION",
+      "name": "Token + demanda → verde",
+      "parentId": "este-block",
+      "layout": {
+        "x": 210,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "este-iniciar-verde-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "este-iniciar-verde-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Token + demanda → verde",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-verde-a-amarillo",
+      "type": "TRANSITION",
+      "name": "Verde 3s → amarillo",
+      "parentId": "este-block",
+      "layout": {
+        "x": 450,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "este-verde-a-amarillo-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "este-verde-a-amarillo-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Verde 3s → amarillo",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 3000,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-amarillo-a-rojo",
+      "type": "TRANSITION",
+      "name": "Amarillo 1s → rojo y ceder",
+      "parentId": "este-block",
+      "layout": {
+        "x": 690,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "este-amarillo-a-rojo-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "este-amarillo-a-rojo-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Amarillo 1s → rojo y ceder",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 1000,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-ceder-sin-demanda",
+      "type": "TRANSITION",
+      "name": "Sin carros → ceder token",
+      "parentId": "este-block",
+      "layout": {
+        "x": 380,
+        "y": 405
+      },
+      "ports": [
+        {
+          "id": "este-ceder-sin-demanda-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "este-ceder-sin-demanda-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Sin carros → ceder token",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "este-recibir-token",
+      "type": "TRANSITION",
+      "name": "Recibir token del anterior",
+      "parentId": "este-block",
+      "layout": {
+        "x": 690,
+        "y": 405
+      },
+      "ports": [
+        {
+          "id": "este-recibir-token-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "este-recibir-token-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Recibir token del anterior",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sur-block",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "Semáforo Sur",
+      "layout": {
+        "x": 900,
+        "y": 660,
+        "width": 780,
+        "height": 520
+      },
+      "ports": [],
+      "properties": {
+        "description": "Nodo autónomo Sur: usa o cede el token y lo entrega a oeste.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sensor-sur",
+      "type": "SERVICE",
+      "name": "Carros esperando · Sur",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 35,
+        "y": 65
+      },
+      "ports": [
+        {
+          "id": "sensor-sur-out",
+          "name": "vehiculos_locales",
+          "direction": "output",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Entrada manual de demanda local.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "0",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "decision-sur",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Decisión local · Sur",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 225,
+        "y": 65
+      },
+      "ports": [
+        {
+          "id": "decision-sur-cars",
+          "name": "vehiculos_locales",
+          "direction": "input",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "decision-sur-demand",
+          "name": "hay_demanda",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "right",
+          "offset": 0.35
+        },
+        {
+          "id": "decision-sur-skip",
+          "name": "sin_demanda",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "right",
+          "offset": 0.7
+        },
+        {
+          "id": "decision-sur-cycle",
+          "name": "ciclo_activo",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Toma el token si hay carros; de lo contrario lo cede conservando rojo.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "codeLanguage": "python",
+        "code": "def calcular(vehiculos_locales):\n    return {\n        'hay_demanda': vehiculos_locales > 0,\n        'sin_demanda': vehiculos_locales <= 0,\n        'ciclo_activo': True,\n    }"
+      }
+    },
+    {
+      "id": "sur-rojo",
+      "type": "PLACE",
+      "name": "🔴 Rojo",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 90,
+        "y": 270
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sur-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 330,
+        "y": 270
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sur-amarillo",
+      "type": "PLACE",
+      "name": "🟡 Amarillo",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 570,
+        "y": 270
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sur-token",
+      "type": "PLACE",
+      "name": "● Token local",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 210,
+        "y": 410
+      },
+      "ports": [],
+      "properties": {
+        "description": "Permiso exclusivo para iniciar un turno.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sur-listo",
+      "type": "PLACE",
+      "name": "Listo para recibir",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 570,
+        "y": 410
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sur-iniciar-verde",
+      "type": "TRANSITION",
+      "name": "Token + demanda → verde",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 210,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "sur-iniciar-verde-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "sur-iniciar-verde-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Token + demanda → verde",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sur-verde-a-amarillo",
+      "type": "TRANSITION",
+      "name": "Verde 3s → amarillo",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 450,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "sur-verde-a-amarillo-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "sur-verde-a-amarillo-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Verde 3s → amarillo",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 3000,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sur-amarillo-a-rojo",
+      "type": "TRANSITION",
+      "name": "Amarillo 1s → rojo y ceder",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 690,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "sur-amarillo-a-rojo-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "sur-amarillo-a-rojo-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Amarillo 1s → rojo y ceder",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 1000,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sur-ceder-sin-demanda",
+      "type": "TRANSITION",
+      "name": "Sin carros → ceder token",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 380,
+        "y": 405
+      },
+      "ports": [
+        {
+          "id": "sur-ceder-sin-demanda-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "sur-ceder-sin-demanda-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Sin carros → ceder token",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sur-recibir-token",
+      "type": "TRANSITION",
+      "name": "Recibir token del anterior",
+      "parentId": "sur-block",
+      "layout": {
+        "x": 690,
+        "y": 405
+      },
+      "ports": [
+        {
+          "id": "sur-recibir-token-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "sur-recibir-token-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Recibir token del anterior",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
       }
     },
     {
@@ -468,14 +1508,14 @@
       "type": "STRUCTURAL_BLOCK",
       "name": "Semáforo Oeste",
       "layout": {
-        "x": 820,
-        "y": 520,
-        "width": 640,
-        "height": 340
+        "x": 60,
+        "y": 660,
+        "width": 780,
+        "height": 520
       },
       "ports": [],
       "properties": {
-        "description": "Recibe el número de vehículos del sentido Oeste y muestra el color decidido automáticamente.",
+        "description": "Nodo autónomo Oeste: usa o cede el token y lo entrega a norte.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -494,16 +1534,16 @@
     {
       "id": "sensor-oeste",
       "type": "SERVICE",
-      "name": "🚗 Sensor Oeste",
+      "name": "Carros esperando · Oeste",
       "parentId": "oeste-block",
       "layout": {
-        "x": 40,
-        "y": 60
+        "x": 35,
+        "y": 65
       },
       "ports": [
         {
           "id": "sensor-oeste-out",
-          "name": "vehiculos_esperando",
+          "name": "vehiculos_locales",
           "direction": "output",
           "dataType": "integer",
           "nature": "continuous",
@@ -512,7 +1552,7 @@
         }
       ],
       "properties": {
-        "description": "Cantidad de vehículos detenidos esperando paso en el sentido Oeste.",
+        "description": "Entrada manual de demanda local.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -529,72 +1569,54 @@
       }
     },
     {
-      "id": "lamparas-oeste",
+      "id": "decision-oeste",
       "type": "FUNCTIONAL_BLOCK",
-      "name": "Lámparas Oeste",
+      "name": "Decisión local · Oeste",
       "parentId": "oeste-block",
       "layout": {
-        "x": 330,
-        "y": 110
+        "x": 225,
+        "y": 65
       },
       "ports": [
         {
-          "id": "lamparas-oeste-luz",
-          "name": "luz",
-          "direction": "input",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.3
-        },
-        {
-          "id": "lamparas-oeste-vehiculos",
-          "name": "vehiculos_esperando",
+          "id": "decision-oeste-cars",
+          "name": "vehiculos_locales",
           "direction": "input",
           "dataType": "integer",
           "nature": "continuous",
           "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "decision-oeste-demand",
+          "name": "hay_demanda",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "right",
+          "offset": 0.35
+        },
+        {
+          "id": "decision-oeste-skip",
+          "name": "sin_demanda",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "right",
           "offset": 0.7
         },
         {
-          "id": "lamparas-oeste-rojo",
-          "name": "rojo",
+          "id": "decision-oeste-cycle",
+          "name": "ciclo_activo",
           "direction": "output",
           "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.2
-        },
-        {
-          "id": "lamparas-oeste-amarillo",
-          "name": "amarillo",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.4
-        },
-        {
-          "id": "lamparas-oeste-verde",
-          "name": "verde",
-          "direction": "output",
-          "dataType": "boolean",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.6
-        },
-        {
-          "id": "lamparas-oeste-vehiculos-out",
-          "name": "vehiculos",
-          "direction": "output",
-          "dataType": "integer",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.8
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
         }
       ],
       "properties": {
-        "description": "Convierte la decisión automática en las señales rojo, amarillo y verde.",
+        "description": "Toma el token si hay carros; de lo contrario lo cede conservando rojo.",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -609,22 +1631,48 @@
         "operatorDirection": "right",
         "rotation": 0,
         "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'vehiculos': vehiculos_esperando,\n    }"
+        "code": "def calcular(vehiculos_locales):\n    return {\n        'hay_demanda': vehiculos_locales > 0,\n        'sin_demanda': vehiculos_locales <= 0,\n        'ciclo_activo': True,\n    }"
       }
     },
     {
-      "id": "control-block",
-      "type": "STRUCTURAL_BLOCK",
-      "name": "Control automático de tráfico",
+      "id": "oeste-rojo",
+      "type": "PLACE",
+      "name": "🔴 Rojo",
+      "parentId": "oeste-block",
       "layout": {
-        "x": 400,
-        "y": 960,
-        "width": 760,
-        "height": 300
+        "x": 90,
+        "y": 270
       },
       "ports": [],
       "properties": {
-        "description": "Suma los carros de cada eje y concede verde al eje con mayor congestión. En empate deja todo rojo.",
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-verde",
+      "type": "PLACE",
+      "name": "🟢 Verde",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 330,
+        "y": 270
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -641,99 +1689,17 @@
       }
     },
     {
-      "id": "control-trafico",
-      "type": "FUNCTIONAL_BLOCK",
-      "name": "Decidir eje con prioridad",
-      "parentId": "control-block",
+      "id": "oeste-amarillo",
+      "type": "PLACE",
+      "name": "🟡 Amarillo",
+      "parentId": "oeste-block",
       "layout": {
-        "x": 260,
-        "y": 90
+        "x": 570,
+        "y": 270
       },
-      "ports": [
-        {
-          "id": "control-vehiculos-norte",
-          "name": "vehiculos_norte",
-          "direction": "input",
-          "dataType": "integer",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.15
-        },
-        {
-          "id": "control-vehiculos-sur",
-          "name": "vehiculos_sur",
-          "direction": "input",
-          "dataType": "integer",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.35
-        },
-        {
-          "id": "control-vehiculos-este",
-          "name": "vehiculos_este",
-          "direction": "input",
-          "dataType": "integer",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.55
-        },
-        {
-          "id": "control-vehiculos-oeste",
-          "name": "vehiculos_oeste",
-          "direction": "input",
-          "dataType": "integer",
-          "nature": "continuous",
-          "side": "left",
-          "offset": 0.7500000000000001
-        },
-        {
-          "id": "control-luz-norte",
-          "name": "luz_norte",
-          "direction": "output",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.15
-        },
-        {
-          "id": "control-luz-sur",
-          "name": "luz_sur",
-          "direction": "output",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.32
-        },
-        {
-          "id": "control-luz-este",
-          "name": "luz_este",
-          "direction": "output",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.49
-        },
-        {
-          "id": "control-luz-oeste",
-          "name": "luz_oeste",
-          "direction": "output",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "right",
-          "offset": 0.66
-        },
-        {
-          "id": "control-eje",
-          "name": "eje",
-          "direction": "output",
-          "dataType": "string",
-          "nature": "continuous",
-          "side": "bottom",
-          "offset": 0.5
-        }
-      ],
+      "ports": [],
       "properties": {
-        "description": "Compara Norte+Sur contra Este+Oeste y produce automáticamente los cuatro colores.",
+        "description": "",
         "collapsed": false,
         "locked": false,
         "visible": true,
@@ -746,9 +1712,291 @@
         "condition": "",
         "heldValue": "",
         "operatorDirection": "right",
-        "rotation": 0,
-        "codeLanguage": "python",
-        "code": "def calcular(**inputs):\n    norte = inputs.get('vehiculos_norte')\n    if norte is None:\n        norte = 0\n    sur = inputs.get('vehiculos_sur')\n    if sur is None:\n        sur = 0\n    este = inputs.get('vehiculos_este')\n    if este is None:\n        este = 0\n    oeste = inputs.get('vehiculos_oeste')\n    if oeste is None:\n        oeste = 0\n    total_norte_sur = norte + sur\n    total_este_oeste = este + oeste\n    luz_norte = 'rojo'\n    luz_sur = 'rojo'\n    luz_este = 'rojo'\n    luz_oeste = 'rojo'\n    eje = 'todo-rojo'\n    if total_norte_sur > total_este_oeste:\n        luz_norte = 'verde'\n        luz_sur = 'verde'\n        eje = 'norte-sur'\n    elif total_este_oeste > total_norte_sur:\n        luz_este = 'verde'\n        luz_oeste = 'verde'\n        eje = 'este-oeste'\n    return {\n        'luz_norte': luz_norte,\n        'luz_sur': luz_sur,\n        'luz_este': luz_este,\n        'luz_oeste': luz_oeste,\n        'eje': eje,\n    }"
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-token",
+      "type": "PLACE",
+      "name": "● Token local",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 210,
+        "y": 410
+      },
+      "ports": [],
+      "properties": {
+        "description": "Permiso exclusivo para iniciar un turno.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-listo",
+      "type": "PLACE",
+      "name": "Listo para recibir",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 570,
+        "y": 410
+      },
+      "ports": [],
+      "properties": {
+        "description": "",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 1,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-iniciar-verde",
+      "type": "TRANSITION",
+      "name": "Token + demanda → verde",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 210,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "oeste-iniciar-verde-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "oeste-iniciar-verde-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Token + demanda → verde",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-verde-a-amarillo",
+      "type": "TRANSITION",
+      "name": "Verde 3s → amarillo",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 450,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "oeste-verde-a-amarillo-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "oeste-verde-a-amarillo-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Verde 3s → amarillo",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 3000,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-amarillo-a-rojo",
+      "type": "TRANSITION",
+      "name": "Amarillo 1s → rojo y ceder",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 690,
+        "y": 265
+      },
+      "ports": [
+        {
+          "id": "oeste-amarillo-a-rojo-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "oeste-amarillo-a-rojo-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Amarillo 1s → rojo y ceder",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 1000,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-ceder-sin-demanda",
+      "type": "TRANSITION",
+      "name": "Sin carros → ceder token",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 380,
+        "y": 405
+      },
+      "ports": [
+        {
+          "id": "oeste-ceder-sin-demanda-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "oeste-ceder-sin-demanda-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Sin carros → ceder token",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "oeste-recibir-token",
+      "type": "TRANSITION",
+      "name": "Recibir token del anterior",
+      "parentId": "oeste-block",
+      "layout": {
+        "x": 690,
+        "y": 405
+      },
+      "ports": [
+        {
+          "id": "oeste-recibir-token-cond",
+          "name": "condicion",
+          "direction": "input",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "top",
+          "offset": 0.5
+        },
+        {
+          "id": "oeste-recibir-token-action",
+          "name": "accion",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "control",
+          "side": "bottom",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Recibir token del anterior",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
       }
     }
   ],
@@ -757,45 +2005,79 @@
       "nodeId": "norte-block",
       "elementIds": [
         "sensor-norte",
-        "lamparas-norte"
-      ]
-    },
-    {
-      "nodeId": "sur-block",
-      "elementIds": [
-        "sensor-sur",
-        "lamparas-sur"
+        "decision-norte",
+        "norte-rojo",
+        "norte-verde",
+        "norte-amarillo",
+        "norte-token",
+        "norte-listo",
+        "norte-iniciar-verde",
+        "norte-verde-a-amarillo",
+        "norte-amarillo-a-rojo",
+        "norte-ceder-sin-demanda",
+        "norte-recibir-token"
       ]
     },
     {
       "nodeId": "este-block",
       "elementIds": [
         "sensor-este",
-        "lamparas-este"
+        "decision-este",
+        "este-rojo",
+        "este-verde",
+        "este-amarillo",
+        "este-token",
+        "este-listo",
+        "este-iniciar-verde",
+        "este-verde-a-amarillo",
+        "este-amarillo-a-rojo",
+        "este-ceder-sin-demanda",
+        "este-recibir-token"
+      ]
+    },
+    {
+      "nodeId": "sur-block",
+      "elementIds": [
+        "sensor-sur",
+        "decision-sur",
+        "sur-rojo",
+        "sur-verde",
+        "sur-amarillo",
+        "sur-token",
+        "sur-listo",
+        "sur-iniciar-verde",
+        "sur-verde-a-amarillo",
+        "sur-amarillo-a-rojo",
+        "sur-ceder-sin-demanda",
+        "sur-recibir-token"
       ]
     },
     {
       "nodeId": "oeste-block",
       "elementIds": [
         "sensor-oeste",
-        "lamparas-oeste"
-      ]
-    },
-    {
-      "nodeId": "control-block",
-      "elementIds": [
-        "control-trafico"
+        "decision-oeste",
+        "oeste-rojo",
+        "oeste-verde",
+        "oeste-amarillo",
+        "oeste-token",
+        "oeste-listo",
+        "oeste-iniciar-verde",
+        "oeste-verde-a-amarillo",
+        "oeste-amarillo-a-rojo",
+        "oeste-ceder-sin-demanda",
+        "oeste-recibir-token"
       ]
     }
   ],
   "connections": [
     {
-      "id": "cch-sensor-norte",
+      "id": "cch-norte-cars",
       "source": "sensor-norte",
       "sourceHandle": "sensor-norte-out",
-      "target": "lamparas-norte",
-      "targetHandle": "lamparas-norte-vehiculos",
-      "label": "CCH · vehículos esperando",
+      "target": "decision-norte",
+      "targetHandle": "decision-norte-cars",
+      "label": "CCH · carros locales",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
@@ -808,17 +2090,17 @@
       }
     },
     {
-      "id": "cch-sensor-sur",
-      "source": "sensor-sur",
-      "sourceHandle": "sensor-sur-out",
-      "target": "lamparas-sur",
-      "targetHandle": "lamparas-sur-vehiculos",
-      "label": "CCH · vehículos esperando",
+      "id": "lch-norte-demand",
+      "source": "decision-norte",
+      "sourceHandle": "decision-norte-demand",
+      "target": "norte-iniciar-verde",
+      "targetHandle": "norte-iniciar-verde-cond",
+      "label": "LCH · hay demanda",
       "type": "hilesEdge",
       "data": {
-        "hilesConnectionType": "CONTINUOUS",
+        "hilesConnectionType": "PETRI",
         "routing": "orthogonal",
-        "dataType": "integer",
+        "dataType": "boolean",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -826,12 +2108,287 @@
       }
     },
     {
-      "id": "cch-sensor-este",
+      "id": "lch-norte-skip",
+      "source": "decision-norte",
+      "sourceHandle": "decision-norte-skip",
+      "target": "norte-ceder-sin-demanda",
+      "targetHandle": "norte-ceder-sin-demanda-cond",
+      "label": "LCH · sin demanda",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-norte-green-clock",
+      "source": "decision-norte",
+      "sourceHandle": "decision-norte-cycle",
+      "target": "norte-verde-a-amarillo",
+      "targetHandle": "norte-verde-a-amarillo-cond",
+      "label": "LCH · temporizar verde",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-norte-yellow-clock",
+      "source": "decision-norte",
+      "sourceHandle": "decision-norte-cycle",
+      "target": "norte-amarillo-a-rojo",
+      "targetHandle": "norte-amarillo-a-rojo-cond",
+      "label": "LCH · temporizar amarillo",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-red-start",
+      "source": "norte-rojo",
+      "sourceHandle": "petri-out",
+      "target": "norte-iniciar-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-token-start",
+      "source": "norte-token",
+      "sourceHandle": "petri-out",
+      "target": "norte-iniciar-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-start-green",
+      "source": "norte-iniciar-verde",
+      "sourceHandle": "petri-out",
+      "target": "norte-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-green-yellow",
+      "source": "norte-verde",
+      "sourceHandle": "petri-out",
+      "target": "norte-verde-a-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-to-yellow",
+      "source": "norte-verde-a-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "norte-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-yellow-release",
+      "source": "norte-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "norte-amarillo-a-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-release-red",
+      "source": "norte-amarillo-a-rojo",
+      "sourceHandle": "petri-out",
+      "target": "norte-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-red-skip",
+      "source": "norte-rojo",
+      "sourceHandle": "petri-out",
+      "target": "norte-ceder-sin-demanda",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-token-skip",
+      "source": "norte-token",
+      "sourceHandle": "petri-out",
+      "target": "norte-ceder-sin-demanda",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-skip-red",
+      "source": "norte-ceder-sin-demanda",
+      "sourceHandle": "petri-out",
+      "target": "norte-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-ready-receive",
+      "source": "norte-listo",
+      "sourceHandle": "petri-out",
+      "target": "norte-recibir-token",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-receive-ready",
+      "source": "norte-recibir-token",
+      "sourceHandle": "petri-out",
+      "target": "norte-listo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-norte-receive-token",
+      "source": "norte-recibir-token",
+      "sourceHandle": "petri-out",
+      "target": "norte-token",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-este-cars",
       "source": "sensor-este",
       "sourceHandle": "sensor-este-out",
-      "target": "lamparas-este",
-      "targetHandle": "lamparas-este-vehiculos",
-      "label": "CCH · vehículos esperando",
+      "target": "decision-este",
+      "targetHandle": "decision-este-cars",
+      "label": "CCH · carros locales",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
@@ -844,17 +2401,17 @@
       }
     },
     {
-      "id": "cch-sensor-oeste",
-      "source": "sensor-oeste",
-      "sourceHandle": "sensor-oeste-out",
-      "target": "lamparas-oeste",
-      "targetHandle": "lamparas-oeste-vehiculos",
-      "label": "CCH · vehículos esperando",
+      "id": "lch-este-demand",
+      "source": "decision-este",
+      "sourceHandle": "decision-este-demand",
+      "target": "este-iniciar-verde",
+      "targetHandle": "este-iniciar-verde-cond",
+      "label": "LCH · hay demanda",
       "type": "hilesEdge",
       "data": {
-        "hilesConnectionType": "CONTINUOUS",
+        "hilesConnectionType": "PETRI",
         "routing": "orthogonal",
-        "dataType": "integer",
+        "dataType": "boolean",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -862,17 +2419,17 @@
       }
     },
     {
-      "id": "cch-control-sensor-norte",
-      "source": "sensor-norte",
-      "sourceHandle": "sensor-norte-out",
-      "target": "control-trafico",
-      "targetHandle": "control-vehiculos-norte",
-      "label": "CCH · carros Norte",
+      "id": "lch-este-skip",
+      "source": "decision-este",
+      "sourceHandle": "decision-este-skip",
+      "target": "este-ceder-sin-demanda",
+      "targetHandle": "este-ceder-sin-demanda-cond",
+      "label": "LCH · sin demanda",
       "type": "hilesEdge",
       "data": {
-        "hilesConnectionType": "CONTINUOUS",
+        "hilesConnectionType": "PETRI",
         "routing": "orthogonal",
-        "dataType": "integer",
+        "dataType": "boolean",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -880,17 +2437,17 @@
       }
     },
     {
-      "id": "cch-control-luz-norte",
-      "source": "control-trafico",
-      "sourceHandle": "control-luz-norte",
-      "target": "lamparas-norte",
-      "targetHandle": "lamparas-norte-luz",
-      "label": "CCH · decisión Norte",
+      "id": "lch-este-green-clock",
+      "source": "decision-este",
+      "sourceHandle": "decision-este-cycle",
+      "target": "este-verde-a-amarillo",
+      "targetHandle": "este-verde-a-amarillo-cond",
+      "label": "LCH · temporizar verde",
       "type": "hilesEdge",
       "data": {
-        "hilesConnectionType": "CONTINUOUS",
+        "hilesConnectionType": "PETRI",
         "routing": "orthogonal",
-        "dataType": "string",
+        "dataType": "boolean",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -898,12 +2455,251 @@
       }
     },
     {
-      "id": "cch-control-sensor-sur",
+      "id": "lch-este-yellow-clock",
+      "source": "decision-este",
+      "sourceHandle": "decision-este-cycle",
+      "target": "este-amarillo-a-rojo",
+      "targetHandle": "este-amarillo-a-rojo-cond",
+      "label": "LCH · temporizar amarillo",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-red-start",
+      "source": "este-rojo",
+      "sourceHandle": "petri-out",
+      "target": "este-iniciar-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-token-start",
+      "source": "este-token",
+      "sourceHandle": "petri-out",
+      "target": "este-iniciar-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-start-green",
+      "source": "este-iniciar-verde",
+      "sourceHandle": "petri-out",
+      "target": "este-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-green-yellow",
+      "source": "este-verde",
+      "sourceHandle": "petri-out",
+      "target": "este-verde-a-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-to-yellow",
+      "source": "este-verde-a-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "este-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-yellow-release",
+      "source": "este-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "este-amarillo-a-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-release-red",
+      "source": "este-amarillo-a-rojo",
+      "sourceHandle": "petri-out",
+      "target": "este-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-red-skip",
+      "source": "este-rojo",
+      "sourceHandle": "petri-out",
+      "target": "este-ceder-sin-demanda",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-token-skip",
+      "source": "este-token",
+      "sourceHandle": "petri-out",
+      "target": "este-ceder-sin-demanda",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-skip-red",
+      "source": "este-ceder-sin-demanda",
+      "sourceHandle": "petri-out",
+      "target": "este-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-ready-receive",
+      "source": "este-listo",
+      "sourceHandle": "petri-out",
+      "target": "este-recibir-token",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-receive-ready",
+      "source": "este-recibir-token",
+      "sourceHandle": "petri-out",
+      "target": "este-listo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-este-receive-token",
+      "source": "este-recibir-token",
+      "sourceHandle": "petri-out",
+      "target": "este-token",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-sur-cars",
       "source": "sensor-sur",
       "sourceHandle": "sensor-sur-out",
-      "target": "control-trafico",
-      "targetHandle": "control-vehiculos-sur",
-      "label": "CCH · carros Sur",
+      "target": "decision-sur",
+      "targetHandle": "decision-sur-cars",
+      "label": "CCH · carros locales",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
@@ -916,17 +2712,17 @@
       }
     },
     {
-      "id": "cch-control-luz-sur",
-      "source": "control-trafico",
-      "sourceHandle": "control-luz-sur",
-      "target": "lamparas-sur",
-      "targetHandle": "lamparas-sur-luz",
-      "label": "CCH · decisión Sur",
+      "id": "lch-sur-demand",
+      "source": "decision-sur",
+      "sourceHandle": "decision-sur-demand",
+      "target": "sur-iniciar-verde",
+      "targetHandle": "sur-iniciar-verde-cond",
+      "label": "LCH · hay demanda",
       "type": "hilesEdge",
       "data": {
-        "hilesConnectionType": "CONTINUOUS",
+        "hilesConnectionType": "PETRI",
         "routing": "orthogonal",
-        "dataType": "string",
+        "dataType": "boolean",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -934,17 +2730,17 @@
       }
     },
     {
-      "id": "cch-control-sensor-este",
-      "source": "sensor-este",
-      "sourceHandle": "sensor-este-out",
-      "target": "control-trafico",
-      "targetHandle": "control-vehiculos-este",
-      "label": "CCH · carros Este",
+      "id": "lch-sur-skip",
+      "source": "decision-sur",
+      "sourceHandle": "decision-sur-skip",
+      "target": "sur-ceder-sin-demanda",
+      "targetHandle": "sur-ceder-sin-demanda-cond",
+      "label": "LCH · sin demanda",
       "type": "hilesEdge",
       "data": {
-        "hilesConnectionType": "CONTINUOUS",
+        "hilesConnectionType": "PETRI",
         "routing": "orthogonal",
-        "dataType": "integer",
+        "dataType": "boolean",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -952,17 +2748,17 @@
       }
     },
     {
-      "id": "cch-control-luz-este",
-      "source": "control-trafico",
-      "sourceHandle": "control-luz-este",
-      "target": "lamparas-este",
-      "targetHandle": "lamparas-este-luz",
-      "label": "CCH · decisión Este",
+      "id": "lch-sur-green-clock",
+      "source": "decision-sur",
+      "sourceHandle": "decision-sur-cycle",
+      "target": "sur-verde-a-amarillo",
+      "targetHandle": "sur-verde-a-amarillo-cond",
+      "label": "LCH · temporizar verde",
       "type": "hilesEdge",
       "data": {
-        "hilesConnectionType": "CONTINUOUS",
+        "hilesConnectionType": "PETRI",
         "routing": "orthogonal",
-        "dataType": "string",
+        "dataType": "boolean",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",
@@ -970,12 +2766,251 @@
       }
     },
     {
-      "id": "cch-control-sensor-oeste",
+      "id": "lch-sur-yellow-clock",
+      "source": "decision-sur",
+      "sourceHandle": "decision-sur-cycle",
+      "target": "sur-amarillo-a-rojo",
+      "targetHandle": "sur-amarillo-a-rojo-cond",
+      "label": "LCH · temporizar amarillo",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-red-start",
+      "source": "sur-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sur-iniciar-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-token-start",
+      "source": "sur-token",
+      "sourceHandle": "petri-out",
+      "target": "sur-iniciar-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-start-green",
+      "source": "sur-iniciar-verde",
+      "sourceHandle": "petri-out",
+      "target": "sur-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-green-yellow",
+      "source": "sur-verde",
+      "sourceHandle": "petri-out",
+      "target": "sur-verde-a-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-to-yellow",
+      "source": "sur-verde-a-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sur-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-yellow-release",
+      "source": "sur-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "sur-amarillo-a-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-release-red",
+      "source": "sur-amarillo-a-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sur-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-red-skip",
+      "source": "sur-rojo",
+      "sourceHandle": "petri-out",
+      "target": "sur-ceder-sin-demanda",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-token-skip",
+      "source": "sur-token",
+      "sourceHandle": "petri-out",
+      "target": "sur-ceder-sin-demanda",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-skip-red",
+      "source": "sur-ceder-sin-demanda",
+      "sourceHandle": "petri-out",
+      "target": "sur-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-ready-receive",
+      "source": "sur-listo",
+      "sourceHandle": "petri-out",
+      "target": "sur-recibir-token",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-receive-ready",
+      "source": "sur-recibir-token",
+      "sourceHandle": "petri-out",
+      "target": "sur-listo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-sur-receive-token",
+      "source": "sur-recibir-token",
+      "sourceHandle": "petri-out",
+      "target": "sur-token",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-oeste-cars",
       "source": "sensor-oeste",
       "sourceHandle": "sensor-oeste-out",
-      "target": "control-trafico",
-      "targetHandle": "control-vehiculos-oeste",
-      "label": "CCH · carros Oeste",
+      "target": "decision-oeste",
+      "targetHandle": "decision-oeste-cars",
+      "label": "CCH · carros locales",
       "type": "hilesEdge",
       "data": {
         "hilesConnectionType": "CONTINUOUS",
@@ -988,17 +3023,436 @@
       }
     },
     {
-      "id": "cch-control-luz-oeste",
-      "source": "control-trafico",
-      "sourceHandle": "control-luz-oeste",
-      "target": "lamparas-oeste",
-      "targetHandle": "lamparas-oeste-luz",
-      "label": "CCH · decisión Oeste",
+      "id": "lch-oeste-demand",
+      "source": "decision-oeste",
+      "sourceHandle": "decision-oeste-demand",
+      "target": "oeste-iniciar-verde",
+      "targetHandle": "oeste-iniciar-verde-cond",
+      "label": "LCH · hay demanda",
       "type": "hilesEdge",
       "data": {
-        "hilesConnectionType": "CONTINUOUS",
+        "hilesConnectionType": "PETRI",
         "routing": "orthogonal",
-        "dataType": "string",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-oeste-skip",
+      "source": "decision-oeste",
+      "sourceHandle": "decision-oeste-skip",
+      "target": "oeste-ceder-sin-demanda",
+      "targetHandle": "oeste-ceder-sin-demanda-cond",
+      "label": "LCH · sin demanda",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-oeste-green-clock",
+      "source": "decision-oeste",
+      "sourceHandle": "decision-oeste-cycle",
+      "target": "oeste-verde-a-amarillo",
+      "targetHandle": "oeste-verde-a-amarillo-cond",
+      "label": "LCH · temporizar verde",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-oeste-yellow-clock",
+      "source": "decision-oeste",
+      "sourceHandle": "decision-oeste-cycle",
+      "target": "oeste-amarillo-a-rojo",
+      "targetHandle": "oeste-amarillo-a-rojo-cond",
+      "label": "LCH · temporizar amarillo",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-red-start",
+      "source": "oeste-rojo",
+      "sourceHandle": "petri-out",
+      "target": "oeste-iniciar-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-token-start",
+      "source": "oeste-token",
+      "sourceHandle": "petri-out",
+      "target": "oeste-iniciar-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-start-green",
+      "source": "oeste-iniciar-verde",
+      "sourceHandle": "petri-out",
+      "target": "oeste-verde",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-green-yellow",
+      "source": "oeste-verde",
+      "sourceHandle": "petri-out",
+      "target": "oeste-verde-a-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-to-yellow",
+      "source": "oeste-verde-a-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "oeste-amarillo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-yellow-release",
+      "source": "oeste-amarillo",
+      "sourceHandle": "petri-out",
+      "target": "oeste-amarillo-a-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-release-red",
+      "source": "oeste-amarillo-a-rojo",
+      "sourceHandle": "petri-out",
+      "target": "oeste-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-red-skip",
+      "source": "oeste-rojo",
+      "sourceHandle": "petri-out",
+      "target": "oeste-ceder-sin-demanda",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-token-skip",
+      "source": "oeste-token",
+      "sourceHandle": "petri-out",
+      "target": "oeste-ceder-sin-demanda",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-skip-red",
+      "source": "oeste-ceder-sin-demanda",
+      "sourceHandle": "petri-out",
+      "target": "oeste-rojo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-ready-receive",
+      "source": "oeste-listo",
+      "sourceHandle": "petri-out",
+      "target": "oeste-recibir-token",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-receive-ready",
+      "source": "oeste-recibir-token",
+      "sourceHandle": "petri-out",
+      "target": "oeste-listo",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "arc-oeste-receive-token",
+      "source": "oeste-recibir-token",
+      "sourceHandle": "petri-out",
+      "target": "oeste-token",
+      "targetHandle": "petri-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-token-norte-amarillo-a-rojo-a-este",
+      "source": "norte-amarillo-a-rojo",
+      "sourceHandle": "norte-amarillo-a-rojo-action",
+      "target": "este-recibir-token",
+      "targetHandle": "este-recibir-token-cond",
+      "label": "TOKEN · Norte → este",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-token-norte-ceder-sin-demanda-a-este",
+      "source": "norte-ceder-sin-demanda",
+      "sourceHandle": "norte-ceder-sin-demanda-action",
+      "target": "este-recibir-token",
+      "targetHandle": "este-recibir-token-cond",
+      "label": "TOKEN · Norte → este",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-token-este-amarillo-a-rojo-a-sur",
+      "source": "este-amarillo-a-rojo",
+      "sourceHandle": "este-amarillo-a-rojo-action",
+      "target": "sur-recibir-token",
+      "targetHandle": "sur-recibir-token-cond",
+      "label": "TOKEN · Este → sur",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-token-este-ceder-sin-demanda-a-sur",
+      "source": "este-ceder-sin-demanda",
+      "sourceHandle": "este-ceder-sin-demanda-action",
+      "target": "sur-recibir-token",
+      "targetHandle": "sur-recibir-token-cond",
+      "label": "TOKEN · Este → sur",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-token-sur-amarillo-a-rojo-a-oeste",
+      "source": "sur-amarillo-a-rojo",
+      "sourceHandle": "sur-amarillo-a-rojo-action",
+      "target": "oeste-recibir-token",
+      "targetHandle": "oeste-recibir-token-cond",
+      "label": "TOKEN · Sur → oeste",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-token-sur-ceder-sin-demanda-a-oeste",
+      "source": "sur-ceder-sin-demanda",
+      "sourceHandle": "sur-ceder-sin-demanda-action",
+      "target": "oeste-recibir-token",
+      "targetHandle": "oeste-recibir-token-cond",
+      "label": "TOKEN · Sur → oeste",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-token-oeste-amarillo-a-rojo-a-norte",
+      "source": "oeste-amarillo-a-rojo",
+      "sourceHandle": "oeste-amarillo-a-rojo-action",
+      "target": "norte-recibir-token",
+      "targetHandle": "norte-recibir-token-cond",
+      "label": "TOKEN · Oeste → norte",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "lch-token-oeste-ceder-sin-demanda-a-norte",
+      "source": "oeste-ceder-sin-demanda",
+      "sourceHandle": "oeste-ceder-sin-demanda-action",
+      "target": "norte-recibir-token",
+      "targetHandle": "norte-recibir-token-cond",
+      "label": "TOKEN · Oeste → norte",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "PETRI",
+        "routing": "orthogonal",
+        "dataType": "boolean",
         "delay": 0,
         "weight": 1,
         "propagationMode": "push",

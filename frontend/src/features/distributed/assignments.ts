@@ -1,5 +1,9 @@
 import type { Node } from '@xyflow/react';
-import { HilesElementType, type HilesNodeData } from '../../types/hiles';
+import {
+  HilesElementType,
+  type HilesNodeData,
+  type HilesNodeProperties,
+} from '../../types/hiles';
 import type {
   EjecutorDisponibleV3,
   EstadoEjecutorV3,
@@ -19,7 +23,7 @@ import type {
  * colaborativa v2 como cualquier otra edición: un cambio produce una sola
  * operación `node.update` deduplicada por `operationId`.
  */
-export const CLAVE_DESTINO = 'deploymentTarget';
+export const CLAVE_DESTINO = 'deploymentTarget' as const;
 
 export type NodoHiles = Node<HilesNodeData>;
 
@@ -33,12 +37,14 @@ const EJECUTABLES = new Set<HilesElementType>([
 ]);
 
 export const obtenerDestino = (nodo: NodoHiles): string | null => {
-  const valor = (nodo.data.properties as unknown as Record<string, unknown>)[CLAVE_DESTINO];
+  const valor = nodo.data.properties.deploymentTarget;
   return typeof valor === 'string' && valor.trim() ? valor : null;
 };
 
 /** Cambios de propiedades para asignar o quitar un ejecutor. */
-export const cambioDestino = (executorId: string | null): Record<string, string | undefined> => ({
+export const cambioDestino = (
+  executorId: string | null,
+): Pick<HilesNodeProperties, 'deploymentTarget'> => ({
   [CLAVE_DESTINO]: executorId ?? undefined,
 });
 

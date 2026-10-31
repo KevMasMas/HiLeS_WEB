@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { HilesModelDocument } from '../../domain/modelDocument';
 import { fixturesDistribucionV3, topicsDistribuidosV3 } from '../distributed';
+import { compilarModeloEditorAIrV2 } from './compiladorIrV2';
 import {
   particionarIrV2Distribuida,
   resolverAsignacionesDistribuidasV3,
@@ -223,6 +224,50 @@ describe('protocolo de ejecución distribuida v3', () => {
     },
   );
 
+  it('divide el anillo vial en cuatro nodos y ocho cesiones remotas sin orquestador', async () => {
+    const dirActual = dirname(fileURLToPath(import.meta.url));
+    const rutaDemo = resolve(dirActual, '../../../../output/demo-4-semaforos-distribuidos.json');
+    const documentoVial = JSON.parse(readFileSync(rutaDemo, 'utf8')) as HilesModelDocument;
+    const compilado = compilarModeloEditorAIrV2(documentoVial);
+    expect(compilado.ok).toBe(true);
+    expect(compilado.modelo).not.toBeNull();
+    if (!compilado.modelo) return;
+
+    const destinos = {
+      'norte-block': 'pico:norte',
+      'sur-block': 'browser:sur',
+      'este-block': 'browser:este',
+      'oeste-block': 'pico:oeste',
+    };
+    const resuelto = resolverAsignacionesDistribuidasV3({
+      documento: documentoVial,
+      modelo: compilado.modelo,
+      plan: { structural_blocks: destinos },
+    });
+    expect(resuelto.errores).toEqual([]);
+
+    const resultado = await particionarIrV2Distribuida({
+      project_id: 'demo-semaforos-pares',
+      deployment_id: 'deploy-semaforos-pares',
+      epoch: 1,
+      modelo: compilado.modelo,
+      ejecutores: [
+        executor('pico:norte', 'pico'),
+        executor('browser:sur'),
+        executor('browser:este'),
+        executor('pico:oeste', 'pico'),
+      ],
+      asignaciones: resuelto.asignaciones,
+    });
+    expect(resultado.ok).toBe(true);
+    if (!resultado.ok) return;
+    expect(resultado.fragments).toHaveLength(4);
+    expect(resultado.manifest.routes).toHaveLength(8);
+    expect(resultado.fragments.every((fragmento) => fragmento.modelo.elementos.length === 12)).toBe(true);
+    expect(resultado.manifest.routes.every((ruta) => ruta.source_executor_id !== ruta.target_executor_id)).toBe(true);
+    expect(resultado.manifest.routes.every((ruta) => ruta.tipo === 'lch')).toBe(true);
+  });
+
   it('rechaza un destino ausente con un error legible y no produce despliegue parcial', async () => {
     const resuelto = resolver({
       structural_blocks: {
@@ -372,8 +417,6 @@ describe('protocolo de ejecución distribuida v3', () => {
   it('mantiene sincronizados los vectores de conformidad v3 compartidos con MicroPython', async () => {
     const dirActual = dirname(fileURLToPath(import.meta.url));
     const dirVectores = resolve(dirActual, '../../../../docs/mqtt/vectores_v3');
-    mkdirSync(dirVectores, { recursive: true });
-
     const escenarios = await Promise.all(
       fixturesDistribucionV3.map(async (fixture) => {
         const resuelto = resolver(fixture.plan);
@@ -414,9 +457,7 @@ describe('protocolo de ejecución distribuida v3', () => {
 
     const archivo = resolve(dirVectores, '01_fixtures_distribucion_v3.json');
     const contenidoEsperado = `${JSON.stringify({ version_contrato: 3, modelo, escenarios }, null, 2)}\n`;
-    if (!existsSync(archivo)) {
-      writeFileSync(archivo, contenidoEsperado, 'utf8');
-    }
+    expect(existsSync(archivo), 'El vector v3 compartido debe estar versionado').toBe(true);
     const contenidoEnDisco = readFileSync(archivo, 'utf8').replace(/\r\n/g, '\n');
     expect(contenidoEnDisco).toBe(contenidoEsperado);
   });

@@ -216,4 +216,3 @@ V3_POLICIES = {
     "command": {"qos": 1, "retain": False},
     "input": {"qos": 1, "retain": False},
 }
-

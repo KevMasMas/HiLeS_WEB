@@ -109,7 +109,7 @@
         "sensor": { "valor": 70 },
         "condicion": { "salida": true },
         "espera": { "tokens": 0 },
-        "transicion": { "habilitada": true, "disparada": true },
+        "transicion": { "habilitada": false, "disparada": true },
         "activo": { "tokens": 1 }
       }
     },

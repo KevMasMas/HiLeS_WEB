@@ -83,9 +83,16 @@ try {
         'config_local.example.py',
         'core/__init__.py',
         'devices/__init__.py',
+        'devices/watchdog_task.py',
         'hiles/__init__.py',
+        'hiles/distributed_worker.py',
+        'hiles/engine_task_v2.py',
+        'hiles/engine_v2.py',
+        'hiles/python_executor.py',
         'platform/__init__.py',
         'pubsub/__init__.py',
+        'pubsub/mqtt_transport.py',
+        'pubsub/topics.py',
         'LEEME_PRIMERO.md'
     )) {
         if ($required -notin $entryNames) {

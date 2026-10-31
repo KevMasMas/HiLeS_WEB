@@ -221,7 +221,9 @@ class HilesEngineV2:
         elif elemento.tipo == "hold":
             self.pulsos[elemento.id] = any(p == elemento.puerto_lch and v is True for p, v in salidas)
 
-        if elemento.retardo_ms > 0:
+        # En una Transition el retardo ya gobierna el disparo Petri. Aplicarlo
+        # otra vez a su acción duplicaría el tiempo configurado.
+        if elemento.retardo_ms > 0 and not isinstance(elemento, TransitionV2):
             salidas = self._apply_element_delay(elemento, salidas)
 
         if salidas:

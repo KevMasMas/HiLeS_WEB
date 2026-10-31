@@ -150,11 +150,9 @@ export const construirModeloEjecutable = (fragmento: FragmentoDespliegueV3): IrM
     salidas: ['out'],
     entradas: [],
   }));
-  // En la Pico una ruta remota entrante entrega cada mensaje una sola vez al
-  // inicio del paso. Un Service conectado por DCH emite únicamente las muestras
-  // inyectadas, así que reproduce esa entrega única tanto para CCH como para DCH.
-  // LCH se conserva como LCH para que el pulso hacia una Transition se limpie al
-  // cerrar el paso.
+  // El proxy discreto entrega cada mensaje remoto una sola vez. Para CCH, las
+  // actualizaciones recibidas antes del paso se coalescen abajo al último valor;
+  // así no se vuelve a emitir indefinidamente el valor retenido del Service.
   const conexiones: IrConexionV2[] = fragmento.inbound_routes.map((ruta) => ({
     id: `${PREFIJO_PROXY_REMOTO}${ruta.connection_id}`,
     tipo: ruta.tipo === 'lch' ? 'lch' : 'dch',
@@ -162,9 +160,9 @@ export const construirModeloEjecutable = (fragmento: FragmentoDespliegueV3): IrM
     puerto_origen: 'out',
     destino: ruta.target_element_id,
     puerto_destino: ruta.target_port_id,
-    ...(ruta.tipo === 'lch'
-      ? {}
-      : { capacidad_cola: ruta.tipo === 'dch' && typeof ruta.capacidad_cola === 'number' ? ruta.capacidad_cola : 32 }),
+    ...(ruta.tipo === 'dch'
+      ? { capacidad_cola: typeof ruta.capacidad_cola === 'number' ? ruta.capacidad_cola : 32 }
+      : {}),
   }) as IrConexionV2);
   return {
     ...fragmento.modelo,
@@ -192,6 +190,7 @@ export class MotorFragmentoNavegador {
   private readonly servicios: ReadonlyMap<string, IrServiceElementV2>;
   private readonly ultimoCch = new Map<string, unknown>();
   private readonly muestrasServicio = new Map<string, IrValorRuntimeV2[]>();
+  private readonly entradasCchPendientes = new Map<string, IrValorRuntimeV2>();
   private diferidas: EntregaRemotaDiferida[] = [];
 
   readonly fragmento: FragmentoDespliegueV3;
@@ -242,12 +241,25 @@ export class MotorFragmentoNavegador {
   inyectarRemoto(connectionId: string, valor: IrValorRuntimeV2): void {
     const ruta = this.rutasEntrada.get(connectionId);
     if (!ruta) throw new Error(`La ruta remota ${connectionId} no pertenece a este fragmento.`);
+    if (ruta.tipo === 'cch') {
+      this.entradasCchPendientes.set(connectionId, valor);
+      return;
+    }
+    this.inyectarProxy(connectionId, valor);
+  }
+
+  private inyectarProxy(connectionId: string, valor: IrValorRuntimeV2): void {
     const resultado = this.motor.inyectarEntrada(`${PREFIJO_PROXY_REMOTO}${connectionId}`, valor);
     if (!resultado.exito) throw new Error(resultado.mensaje);
   }
 
   async paso(avanceMs: number): Promise<void> {
     const relojDestino = this.motor.obtenerRelojMs() + Math.max(0, Math.trunc(avanceMs));
+    if (this.entradasCchPendientes.size > 0) {
+      const pendientes = [...this.entradasCchPendientes.entries()];
+      this.entradasCchPendientes.clear();
+      pendientes.forEach(([connectionId, valor]) => this.inyectarProxy(connectionId, valor));
+    }
     if (this.diferidas.length > 0) {
       const vencidas = this.diferidas.filter((entrega) => entrega.venceEnMs <= relojDestino);
       this.diferidas = this.diferidas.filter((entrega) => entrega.venceEnMs > relojDestino);
@@ -264,6 +276,7 @@ export class MotorFragmentoNavegador {
     this.motor.reiniciar();
     this.ultimoCch.clear();
     this.muestrasServicio.clear();
+    this.entradasCchPendientes.clear();
     this.diferidas = [];
   }
 
@@ -278,7 +291,7 @@ export class MotorFragmentoNavegador {
   }
 
   tieneTrabajoPendiente(): boolean {
-    return this.diferidas.length > 0;
+    return this.diferidas.length > 0 || this.entradasCchPendientes.size > 0;
   }
 
   private alEmitir(ruta: RutaRemotaV3, origenId: string, valor: IrValorRuntimeV2): void {

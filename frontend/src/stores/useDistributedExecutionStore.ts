@@ -12,7 +12,7 @@ import type {
 import { compilarDocumentoAIrV2 } from '../services/ir/compiladorIrV2';
 import { particionarIrV2Distribuida, resolverAsignacionesDistribuidasV3, serializarCanonico } from '../services/ir/particionarIr';
 import { PROTOCOLO_EJECUCION_DISTRIBUIDA_VERSION, type ManifiestoDespliegueV3 } from '../services/ir/tiposIrDistribuida';
-import type { HilesNodeData, HilesNodeProperties } from '../types/hiles';
+import type { HilesNodeData } from '../types/hiles';
 import { safeRandomUUID } from '../utils/uuid';
 import {
   aceptarSnapshot,
@@ -295,7 +295,7 @@ export const useDistributedExecutionStore = create<DistributedExecutionState>((s
   asignar: (nodoId, executorId) => {
     // Un solo cambio de propiedad: la colaboración v2 lo publica una vez y
     // los demás navegadores lo aplican por operationId sin duplicarlo.
-    useEditorStore.getState().updateNodeProperties(nodoId, cambioDestino(executorId) as unknown as Partial<HilesNodeProperties>);
+    useEditorStore.getState().updateNodeProperties(nodoId, cambioDestino(executorId));
   },
 
   desplegar: async () => {

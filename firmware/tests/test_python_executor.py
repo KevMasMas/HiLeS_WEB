@@ -71,6 +71,45 @@ class PythonExecutorTests(unittest.TestCase):
         scalar = PythonExecutor("fb-mal", "x + 1", ["x"], ["a", "b"])
         self.assert_code(PYTHON_SALIDA_INVALIDA, lambda: scalar.execute({"x": 1}))
 
+    def test_distributed_traffic_demo_has_four_local_demand_decisions(self):
+        root = Path(__file__).resolve().parents[2]
+        document = json.loads(
+            (root / "output" / "demo-4-semaforos-distribuidos.json").read_text(encoding="utf-8")
+        )
+        blocks = [
+            item for item in document["allElements"]
+            if item["type"] == "FUNCTIONAL_BLOCK" and item["id"].startswith("decision-")
+        ]
+        self.assertEqual(len(blocks), 4)
+        self.assertFalse(any(item["id"] == "control-trafico" for item in document["allElements"]))
+
+        def run(vehicles):
+            results = {}
+            for block in blocks:
+                input_ports = [item for item in block["ports"] if item["direction"] == "input"]
+                output_ports = [item for item in block["ports"] if item["direction"] == "output"]
+                executor = PythonExecutor(
+                    block["id"],
+                    block["properties"]["code"],
+                    [item["name"] for item in input_ports],
+                    [item["name"] for item in output_ports],
+                    input_types={item["name"]: item["dataType"] for item in input_ports},
+                    output_types={item["name"]: item["dataType"] for item in output_ports},
+                )
+                results[block["id"]] = executor.execute({"vehiculos_locales": vehicles[block["id"]]})
+            return results
+
+        congestion = run({
+            "decision-norte": 2,
+            "decision-sur": 7,
+            "decision-este": 0,
+            "decision-oeste": 0,
+        })
+        self.assertEqual(congestion["decision-norte"], {"hay_demanda": True, "sin_demanda": False, "ciclo_activo": True})
+        self.assertEqual(congestion["decision-sur"], {"hay_demanda": True, "sin_demanda": False, "ciclo_activo": True})
+        self.assertEqual(congestion["decision-este"], {"hay_demanda": False, "sin_demanda": True, "ciclo_activo": True})
+        self.assertEqual(congestion["decision-oeste"], {"hay_demanda": False, "sin_demanda": True, "ciclo_activo": True})
+
     def test_custom_single_output_may_be_a_dictionary(self):
         executor = PythonExecutor(
             "fb-custom",

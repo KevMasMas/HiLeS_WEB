@@ -24,11 +24,62 @@ class MockPyodideWorker {
   }
 }
 
+class MockPyodideWorkerFirmaEstricta extends MockPyodideWorker {
+  static ultimasClaves: string[] = [];
+
+  override postMessage(mensaje: { codigo: string; inputs: Record<string, RuntimeValue> }): void {
+    MockPyodideWorkerFirmaEstricta.ultimasClaves = Object.keys(mensaje.inputs).sort();
+    super.postMessage(mensaje);
+  }
+}
+
 afterEach(() => {
   Object.assign(globalThis, { Worker: WorkerOriginal });
 });
 
 describe('MotorSimulacion con IR v2: canales diferenciados, desbordamiento DCH y retardos', () => {
+  it('envía a Python solo las variables declaradas y no identificadores internos de puerto', async () => {
+    Object.assign(globalThis, { Worker: MockPyodideWorkerFirmaEstricta });
+    MockPyodideWorkerFirmaEstricta.ultimasClaves = [];
+    const modelo: IrModeloV2 = {
+      ir_version: 2,
+      modelo_id: 'firma-python-estricta',
+      version: 1,
+      nombre: 'Firma Python estricta',
+      metadata: {
+        documento_schema_version: 2,
+        compilado_en: '2026-10-28T12:00:00.000Z',
+        bloque_raiz_id: null,
+      },
+      entradas_externas: [{
+        elemento_id: 'srv', nombre: 'Entrada', puerto_salida: 'out', tipo_dato: 'integer',
+      }],
+      elementos: [
+        {
+          id: 'srv', tipo: 'service', nombre: 'Entrada', tipo_dato: 'integer',
+          salidas: ['out'], entradas: [],
+        },
+        {
+          id: 'fb', tipo: 'functional_block', nombre: 'Duplicador', habilitado: true,
+          lenguaje: 'python', codigo: 'def calcular(x):\n    return x * 2',
+          entradas: [{ puerto: 'puerto-interno-in', variable: 'x', tipo_dato: 'integer' }],
+          salidas: [{ puerto: 'out', variable: 'y', tipo_dato: 'integer' }],
+        },
+      ],
+      conexiones: [{
+        id: 'cch', tipo: 'cch', origen: 'srv', puerto_origen: 'out',
+        destino: 'fb', puerto_destino: 'puerto-interno-in',
+      }],
+    };
+
+    const motor = new MotorSimulacion();
+    motor.construirDesdeIrV2(modelo);
+    motor.inyectarEntrada('srv', 7);
+    await motor.paso(0);
+
+    expect(MockPyodideWorkerFirmaEstricta.ultimasClaves).toEqual(['x']);
+  });
+
   it('recorre la ruta real Service → conexión DCH → BusObserver → Hold sin repetir muestras no inyectadas y reporta DCH_COLA_DESBORDADA', async () => {
     const modelo: IrModeloV2 = {
       ir_version: 2,
