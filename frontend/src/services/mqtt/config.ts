@@ -19,6 +19,65 @@ export const MQTT_TOPICS = {
 } as const;
 
 export type MqttTopic = (typeof MQTT_TOPICS)[keyof typeof MQTT_TOPICS];
+export type MqttTopicKey = keyof typeof MQTT_TOPICS;
+export type MqttDeviceTopics = Record<MqttTopicKey, string>;
+
+const MQTT_TOPIC_SUFFIXES: Record<MqttTopicKey, string> = {
+  LED_COMANDO: 'led/comando',
+  LED_ESTADO: 'led/estado',
+  ESTADO_CONEXION: 'estado/conexion',
+  TELEMETRIA: 'telemetria',
+  SALIDA: 'salida',
+  ERROR: 'error',
+  SIMULACION_COMANDO: 'simulacion/comando',
+  ENTRADA_ESTABLECER: 'entrada/establecer',
+  MODELO_CARGAR: 'modelo/cargar',
+  MODELO_CONFIRMACION: 'modelo/confirmacion',
+  SIMULACION_ESTADO: 'simulacion/estado',
+};
+
+const validarSegmentoV1 = (valor: string, nombre: string): string => {
+  const limpio = valor.trim();
+  if (!limpio || /[/+#]/.test(limpio)) {
+    throw new Error(`${nombre} no puede estar vacío ni contener /, + o #.`);
+  }
+  return limpio;
+};
+
+/** Construye los topics v1 para cualquier Pico sin fijar el panel a pico01. */
+export const buildMqttDeviceTopics = (
+  deviceId: string,
+  teamId = 'equipo1',
+): MqttDeviceTopics => {
+  const dispositivo = validarSegmentoV1(deviceId, 'deviceId');
+  const equipo = validarSegmentoV1(teamId, 'teamId');
+  const prefijo = `udfjc/hiles/v1/${equipo}/${dispositivo}`;
+  return Object.fromEntries(
+    Object.entries(MQTT_TOPIC_SUFFIXES).map(([clave, sufijo]) => [clave, `${prefijo}/${sufijo}`]),
+  ) as MqttDeviceTopics;
+};
+
+export const buildMqttDeviceConnectionWildcard = (teamId = 'equipo1'): string =>
+  `udfjc/hiles/v1/${validarSegmentoV1(teamId, 'teamId')}/+/estado/conexion`;
+
+/** Extrae el DEVICE_ID de un topic de presencia v1 del equipo indicado. */
+export const parseMqttDeviceConnectionTopic = (
+  topic: string,
+  teamId = 'equipo1',
+): string | null => {
+  const equipo = validarSegmentoV1(teamId, 'teamId');
+  const match = new RegExp(`^udfjc/hiles/v1/${equipo}/([^/+#]+)/estado/conexion$`).exec(topic);
+  return match?.[1] ?? null;
+};
+
+/** Devuelve el topic canónico pico01 usado como esquema para un topic v1 dinámico. */
+export const normalizeMqttDeviceTopic = (topic: string): MqttTopic | null => {
+  const match = /^udfjc\/hiles\/v1\/[^/+#]+\/[^/+#]+\/(.+)$/.exec(topic);
+  if (!match) return null;
+  const entrada = (Object.entries(MQTT_TOPIC_SUFFIXES) as Array<[MqttTopicKey, string]>)
+    .find(([, sufijo]) => sufijo === match[1]);
+  return entrada ? MQTT_TOPICS[entrada[0]] : null;
+};
 
 export interface MqttTopicPolicy {
   qos: 0 | 1;
@@ -78,6 +137,10 @@ export const getMqttDynamicTopicPolicy = (topic: string): MqttTopicPolicy => {
   const staticPolicy = MQTT_TOPIC_POLICIES[topic as MqttTopic];
   if (staticPolicy) {
     return staticPolicy;
+  }
+  const deviceTopic = normalizeMqttDeviceTopic(topic);
+  if (deviceTopic) {
+    return MQTT_TOPIC_POLICIES[deviceTopic];
   }
   const projectTopic = parsearTopicoProyectoV2(
     topic,

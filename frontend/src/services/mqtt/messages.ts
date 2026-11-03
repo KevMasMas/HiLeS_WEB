@@ -5,6 +5,7 @@ import {
   MQTT_MAX_PAYLOAD_BYTES,
   MQTT_SUPPORTED_IR_VERSIONS,
   MQTT_TOPICS,
+  normalizeMqttDeviceTopic,
   type MqttIrVersion,
   type MqttTopic,
 } from './config';
@@ -154,7 +155,6 @@ export type ResultadoValidacionMensaje =
   | { valido: true; topic: MqttTopic; mensaje: MensajeMqtt }
   | { valido: false; error: string };
 
-const TOPICS_CONOCIDOS = new Set<string>(Object.values(MQTT_TOPICS));
 const ACCIONES_LED = new Set<AccionLed>(['encender', 'apagar', 'titilar']);
 const ACCIONES_ESTADO_LED = new Set<AccionLedEstado>(['encender', 'apagar', 'titilar', 'inicio']);
 const ACCIONES_SIMULACION = new Set<AccionSimulacion>(['iniciar', 'detener', 'reiniciar', 'paso', 'liberar']);
@@ -244,8 +244,9 @@ export const validarMensajeMqtt = (topic: string, payload: unknown): ResultadoVa
       };
     }
   } else {
-    if (!TOPICS_CONOCIDOS.has(topic)) return error(topic, 'el topic no pertenece al contrato MQTT de HiLeS');
-    topicEsquema = topic as MqttTopic;
+    const topicDispositivo = normalizeMqttDeviceTopic(topic);
+    if (!topicDispositivo) return error(topic, 'el topic no pertenece al contrato MQTT de HiLeS');
+    topicEsquema = topicDispositivo;
   }
 
   if (!esObjeto(payload)) return error(topic, 'el contenido debe ser un objeto JSON');

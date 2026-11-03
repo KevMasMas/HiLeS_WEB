@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { buildMqttWebSocketUrl, MQTT_TOPIC_POLICIES, MQTT_TOPICS } from './config';
+import {
+  buildMqttDeviceTopics,
+  buildMqttDeviceConnectionWildcard,
+  buildMqttWebSocketUrl,
+  getMqttDynamicTopicPolicy,
+  MQTT_TOPIC_POLICIES,
+  MQTT_TOPICS,
+  parseMqttDeviceConnectionTopic,
+} from './config';
 
 describe('configuración MQTT WebSocket', () => {
   it('construye la URL local con la ruta normalizada', () => {
@@ -22,5 +30,18 @@ describe('configuración MQTT WebSocket', () => {
     expect(MQTT_TOPIC_POLICIES[MQTT_TOPICS.SIMULACION_COMANDO]).toEqual({ qos: 1, retain: false });
     expect(MQTT_TOPIC_POLICIES[MQTT_TOPICS.MODELO_CARGAR]).toEqual({ qos: 1, retain: false });
     expect(MQTT_TOPIC_POLICIES[MQTT_TOPICS.SIMULACION_ESTADO]).toEqual({ qos: 1, retain: true });
+  });
+
+  it('construye topics y políticas para cualquier DEVICE_ID', () => {
+    const topics = buildMqttDeviceTopics('pico02');
+    expect(topics.LED_COMANDO).toBe('udfjc/hiles/v1/equipo1/pico02/led/comando');
+    expect(getMqttDynamicTopicPolicy(topics.LED_COMANDO)).toEqual({ qos: 1, retain: false });
+    expect(getMqttDynamicTopicPolicy(topics.LED_ESTADO)).toEqual({ qos: 1, retain: true });
+  });
+
+  it('descubre el DEVICE_ID desde los topics de presencia', () => {
+    expect(buildMqttDeviceConnectionWildcard()).toBe('udfjc/hiles/v1/equipo1/+/estado/conexion');
+    expect(parseMqttDeviceConnectionTopic('udfjc/hiles/v1/equipo1/pico02/estado/conexion')).toBe('pico02');
+    expect(parseMqttDeviceConnectionTopic('udfjc/hiles/v1/otro/pico02/estado/conexion')).toBeNull();
   });
 });

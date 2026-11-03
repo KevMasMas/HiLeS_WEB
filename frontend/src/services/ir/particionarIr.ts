@@ -1,4 +1,5 @@
 import { HilesElementType } from '../../types/hiles';
+import { sha256Bytes } from '../crypto/sha256';
 import { topicsDistribuidosV3, validarSegmentoTopicV3 } from '../distributed/topics';
 import {
   PROTOCOLO_EJECUCION_DISTRIBUIDA_VERSION,
@@ -38,10 +39,7 @@ export function serializarCanonico(valor: unknown): string {
 
 export async function sha256(valor: unknown): Promise<string> {
   const bytes = encoder.encode(serializarCanonico(valor));
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, '0'),
-  ).join('');
+  return sha256Bytes(bytes);
 }
 
 function error(

@@ -1,6 +1,10 @@
-import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { MQTT_TOPICS } from '../../services/mqtt/config';
+import {
+  buildMqttDeviceConnectionWildcard,
+  buildMqttDeviceTopics,
+  parseMqttDeviceConnectionTopic,
+} from '../../services/mqtt/config';
 import { mqttClient } from '../../services/mqtt/MqttClient';
 import { mqttHilesBridge } from '../../services/mqtt/setupMqttHilesBridge';
 import type { AccionLed } from '../../services/mqtt/messages';
@@ -58,6 +62,14 @@ export const MqttPanel: React.FC = () => {
   const [messages, setMessages] = useState<MessageEntry[]>([]);
   const [notices, setNotices] = useState<IntegrationNotice[]>([]);
   const [connectionFeedback, setConnectionFeedback] = useState<ConnectionFeedback | null>(null);
+  const [deviceId, setDeviceId] = useState('');
+  const [connectedDevices, setConnectedDevices] = useState<string[]>([]);
+  const preferredDeviceId = useRef(localStorage.getItem('hiles_mqtt_device_id') || '');
+  const connectionWildcard = useMemo(() => buildMqttDeviceConnectionWildcard(), []);
+  const deviceTopics = useMemo(
+    () => (deviceId ? buildMqttDeviceTopics(deviceId) : null),
+    [deviceId],
+  );
   const dockTarget = useSyncExternalStore(subscribeMqttPanelPortal, getMqttPanelPortalTarget, () => null);
   const modoEjecucion = useSimulationStore((state) => state.modoEjecucion);
 
@@ -72,6 +84,7 @@ export const MqttPanel: React.FC = () => {
 
     const unsubscribeStatus = mqttClient.onStatusChange((nextStatus) => {
       setStatus(nextStatus);
+      if (nextStatus === 'DISCONNECTED' || nextStatus === 'ERROR') setConnectedDevices([]);
       if (nextStatus === 'CONNECTING') {
         setConnectionFeedback({ level: 'pending', message: 'Intentando conectar con el broker MQTT…' });
       } else if (nextStatus === 'CONNECTED') {
@@ -93,14 +106,20 @@ export const MqttPanel: React.FC = () => {
       };
 
       setMessages((previous) => [entry, ...previous].slice(0, 8));
+
+      const announcedDeviceId = parseMqttDeviceConnectionTopic(topic);
+      if (announcedDeviceId && typeof payload === 'object' && payload !== null && 'conectado' in payload) {
+        setConnectedDevices((previous) => {
+          const next = new Set(previous);
+          if (payload.conectado === true) next.add(announcedDeviceId);
+          else next.delete(announcedDeviceId);
+          return [...next].sort((a, b) => a.localeCompare(b));
+        });
+      }
     });
     const unsubscribeValidation = mqttClient.onValidationError(({ error }) => addNotice('error', error));
     const unsubscribeBridge = mqttHilesBridge.onEvent(({ nivel, mensaje }) => addNotice(nivel, mensaje));
-
-    mqttClient.subscribe(MQTT_TOPICS.LED_ESTADO);
-    mqttClient.subscribe(MQTT_TOPICS.ESTADO_CONEXION);
-    mqttClient.subscribe(MQTT_TOPICS.TELEMETRIA);
-    mqttClient.subscribe(MQTT_TOPICS.ERROR);
+    mqttClient.subscribe(connectionWildcard);
 
     return () => {
       unsubscribeStatus();
@@ -108,12 +127,37 @@ export const MqttPanel: React.FC = () => {
       unsubscribeValidation();
       unsubscribeBridge();
       mqttHilesBridge.stop();
-      mqttClient.unsubscribe(MQTT_TOPICS.LED_ESTADO);
-      mqttClient.unsubscribe(MQTT_TOPICS.ESTADO_CONEXION);
-      mqttClient.unsubscribe(MQTT_TOPICS.TELEMETRIA);
-      mqttClient.unsubscribe(MQTT_TOPICS.ERROR);
+      mqttClient.unsubscribe(connectionWildcard);
     };
-  }, []);
+  }, [connectionWildcard]);
+
+  useEffect(() => {
+    if (!deviceTopics) return;
+    mqttClient.subscribe(deviceTopics.LED_ESTADO);
+    mqttClient.subscribe(deviceTopics.ESTADO_CONEXION);
+    mqttClient.subscribe(deviceTopics.TELEMETRIA);
+    mqttClient.subscribe(deviceTopics.ERROR);
+    return () => {
+      mqttClient.unsubscribe(deviceTopics.LED_ESTADO);
+      mqttClient.unsubscribe(deviceTopics.ESTADO_CONEXION);
+      mqttClient.unsubscribe(deviceTopics.TELEMETRIA);
+      mqttClient.unsubscribe(deviceTopics.ERROR);
+    };
+  }, [deviceTopics]);
+
+  useEffect(() => {
+    setDeviceId((current) => {
+      if (connectedDevices.includes(current)) return current;
+      if (connectedDevices.includes(preferredDeviceId.current)) return preferredDeviceId.current;
+      return connectedDevices[0] ?? '';
+    });
+  }, [connectedDevices]);
+
+  const selectDevice = (nextDeviceId: string) => {
+    setDeviceId(nextDeviceId);
+    preferredDeviceId.current = nextDeviceId;
+    if (nextDeviceId) localStorage.setItem('hiles_mqtt_device_id', nextDeviceId);
+  };
 
   useEffect(() => {
     if (modoEjecucion === 'local') mqttHilesBridge.start();
@@ -132,7 +176,7 @@ export const MqttPanel: React.FC = () => {
   };
 
   const handleLedCommand = (accion: AccionLed) => {
-    mqttClient.sendLedCommand(accion);
+    if (deviceTopics) mqttClient.sendLedCommand(accion, {}, deviceTopics.LED_COMANDO);
   };
 
   const content = (
@@ -153,6 +197,22 @@ export const MqttPanel: React.FC = () => {
               {getStatusLabel(status)}
             </span>
           </div>
+
+          <label style={styles.deviceField}>
+            <span style={styles.label}>Pico destino</span>
+            <select
+              value={deviceId}
+              onChange={(event) => selectDevice(event.target.value)}
+              disabled={connectedDevices.length === 0}
+              style={styles.deviceInput}
+            >
+              {connectedDevices.length === 0 && <option value="">Sin Picos conectadas</option>}
+              {connectedDevices.map((id) => <option key={id} value={id}>{id}</option>)}
+            </select>
+            {status === 'CONNECTED' && connectedDevices.length === 0 && (
+              <small style={styles.deviceHint}>Enciende una Pico configurada en este broker.</small>
+            )}
+          </label>
 
           <div style={styles.actions}>
             <button type="button" style={styles.primaryButton} onClick={handleConnect} disabled={status === 'CONNECTED' || status === 'CONNECTING'}>
@@ -175,9 +235,9 @@ export const MqttPanel: React.FC = () => {
           )}
 
           <div style={styles.actions}>
-            <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('encender')} disabled={status !== 'CONNECTED'}>Encender</button>
-            <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('apagar')} disabled={status !== 'CONNECTED'}>Apagar</button>
-            <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('titilar')} disabled={status !== 'CONNECTED'}>Titilar</button>
+            <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('encender')} disabled={status !== 'CONNECTED' || !deviceTopics}>Encender</button>
+            <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('apagar')} disabled={status !== 'CONNECTED' || !deviceTopics}>Apagar</button>
+            <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('titilar')} disabled={status !== 'CONNECTED' || !deviceTopics}>Titilar</button>
           </div>
 
           {notices.length > 0 && (
@@ -269,6 +329,24 @@ const styles = {
     color: '#64748b',
     textTransform: 'uppercase' as const,
     fontWeight: 700,
+  },
+  deviceField: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 5,
+  },
+  deviceInput: {
+    width: '100%',
+    boxSizing: 'border-box' as const,
+    border: '1px solid #cbd5e1',
+    borderRadius: 6,
+    padding: '7px 8px',
+    background: '#fff',
+    color: '#0f172a',
+  },
+  deviceHint: {
+    color: '#64748b',
+    fontSize: 10,
   },
   badge: {
     fontSize: 11,

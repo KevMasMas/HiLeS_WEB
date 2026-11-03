@@ -18,6 +18,7 @@
  */
 import { MotorSimulacion } from '../../engine/MotorSimulacion';
 import type { ValorRuntime } from '../../engine/tipos';
+import { sha256Bytes } from '../crypto/sha256';
 import { serializarCanonico, sha256 } from '../ir/particionarIr';
 import {
   PROTOCOLO_EJECUCION_DISTRIBUIDA_VERSION,
@@ -119,8 +120,7 @@ export const construirExecutorIdNavegador = (sessionId: string): string =>
 
 /** SHA-256 hexadecimal de los bytes UTF-8 de un texto. */
 export async function sha256Texto(texto: string): Promise<string> {
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', encoder.encode(texto));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return sha256Bytes(encoder.encode(texto));
 }
 
 const esObjeto = (valor: unknown): valor is Record<string, unknown> =>

@@ -252,8 +252,12 @@ class MqttBrowserClient implements TransporteMqttProyectoV2 {
     return true;
   }
 
-  public sendLedCommand(accion: AccionLed, extra: Record<string, unknown> = {}): boolean {
-    return this.publish(MQTT_TOPICS.LED_COMANDO, {
+  public sendLedCommand(
+    accion: AccionLed,
+    extra: Record<string, unknown> = {},
+    topic: string = MQTT_TOPICS.LED_COMANDO,
+  ): boolean {
+    return this.publish(topic, {
       accion,
       id_mensaje: `web-${Date.now()}`,
       ...extra,

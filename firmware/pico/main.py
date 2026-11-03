@@ -40,7 +40,14 @@ def build_default_application(config=None, clock=None, machine_module=None,
 
     try:
         from devices.led_task import APAGADO, LedTask
+        import hiles.engine_v2  # noqa: F401 - orden de carga crítico en RP2040
+        import gc
+
+        gc.collect()
+        # Cargar primero el motor v2 reduce la fragmentación de RAM en RP2040;
+        # el worker reutiliza después estos módulos ya inicializados.
         from hiles.distributed_worker import DistributedWorker
+        gc.collect()
         from hiles.engine_task_v2 import EngineTaskV2
         from devices.watchdog_task import WatchdogTask
         from platform.hardware import create_led_output, resolve_device_id
@@ -57,6 +64,7 @@ def build_default_application(config=None, clock=None, machine_module=None,
         )
     except ImportError:  # Permite construir la aplicación desde las pruebas de escritorio.
         from .devices.led_task import APAGADO, LedTask
+        from .hiles import engine_v2 as _engine_v2  # noqa: F401
         from .hiles.distributed_worker import DistributedWorker
         from .hiles.engine_task_v2 import EngineTaskV2
         from .devices.watchdog_task import WatchdogTask
