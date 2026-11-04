@@ -9,8 +9,10 @@ import {
   construirPlanDesdeNodos,
   describirFase,
   ejecutablesSinDestino,
+  ejecutoresDisponibles,
   etiquetaEjecutor,
   recomendacionError,
+  validarDestinosDespliegue,
   type NodoHiles,
 } from './assignments';
 
@@ -94,6 +96,17 @@ describe('asignaciones guardadas en el documento', () => {
     expect(etiquetaEjecutor('pico:lab-1', 'browser:abc123')).toBe('Pico lab-1');
     expect(etiquetaEjecutor('browser:zzzzzzzzz', 'browser:abc123')).toBe('Navegador zzzzzz');
     expect(etiquetaEjecutor(null, null)).toBe('Sin asignar');
+  });
+
+  it('usa la misma disponibilidad para preparar y validar el despliegue', () => {
+    const nodos = documento.slice(0, 3);
+    const ejecutores = { 'pico:a': estado('pico:a', 'online'), 'browser:b': estado('browser:b', 'ready') };
+    const vistoEn = { 'pico:a': 99_000, 'browser:b': 99_000 };
+    expect(ejecutoresDisponibles(ejecutores, { projectId: 'p', vistoEn, ahora: 100_000 })).toHaveLength(2);
+    expect(validarDestinosDespliegue(nodos, ejecutores, { projectId: 'p', vistoEn, ahora: 100_000 })).toEqual([]);
+    expect(validarDestinosDespliegue(nodos, { ...ejecutores, 'pico:a': estado('pico:a', 'offline') }, {
+      projectId: 'p', vistoEn, ahora: 100_000,
+    })[0].mensaje).toMatch(/desconectado/);
   });
 });
 

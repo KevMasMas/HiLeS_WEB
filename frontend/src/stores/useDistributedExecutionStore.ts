@@ -9,6 +9,7 @@ import type {
   MensajeEstadoEjecutorV3,
   MensajeSnapshotParcialV3,
 } from '../services/distributed/messages';
+import { validarMensajeEstadoEjecutorV3 } from '../services/distributed/messages';
 import { compilarDocumentoAIrV2 } from '../services/ir/compiladorIrV2';
 import { particionarIrV2Distribuida, resolverAsignacionesDistribuidasV3, serializarCanonico } from '../services/ir/particionarIr';
 import { PROTOCOLO_EJECUCION_DISTRIBUIDA_VERSION, type ManifiestoDespliegueV3 } from '../services/ir/tiposIrDistribuida';
@@ -20,6 +21,7 @@ import {
   cambioDestino,
   construirPlanDesdeNodos,
   ejecutoresDisponibles,
+  validarDestinosDespliegue,
   type NodoHiles,
 } from '../features/distributed/assignments';
 import { TransporteMqttDistribuido } from '../features/distributed/distributedTransport';
@@ -146,18 +148,36 @@ const alMensajeControl = (topic: string, raw: string): void => {
   const partes = topic.slice(base.length).split('/');
 
   if (partes[0] === 'executors' && partes[2] === 'status') {
-    const mensaje = parsear<MensajeEstadoEjecutorV3>(raw);
-    useDistributedExecutionStore.setState((actual) => {
-      const ejecutores = { ...actual.ejecutores };
-      const vistoEn = { ...actual.vistoEn };
-      if (!mensaje) {
+    if (!raw) {
+      useDistributedExecutionStore.setState((actual) => {
+        const ejecutores = { ...actual.ejecutores };
+        const vistoEn = { ...actual.vistoEn };
         delete ejecutores[partes[1]];
         delete vistoEn[partes[1]];
-      } else if (mensaje.executor_id === partes[1] && mensaje.protocol_version === PROTOCOLO_EJECUCION_DISTRIBUIDA_VERSION) {
-        ejecutores[partes[1]] = mensaje;
-        vistoEn[partes[1]] = Date.now();
-      }
-      return { ejecutores, vistoEn };
+        return { ejecutores, vistoEn };
+      });
+      pintarEnCanvas();
+      return;
+    }
+    const validacion = validarMensajeEstadoEjecutorV3(parsear<unknown>(raw), {
+      projectId,
+      executorId: partes[1],
+    });
+    if (!validacion.ok) {
+      registrarError({
+        codigo: 'EJECUTOR_ESTADO_INVALIDO',
+        mensaje: validacion.motivo,
+        executorId: partes[1],
+        etapa: 'transport',
+      });
+      return;
+    }
+    const mensaje = validacion.mensaje;
+    useDistributedExecutionStore.setState((actual) => {
+      return {
+        ejecutores: { ...actual.ejecutores, [partes[1]]: mensaje },
+        vistoEn: { ...actual.vistoEn, [partes[1]]: Date.now() },
+      };
     });
     pintarEnCanvas();
     return;
@@ -299,7 +319,7 @@ export const useDistributedExecutionStore = create<DistributedExecutionState>((s
   },
 
   desplegar: async () => {
-    const { projectId, manifest: anterior, ejecutores } = get();
+    const { projectId, manifest: anterior, ejecutores, vistoEn } = get();
     if (!projectId || !control?.conectado) {
       set({ errorLocal: 'No hay conexión con el broker: revisa MQTT antes de desplegar.' });
       return false;
@@ -307,6 +327,18 @@ export const useDistributedExecutionStore = create<DistributedExecutionState>((s
     set({ desplegando: true, errorLocal: null, mensaje: 'Compilando y particionando el modelo…' });
     try {
       const { nodes, edges } = useEditorStore.getState();
+      const erroresDestino = validarDestinosDespliegue(nodes as NodoHiles[], ejecutores, { projectId, vistoEn });
+      if (erroresDestino.length > 0) {
+        const primero = erroresDestino[0];
+        registrarError({
+          codigo: primero.executorId ? 'DISTRIBUCION_DESTINO_INEXISTENTE' : 'DISTRIBUCION_DESTINO_FALTANTE',
+          mensaje: primero.mensaje,
+          executorId: primero.executorId ?? undefined,
+          etapa: 'manifest',
+        });
+        set({ errorLocal: `No se pudo desplegar: ${primero.mensaje}` });
+        return false;
+      }
       const documento = serializeModel(nodes, edges);
       const compilado = compilarDocumentoAIrV2(documento, { modeloId: projectId, nombre: projectId });
       if (!compilado.valido || !compilado.modelo) {
@@ -326,7 +358,7 @@ export const useDistributedExecutionStore = create<DistributedExecutionState>((s
           deployment_id: deploymentId,
           epoch,
           modelo: compilado.modelo,
-          ejecutores: ejecutoresDisponibles(ejecutores),
+          ejecutores: ejecutoresDisponibles(ejecutores, { projectId, vistoEn }),
           asignaciones: resolucion.asignaciones,
         });
       if (!resultado.ok) {

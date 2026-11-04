@@ -1,12 +1,16 @@
 import React from 'react';
 import type { MensajeEstadoEjecutorV3 } from '../../services/distributed/messages';
 import { ETIQUETA_ESTADO_EJECUTOR, etiquetaEjecutor } from './assignments';
+import { evaluarDisponibilidadEjecutor } from './executorAvailability';
 
 interface AssignmentSelectorProps {
   valor: string | null;
   ejecutores: Record<string, MensajeEstadoEjecutorV3>;
   executorLocal: string | null;
   workerLocalActivo: boolean;
+  projectId: string;
+  vistoEn: Record<string, number>;
+  ahora: number;
   onChange: (executorId: string | null) => void;
   etiqueta: string;
   heredado?: string | null;
@@ -22,6 +26,9 @@ export const AssignmentSelector: React.FC<AssignmentSelectorProps> = ({
   ejecutores,
   executorLocal,
   workerLocalActivo,
+  projectId,
+  vistoEn,
+  ahora,
   onChange,
   etiqueta,
   heredado,
@@ -32,12 +39,22 @@ export const AssignmentSelector: React.FC<AssignmentSelectorProps> = ({
     .sort((a, b) => a.executor_id.localeCompare(b.executor_id));
   const conocido = !valor || valor === executorLocal || Boolean(ejecutores[valor]);
 
-  const opcion = (item: MensajeEstadoEjecutorV3) => (
-    <option key={item.executor_id} value={item.executor_id}>
-      {etiquetaEjecutor(item.executor_id, executorLocal)}
-      {item.estado !== 'online' && item.estado !== 'ready' && item.estado !== 'running' ? ` · ${ETIQUETA_ESTADO_EJECUTOR[item.estado]}` : ''}
-    </option>
-  );
+  const opcion = (item: MensajeEstadoEjecutorV3) => {
+    const disponibilidad = evaluarDisponibilidadEjecutor(item, {
+      projectId,
+      recibidoEn: vistoEn[item.executor_id],
+      ahora,
+    });
+    const estado = item.estado !== 'online' && item.estado !== 'ready' && item.estado !== 'running'
+      ? ETIQUETA_ESTADO_EJECUTOR[item.estado]
+      : null;
+    return (
+      <option key={item.executor_id} value={item.executor_id} disabled={!disponibilidad.seleccionable}>
+        {etiquetaEjecutor(item.executor_id, executorLocal)}
+        {disponibilidad.detalle ? ` · ${disponibilidad.detalle}` : estado ? ` · ${estado}` : ''}
+      </option>
+    );
+  };
 
   return (
     <select

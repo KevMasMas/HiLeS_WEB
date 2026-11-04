@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { useDistributedExecutionStore } from '../../stores/useDistributedExecutionStore';
 import { HilesElementType } from '../../types/hiles';
@@ -12,6 +12,7 @@ import {
   ejecutablesSinDestino,
   etiquetaEjecutor,
   recomendacionError,
+  validarDestinosDespliegue,
   type NodoHiles,
 } from './assignments';
 import { useFaseDistribuida } from './useFaseDistribuida';
@@ -57,6 +58,12 @@ export const DistributedPanel: React.FC<DistributedPanelProps> = ({ onClose }) =
   const store = useDistributedExecutionStore();
   const [servicio, setServicio] = useState('');
   const [valorEntrada, setValorEntrada] = useState('');
+  const [ahora, setAhora] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalo = window.setInterval(() => setAhora(Date.now()), 5_000);
+    return () => window.clearInterval(intervalo);
+  }, []);
 
   const mapa = useMemo(() => construirMapaAsignaciones(nodos), [nodos]);
   const sinDestino = useMemo(() => ejecutablesSinDestino(nodos), [nodos]);
@@ -72,7 +79,12 @@ export const DistributedPanel: React.FC<DistributedPanelProps> = ({ onClose }) =
   const nombres = new Map(nodos.map((nodo) => [nodo.id, nodo.data.name]));
   const servicios = vista.filter((item) => nodos.find((nodo) => nodo.id === item.elementId)?.data.hilesType === HilesElementType.SERVICE);
   const local = store.workerExecutorId;
-  const listoParaDesplegar = store.conectado && !store.desplegando && nodos.length > 0;
+  const erroresDestino = useMemo(() => validarDestinosDespliegue(nodos, store.ejecutores, {
+    projectId: store.projectId ?? '',
+    vistoEn: store.vistoEn,
+    ahora,
+  }), [ahora, nodos, store.ejecutores, store.projectId, store.vistoEn]);
+  const listoParaDesplegar = store.conectado && !store.desplegando && nodos.length > 0 && erroresDestino.length === 0;
   const acksListos = fase.fase === 'listo' || fase.fase === 'ejecutando';
 
   return (
@@ -108,6 +120,7 @@ export const DistributedPanel: React.FC<DistributedPanelProps> = ({ onClose }) =
           Ejecutores disponibles
           <HelpHint titulo="Ejecutores" texto="Cada Raspberry Pi Pico W o navegador conectado al mismo proyecto aparece aquí con su estado, memoria y despliegue activo." />
         </h3>
+        <p className="dist-muted">Proyecto de ejecución: <code>{store.projectId ?? '—'}</code>. Las Pico deben usar exactamente este HILES_PROJECT_ID.</p>
         {!store.conectado && <p className="empty-state">Sin conexión con el broker. Revisa que Mosquitto esté encendido y la configuración MQTT en el panel MQTT.</p>}
         {store.conectado && ejecutores.length === 0 && (
           <p className="empty-state">Todavía no hay ejecutores. Activa «Ejecutar aquí» o enciende una Pico W configurada con este proyecto.</p>
@@ -148,6 +161,9 @@ export const DistributedPanel: React.FC<DistributedPanelProps> = ({ onClose }) =
                   ejecutores={store.ejecutores}
                   executorLocal={local}
                   workerLocalActivo={store.workerHabilitado}
+                  projectId={store.projectId ?? ''}
+                  vistoEn={store.vistoEn}
+                  ahora={ahora}
                   etiqueta={`Destino de ${fila.nombre}`}
                   heredado={fila.efectivo.origen === 'heredado' ? fila.efectivo.executorId : null}
                   onChange={(executorId) => store.asignar(fila.nodoId, executorId)}
@@ -170,6 +186,11 @@ export const DistributedPanel: React.FC<DistributedPanelProps> = ({ onClose }) =
           <div className="callout callout--warn">
             <strong>{sinDestino.length} elemento(s) sin ejecutor.</strong> Asigna su bloque antes de desplegar.
             <button type="button" className="link-button" onClick={() => enfocarElemento(sinDestino[0].id, true)}>Ver el primero</button>
+          </div>
+        )}
+        {sinDestino.length === 0 && erroresDestino.length > 0 && (
+          <div className="callout callout--warn" role="status">
+            <strong>No se puede desplegar todavía.</strong> {erroresDestino[0].mensaje}
           </div>
         )}
         <div className="button-row">

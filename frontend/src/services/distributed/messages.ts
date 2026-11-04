@@ -14,6 +14,53 @@ export interface MensajeEstadoEjecutorV3 extends EjecutorDisponibleV3 {
   active_epoch?: number;
 }
 
+export type ResultadoValidacionEstadoEjecutor =
+  | { ok: true; mensaje: MensajeEstadoEjecutorV3 }
+  | { ok: false; motivo: string };
+
+const ESTADOS_EJECUTOR = new Set(['online', 'deploying', 'ready', 'running', 'degraded', 'offline']);
+const TIPOS_EJECUTOR = new Set(['pico', 'browser']);
+const LENGUAJES_EJECUTOR = new Set(['python', 'expresion']);
+
+/**
+ * Valida el mensaje MQTT antes de incorporarlo al estado de la interfaz.
+ * También cruza el payload con el proyecto activo y con el executorId del
+ * tópico para impedir que un retenido mal formado habilite un destino ajeno.
+ */
+export function validarMensajeEstadoEjecutorV3(
+  valor: unknown,
+  esperado: { projectId: string; executorId: string },
+): ResultadoValidacionEstadoEjecutor {
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) {
+    return { ok: false, motivo: 'El estado del ejecutor no es un objeto JSON.' };
+  }
+  const mensaje = valor as Record<string, unknown>;
+  if (mensaje.protocol_version !== 3) return { ok: false, motivo: 'El ejecutor no usa el protocolo distribuido v3.' };
+  if (mensaje.project_id !== esperado.projectId) return { ok: false, motivo: `El ejecutor pertenece al proyecto ${String(mensaje.project_id ?? 'desconocido')}.` };
+  if (mensaje.executor_id !== esperado.executorId) return { ok: false, motivo: 'El executorId del payload no coincide con el tópico MQTT.' };
+  if (typeof mensaje.tipo !== 'string' || !TIPOS_EJECUTOR.has(mensaje.tipo)) return { ok: false, motivo: 'El tipo de ejecutor no es válido.' };
+  if (typeof mensaje.estado !== 'string' || !ESTADOS_EJECUTOR.has(mensaje.estado)) return { ok: false, motivo: 'El estado publicado no es válido.' };
+  if (typeof mensaje.last_seen_ms !== 'number' || !Number.isFinite(mensaje.last_seen_ms) || mensaje.last_seen_ms < 0) {
+    return { ok: false, motivo: 'El ejecutor no publicó una marca de actividad válida.' };
+  }
+  const capacidades = mensaje.capacidades;
+  if (!capacidades || typeof capacidades !== 'object' || Array.isArray(capacidades)) {
+    return { ok: false, motivo: 'El ejecutor no publicó sus capacidades.' };
+  }
+  const caps = capacidades as Record<string, unknown>;
+  if (!Array.isArray(caps.ir_versions) || !caps.ir_versions.every((item) => typeof item === 'number')) {
+    return { ok: false, motivo: 'Las versiones IR publicadas no son válidas.' };
+  }
+  if (!Array.isArray(caps.lenguajes) || !caps.lenguajes.every((item) => typeof item === 'string' && LENGUAJES_EJECUTOR.has(item))) {
+    return { ok: false, motivo: 'Los lenguajes publicados no son válidos.' };
+  }
+  if (typeof caps.max_fragment_bytes !== 'number' || caps.max_fragment_bytes <= 0
+    || typeof caps.max_elementos !== 'number' || caps.max_elementos <= 0) {
+    return { ok: false, motivo: 'Los límites de capacidad del ejecutor no son válidos.' };
+  }
+  return { ok: true, mensaje: valor as MensajeEstadoEjecutorV3 };
+}
+
 export interface MensajeAckFragmentoV3 {
   protocol_version: 3;
   project_id: string;

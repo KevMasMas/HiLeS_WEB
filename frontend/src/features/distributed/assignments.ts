@@ -15,6 +15,7 @@ import type {
   MensajeEstadoEjecutorV3,
   MensajeSnapshotParcialV3,
 } from '../../services/distributed/messages';
+import { evaluarDisponibilidadEjecutor } from './executorAvailability';
 
 /**
  * Propiedad del documento compartido que guarda el ejecutor elegido.
@@ -274,15 +275,65 @@ export const aceptarSnapshot = (
   return !anterior || anterior.epoch !== nuevo.epoch || nuevo.sequence > anterior.sequence;
 };
 
-export const ejecutoresDisponibles = (ejecutores: Record<string, MensajeEstadoEjecutorV3>): EjecutorDisponibleV3[] =>
+export const ejecutoresDisponibles = (
+  ejecutores: Record<string, MensajeEstadoEjecutorV3>,
+  opciones: { projectId: string; vistoEn: Record<string, number>; ahora?: number },
+): EjecutorDisponibleV3[] =>
   Object.values(ejecutores)
-    .filter((ejecutor) => ejecutor.estado !== 'offline')
+    .filter((ejecutor) => evaluarDisponibilidadEjecutor(ejecutor, {
+      projectId: opciones.projectId,
+      recibidoEn: opciones.vistoEn[ejecutor.executor_id],
+      ahora: opciones.ahora,
+    }).desplegable)
     .map((ejecutor) => ({
       executor_id: ejecutor.executor_id,
       tipo: ejecutor.tipo,
       estado: ejecutor.estado,
       capacidades: ejecutor.capacidades,
     }));
+
+export interface ErrorDestinoDespliegue {
+  executorId: string | null;
+  mensaje: string;
+}
+
+/**
+ * Verifica antes de compilar que cada elemento ejecutable tenga un destino y
+ * que todos los destinos usen el mismo criterio de disponibilidad del selector.
+ */
+export const validarDestinosDespliegue = (
+  nodos: readonly NodoHiles[],
+  ejecutores: Record<string, MensajeEstadoEjecutorV3>,
+  opciones: { projectId: string; vistoEn: Record<string, number>; ahora?: number },
+): ErrorDestinoDespliegue[] => {
+  const porId = new Map(nodos.map((nodo) => [nodo.id, nodo]));
+  const destinos = new Set<string>();
+  let faltantes = 0;
+  for (const nodo of nodos) {
+    if (!EJECUTABLES.has(nodo.data.hilesType)) continue;
+    const destino = destinoEfectivo(nodo, porId).executorId;
+    if (destino) destinos.add(destino);
+    else faltantes += 1;
+  }
+  const errores: ErrorDestinoDespliegue[] = [];
+  if (faltantes > 0) errores.push({ executorId: null, mensaje: `${faltantes} elemento(s) no tienen ejecutor asignado.` });
+  for (const executorId of [...destinos].sort()) {
+    const ejecutor = ejecutores[executorId];
+    if (!ejecutor) {
+      errores.push({ executorId, mensaje: `${etiquetaEjecutor(executorId, null)} no está conectado al proyecto ${opciones.projectId}.` });
+      continue;
+    }
+    const disponibilidad = evaluarDisponibilidadEjecutor(ejecutor, {
+      projectId: opciones.projectId,
+      recibidoEn: opciones.vistoEn[executorId],
+      ahora: opciones.ahora,
+    });
+    if (!disponibilidad.desplegable) {
+      errores.push({ executorId, mensaje: `${etiquetaEjecutor(executorId, null)}: ${disponibilidad.detalle ?? 'no está disponible.'}` });
+    }
+  }
+  return errores;
+};
 
 const RECOMENDACIONES: Record<string, string> = {
   DISTRIBUCION_DESTINO_FALTANTE: 'Asigna un ejecutor al bloque que lo contiene o al propio elemento en el mapa de asignaciones.',
