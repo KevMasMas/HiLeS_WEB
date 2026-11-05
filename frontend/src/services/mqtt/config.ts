@@ -119,7 +119,28 @@ export type MqttConnectionStatus =
   | 'CONNECTED'
   | 'ERROR';
 
+export type MqttConnectionMode = 'lan' | 'remote';
+export type MqttWsProtocol = 'ws' | 'wss';
+
+/**
+ * Perfil de conexión del proyecto al broker MQTT.
+ *
+ * Solo vive en memoria de la pestaña actual: nunca persiste credenciales en
+ * `localStorage`, URL, documento colaborativo ni mensajes retenidos.
+ */
+export interface MqttConnectionProfile {
+  mode: MqttConnectionMode;
+  protocol: MqttWsProtocol;
+  host: string;
+  port: number;
+  path: string;
+  username: string;
+  password: string;
+}
+
 export interface MqttConfig {
+  mode: MqttConnectionMode;
+  protocol: MqttWsProtocol;
   host: string;
   port: number;
   path: string;
@@ -176,27 +197,163 @@ export const buildMqttWebSocketUrl = (
   return `${normalizedProtocol}://${host}:${port}${normalizedPath}`;
 };
 
-export const getMqttConfig = (): MqttConfig => {
+/** Distingue direcciones de red doméstica/laboratorio frente a hosts públicos. */
+export const esHostLocalOLan = (host: string): boolean => {
+  const limpio = host.trim().toLowerCase();
+  if (!limpio) return true;
+  if (limpio === 'localhost' || limpio === '127.0.0.1' || limpio === '::1' || limpio.endsWith('.local')) {
+    return true;
+  }
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(limpio)) return true;
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(limpio)) return true;
+  const privado172 = /^172\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(limpio);
+  if (privado172) {
+    const segundo = Number(privado172[1]);
+    return segundo >= 16 && segundo <= 31;
+  }
+  return false;
+};
+
+export interface ValidacionPerfilMqtt {
+  errores: string[];
+  advertencias: string[];
+}
+
+export const validarPerfilConexionMqtt = (
+  perfil: MqttConnectionProfile,
+  paginaHttps = typeof window !== 'undefined' && window.location.protocol === 'https:',
+): ValidacionPerfilMqtt => {
+  const errores: string[] = [];
+  const advertencias: string[] = [];
+  const host = perfil.host.trim();
+
+  if (!host) {
+    errores.push('Escribe la IP o el dominio del broker MQTT.');
+  } else if (/\s/.test(host) || host.includes('://') || host.includes('/')) {
+    errores.push('Escribe solo el host o IP del broker, sin ws:// ni barras.');
+  }
+
+  if (!Number.isInteger(perfil.port) || perfil.port < 1 || perfil.port > 65535) {
+    errores.push('El puerto WebSocket debe estar entre 1 y 65535.');
+  }
+
+  if (!perfil.path.trim() || /\s/.test(perfil.path)) {
+    errores.push('La ruta WebSocket no puede estar vacía ni tener espacios (ej. /mqtt).');
+  }
+
+  if (perfil.protocol !== 'ws' && perfil.protocol !== 'wss') {
+    errores.push('El protocolo debe ser ws o wss.');
+  }
+
+  if (paginaHttps && perfil.protocol === 'ws') {
+    errores.push('Esta página usa HTTPS: el navegador bloquea conexiones ws:// sin cifrar; selecciona wss://.');
+  }
+
+  if (perfil.mode === 'remote') {
+    if (perfil.protocol !== 'wss') {
+      advertencias.push('Conexión remota sin TLS (ws://): no es segura para Internet; usa wss://.');
+    }
+    if (!perfil.username.trim()) {
+      advertencias.push('Conexión remota sin usuario: usa un broker con autenticación y control de acceso.');
+    }
+  } else if (host === 'localhost' || host === '127.0.0.1') {
+    advertencias.push('Con localhost solo conecta este equipo; para otros celulares o PCs en la LAN usa la IP local del broker.');
+  }
+
+  return { errores, advertencias };
+};
+
+export const getDefaultMqttProfile = (): MqttConnectionProfile => {
   const host = readEnv('VITE_MQTT_HOST', 'localhost');
   const port = Number(readEnv('VITE_MQTT_WS_PORT', '9001')) || 9001;
   const path = readEnv('VITE_MQTT_WS_PATH', '/mqtt');
-  const protocol = readEnv(
+  const rawProtocol = readEnv(
     'VITE_MQTT_WS_PROTOCOL',
     typeof window !== 'undefined' && window.location.protocol === 'https:'
       ? 'wss'
       : 'ws',
-  );
+  ).replace('://', '').toLowerCase();
+  const protocol: MqttWsProtocol = rawProtocol === 'wss' ? 'wss' : 'ws';
   const username = readEnv('VITE_MQTT_USERNAME', '');
   const password = readEnv('VITE_MQTT_PASSWORD', '');
+  const mode: MqttConnectionMode = protocol === 'wss' && !esHostLocalOLan(host) ? 'remote' : 'lan';
+
+  return Object.freeze({
+    mode,
+    protocol,
+    host,
+    port,
+    path: path.startsWith('/') ? path : `/${path}`,
+    username,
+    password,
+  });
+};
+
+let activeProfile: Readonly<MqttConnectionProfile> | null = null;
+const profileListeners = new Set<() => void>();
+
+const notifyProfileListeners = (): void => {
+  profileListeners.forEach((listener) => listener());
+};
+
+/** Snapshot inmutable para `useSyncExternalStore`. */
+export const getActiveMqttProfile = (): Readonly<MqttConnectionProfile> => {
+  if (!activeProfile) {
+    activeProfile = getDefaultMqttProfile();
+  }
+  return activeProfile;
+};
+
+export const setActiveMqttProfile = (
+  next: MqttConnectionProfile,
+): Readonly<MqttConnectionProfile> => {
+  const normalizado: MqttConnectionProfile = {
+    mode: next.mode,
+    protocol: next.protocol,
+    host: next.host.trim(),
+    port: Number(next.port),
+    path: next.path.trim().startsWith('/') ? next.path.trim() : `/${next.path.trim()}`,
+    username: next.username.trim(),
+    password: next.password,
+  };
+  const { errores } = validarPerfilConexionMqtt(normalizado);
+  if (errores.length > 0) {
+    throw new Error(errores[0]);
+  }
+  activeProfile = Object.freeze(normalizado);
+  notifyProfileListeners();
+  return activeProfile;
+};
+
+export const resetActiveMqttProfile = (): Readonly<MqttConnectionProfile> => {
+  activeProfile = getDefaultMqttProfile();
+  notifyProfileListeners();
+  return activeProfile;
+};
+
+export const subscribeMqttProfile = (listener: () => void): (() => void) => {
+  profileListeners.add(listener);
+  return () => profileListeners.delete(listener);
+};
+
+export const etiquetaModoConexionMqtt = (perfil: Pick<MqttConnectionProfile, 'mode' | 'protocol'>): string =>
+  perfil.mode === 'remote'
+    ? `Remoto (${perfil.protocol})`
+    : 'Local/LAN';
+
+export const getMqttConfig = (): MqttConfig => {
+  const perfil = getActiveMqttProfile();
   const clientId = `hiles-web-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 
   return {
-    host,
-    port,
-    path,
-    username: username || undefined,
-    password: password || undefined,
-    webSocketUrl: buildMqttWebSocketUrl(host, port, path, protocol),
+    mode: perfil.mode,
+    protocol: perfil.protocol,
+    host: perfil.host,
+    port: perfil.port,
+    path: perfil.path,
+    username: perfil.username || undefined,
+    password: perfil.password || undefined,
+    webSocketUrl: buildMqttWebSocketUrl(perfil.host, perfil.port, perfil.path, perfil.protocol),
     clientId,
   };
 };

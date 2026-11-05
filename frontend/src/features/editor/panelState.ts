@@ -5,31 +5,70 @@ export const getNextDockPanel = (current: DockPanel, requested: Exclude<DockPane
   current === requested ? null : requested
 );
 
-export interface ExecutionAvailabilityInput {
-  modo: 'local' | 'pico';
-  ocupado: boolean;
-  estadoLocal: string;
-  sesionRemotaActiva: boolean;
+export interface WorkspacePanelsState {
+  activePanel: DockPanel;
+  distributedOpen: boolean;
+  paletteOpen: boolean;
 }
 
-export interface ExecutionAvailability {
-  stepDisabled: boolean;
-  runDisabled: boolean;
-  resetDisabled: boolean;
-  stopVisible: boolean;
-  stopDisabled: boolean;
-}
+export type WorkspacePanelAction =
+  | { type: 'toggle-dock'; panel: Exclude<DockPanel, null> }
+  | { type: 'set-dock'; panel: DockPanel }
+  | { type: 'toggle-distributed' }
+  | { type: 'open-distributed' }
+  | { type: 'close-distributed' }
+  | { type: 'toggle-palette' };
 
-/** Estado puro usado por la TopBar y por las pruebas de regresión. */
-export const getExecutionAvailability = (input: ExecutionAvailabilityInput): ExecutionAvailability => {
-  const localUnavailable = input.estadoLocal === 'error' || input.estadoLocal === 'inactiva';
-  const remoteUnavailable = !input.sesionRemotaActiva;
-  const disabled = input.ocupado || (input.modo === 'pico' ? remoteUnavailable : localUnavailable);
-  return {
-    stepDisabled: disabled,
-    runDisabled: disabled,
-    resetDisabled: input.ocupado || (input.modo === 'pico' && remoteUnavailable),
-    stopVisible: input.modo === 'pico',
-    stopDisabled: remoteUnavailable,
-  };
+/**
+ * Coordina los paneles laterales para que el dock y el panel de ejecutores no
+ * se superpongan, y en móvil tampoco se apilen sobre la paleta.
+ */
+export const applyWorkspacePanelAction = (
+  current: WorkspacePanelsState,
+  action: WorkspacePanelAction,
+  esMovil = false,
+): WorkspacePanelsState => {
+  switch (action.type) {
+    case 'toggle-dock': {
+      const next = getNextDockPanel(current.activePanel, action.panel);
+      return {
+        activePanel: next,
+        distributedOpen: next ? false : current.distributedOpen,
+        paletteOpen: next && esMovil ? false : current.paletteOpen,
+      };
+    }
+    case 'set-dock':
+      return {
+        activePanel: action.panel,
+        distributedOpen: action.panel ? false : current.distributedOpen,
+        paletteOpen: action.panel && esMovil ? false : current.paletteOpen,
+      };
+    case 'toggle-distributed': {
+      const next = !current.distributedOpen;
+      return {
+        activePanel: next ? null : current.activePanel,
+        distributedOpen: next,
+        paletteOpen: next && esMovil ? false : current.paletteOpen,
+      };
+    }
+    case 'open-distributed':
+      return {
+        activePanel: null,
+        distributedOpen: true,
+        paletteOpen: esMovil ? false : current.paletteOpen,
+      };
+    case 'close-distributed':
+      return {
+        ...current,
+        distributedOpen: false,
+      };
+    case 'toggle-palette': {
+      const next = !current.paletteOpen;
+      return {
+        activePanel: next && esMovil ? null : current.activePanel,
+        distributedOpen: next && esMovil ? false : current.distributedOpen,
+        paletteOpen: next,
+      };
+    }
+  }
 };

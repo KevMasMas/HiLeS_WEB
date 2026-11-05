@@ -65,16 +65,16 @@ La entrega dejará el estado y la interfaz preparados para un broker remoto, per
 - [x] Implementar en software una validación central para estados Pico/navegador y cubrirla con pruebas.
 - [ ] Verificar visualmente que `pico:pico01w` y `pico:pico02w` aparecen y pueden seleccionarse en `proyecto-hl950c`.
 - [ ] Desplegar un modelo real Pico ↔ Pico y registrar ambos ACK.
-- [ ] Eliminar la duplicación funcional entre `Local/Pico`, `Pico/MQTT`, controles de la barra y controles del panel distribuido.
-- [ ] Definir un estado único de conexión y ejecución consumido por toda la interfaz.
-- [ ] Corregir desbordamientos y barras de desplazamiento innecesarias en escritorio, tablet y celular.
-- [ ] Mantener scroll interno únicamente en listas o paneles cuyo contenido realmente lo requiera.
-- [ ] Actualizar el tutorial para el flujo proyecto → conexión → ejecutores → asignación → despliegue → entrada → ejecución.
+- [x] Eliminar la duplicación funcional entre `Local/Pico`, `Pico/MQTT`, controles de la barra y controles del panel distribuido.
+- [x] Definir un estado único de conexión y ejecución consumido por toda la interfaz.
+- [x] Corregir desbordamientos y barras de desplazamiento innecesarias en escritorio, tablet y celular.
+- [x] Mantener scroll interno únicamente en listas o paneles cuyo contenido realmente lo requiera.
+- [x] Actualizar el tutorial para el flujo proyecto → conexión → ejecutores → asignación → despliegue → entrada → ejecución.
 - [ ] Probar todos los tipos de elemento soportados y los tres tipos de canal en browser y MicroPython.
-- [ ] Añadir casos con varios tokens y una representación visual legible de la cantidad.
+- [x] Añadir casos con varios tokens y una representación visual legible de la cantidad.
 - [ ] Generar y validar un paquete de firmware canónico idéntico para Pico W y Pico 2 W.
 - [ ] Inventariar ambas placas, respaldarlas, sincronizar el runtime y comprobar checksums sin reemplazar `config_local.py` ni `umqtt/`.
-- [ ] Permitir preparar desde la aplicación una configuración validada sin escribir Python manualmente.
+- [x] Permitir preparar desde la aplicación una configuración validada sin escribir Python manualmente.
 - [ ] Ejecutar la matriz mínima de pruebas automáticas, visuales y físicas y registrar evidencia.
 - [ ] Actualizar la documentación de instalación, configuración, uso, recuperación y demostración.
 
@@ -84,7 +84,7 @@ La entrega dejará el estado y la interfaz preparados para un broker remoto, per
 - [ ] Detectar desde el asistente si una placa usa firmware incompleto o versión diferente y recomendar sincronización.
 - [ ] Probar Pico ↔ navegador con pérdida y recuperación de uno de los ejecutores.
 - [ ] Mostrar versión de firmware, modelo de placa, memoria libre, última actividad y despliegue activo.
-- [ ] Incorporar un menú de desbordamiento compacto en la barra superior para pantallas pequeñas.
+- [x] Incorporar un menú de desbordamiento compacto en la barra superior para pantallas pequeñas.
 - [ ] Probar un perfil remoto `wss://` real si existe infraestructura segura disponible.
 
 ### P2 — no bloquea la entrega
@@ -321,9 +321,9 @@ Cada una de las otras cuatro personas deberá entregar al finalizar su jornada u
 - [x] Hacer que selector y despliegue compartan el mismo criterio.
 - [x] Añadir pruebas de Pico válida, otro proyecto, protocolo inválido, offline, degradado y obsoleto.
 - [ ] Verificar las dos Picos reales en el panel y completar despliegue Pico ↔ Pico.
-- [ ] Definir la fachada de estado oficial que reemplazará el modo global `local/pico`.
-- [ ] Migrar comandos globales hacia el despliegue distribuido.
-- [ ] Entregar a Persona 3 el contrato exacto de controles y estados visibles.
+- [x] Definir la fachada de estado oficial que reemplazará el modo global `local/pico`.
+- [x] Migrar comandos globales hacia el despliegue distribuido.
+- [x] Entregar a Persona 3 el contrato exacto de controles y estados visibles.
 
 #### Archivos bajo su control
 
@@ -358,7 +358,7 @@ frontend/src/features/distributed/*.test.ts
 - [ ] Preservar `config_local.py` y `umqtt/`.
 - [ ] Verificar Pico W RP2040 y Pico 2 W RP2350 con el mismo runtime general.
 - [ ] Añadir versión de firmware y modelo de placa al estado publicado si falta.
-- [ ] Preparar el formulario/generador seguro de `config_local.py`.
+- [x] Preparar el formulario/generador seguro de `config_local.py`.
 - [ ] Investigar Web Serial y entregar resultado funcional o fallback documentado.
 - [ ] Probar incorporación de una identidad `pico03w` simulada o física sin código nuevo.
 
@@ -389,15 +389,15 @@ frontend/src/features/setup/**
 
 #### Tareas
 
-- [ ] Inventariar todos los botones y marcar mantener, fusionar o retirar.
-- [ ] Eliminar los controles duplicados después de migrar sus funciones.
-- [ ] Rediseñar la información visible alrededor de conexión, destino, despliegue y ejecución.
-- [ ] Corregir scrollbars globales y desbordamientos por panel.
-- [ ] Crear comportamiento compacto de topbar para móvil y tablet.
-- [ ] Mantener accesibilidad por teclado, foco visible, etiquetas y áreas táctiles.
-- [ ] Actualizar tutorial y ayudas contextuales al flujo real.
-- [ ] Mostrar cantidad de tokens y estados remotos de forma legible.
-- [ ] Ejecutar revisión visual en todos los viewports definidos.
+- [x] Inventariar todos los botones y marcar mantener, fusionar o retirar.
+- [x] Eliminar los controles duplicados después de migrar sus funciones.
+- [x] Rediseñar la información visible alrededor de conexión, destino, despliegue y ejecución.
+- [x] Corregir scrollbars globales y desbordamientos por panel.
+- [x] Crear comportamiento compacto de topbar para móvil y tablet.
+- [x] Mantener accesibilidad por teclado, foco visible, etiquetas y áreas táctiles.
+- [x] Actualizar tutorial y ayudas contextuales al flujo real.
+- [x] Mostrar cantidad de tokens y estados remotos de forma legible.
+- [x] Ejecutar revisión visual en todos los viewports definidos.
 
 #### Archivos bajo su control
 
@@ -536,21 +536,21 @@ Reglas de integración:
 
 - [x] Auditoría de validaciones de Pico.
 - [x] Corrección de software del Paso 1 y 161 pruebas frontend aprobadas.
-- [ ] Congelar contrato único de estado y comandos.
-- [ ] Inventariar duplicados de UI y causas de overflow.
+- [x] Congelar contrato único de estado y comandos.
+- [x] Inventariar duplicados de UI y causas de overflow.
 - [ ] Inventariar las dos Picos y producir comparación segura.
 - [ ] Congelar matriz de conformidad general.
 - [ ] Persona 5 inicia la cronología histórica y el índice de aportes por persona.
 
 ### Jueves 5 de noviembre
 
-- [ ] Integrar controles únicos y primera pasada responsive.
+- [x] Integrar controles únicos y primera pasada responsive.
 - [ ] Sincronizar firmware canónico en ambas Picos.
-- [ ] Completar generador seguro de configuración.
-- [ ] Ejecutar pruebas de elementos, canales y múltiples tokens.
-- [ ] Completar tutorial actualizado.
+- [x] Completar generador seguro de configuración.
+- [x] Ejecutar pruebas de elementos, canales y múltiples tokens.
+- [x] Completar tutorial actualizado.
 - [ ] Ejecutar Pico ↔ Pico y Pico ↔ navegador.
-- [ ] Personas 1 a 4 entregan sus primeros informes verificables a Persona 5.
+- [x] Personas 1 a 4 entregan sus primeros informes verificables a Persona 5.
 - [ ] Persona 5 reconcilia arquitectura, instalación y guías de Pico con el código actual.
 
 ### Viernes 6 de noviembre — mañana
@@ -590,14 +590,14 @@ Reglas de integración:
 
 Además:
 
-- [ ] Suite completa de frontend.
+- [x] Suite completa de frontend.
 - [ ] Suite completa de firmware.
-- [ ] ESLint.
-- [ ] TypeScript.
-- [ ] Build de producción.
-- [ ] `git diff --check`.
+- [x] ESLint.
+- [x] TypeScript.
+- [x] Build de producción.
+- [x] `git diff --check`.
 - [ ] Paquete Pico comparado por checksum.
-- [ ] Auditoría de secretos.
+- [x] Auditoría de secretos.
 
 ## 14. Secuencia de demostración
 
@@ -619,15 +619,15 @@ La entrega se considera aprobada solamente si:
 - [ ] Las dos Picos reales aparecen seleccionables en el proyecto correcto.
 - [ ] Pico ↔ Pico ejecuta al menos un flujo de datos completo.
 - [ ] Pico ↔ navegador ejecuta al menos un flujo de datos completo.
-- [ ] No existen dos sistemas de controles visibles para la misma ejecución.
-- [ ] El modo de conexión no se confunde con el destino de un bloque.
+- [x] No existen dos sistemas de controles visibles para la misma ejecución.
+- [x] El modo de conexión no se confunde con el destino de un bloque.
 - [ ] Todos los elementos generales cuentan con evidencia de conformidad.
-- [ ] Varios tokens se representan y ejecutan correctamente.
-- [ ] No hay desbordamiento horizontal global en los viewports obligatorios.
-- [ ] El tutorial coincide con la interfaz entregada.
+- [x] Varios tokens se representan y ejecutan correctamente.
+- [x] No hay desbordamiento horizontal global en los viewports obligatorios.
+- [x] El tutorial coincide con la interfaz entregada.
 - [ ] Las dos Picos usan el paquete canónico y conservan configuración individual.
-- [ ] Una nueva Pico puede configurarse sin escribir código Python manualmente.
-- [ ] Ningún secreto aparece en Git, URLs, retaineds o capturas.
+- [x] Una nueva Pico puede configurarse sin escribir código Python manualmente.
+- [x] Ningún secreto aparece en Git, URLs, retaineds o capturas.
 - [ ] Pruebas, build y documentación se encuentran aprobados y registrados.
 
 ## 16. Riesgos y recortes autorizados

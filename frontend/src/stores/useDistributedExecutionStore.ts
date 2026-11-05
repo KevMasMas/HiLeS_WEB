@@ -58,6 +58,8 @@ interface DistributedExecutionState {
   errorLocal: string | null;
   mensaje: string | null;
   iniciar: (projectId: string) => () => void;
+  reconectarBroker: () => void;
+  desconectarBroker: () => void;
   habilitarWorker: (habilitar: boolean) => void;
   asignar: (nodoId: string, executorId: string | null) => void;
   desplegar: () => Promise<boolean>;
@@ -106,7 +108,11 @@ const pintarEnCanvas = (): void => {
     let cambio = false;
     const nodes = estado.nodes.map((nodo) => {
       const item = vista.get(nodo.id);
-      if (!item) return nodo;
+      if (!item) {
+        if (!nodo.data.runtime) return nodo;
+        cambio = true;
+        return { ...nodo, data: { ...nodo.data, runtime: undefined } };
+      }
       const datos = item.estado ?? {};
       const runtime: NonNullable<HilesNodeData['runtime']> = {
         ...(datos.valor !== undefined ? { value: datos.valor as never } : {}),
@@ -306,6 +312,32 @@ export const useDistributedExecutionStore = create<DistributedExecutionState>((s
     };
   },
 
+  reconectarBroker: () => {
+    const { projectId, workerHabilitado, workerSessionId } = get();
+    if (!projectId) return;
+    suscribirDespliegue(projectId, null);
+    set({
+      conectado: false,
+      ejecutores: {},
+      vistoEn: {},
+      manifest: null,
+      acks: {},
+      snapshots: {},
+      ejecutando: false,
+      errorLocal: null,
+    });
+    control?.conectar(null);
+    if (workerHabilitado) arrancarWorker(projectId, workerSessionId);
+  },
+
+  desconectarBroker: () => {
+    const { projectId } = get();
+    if (projectId) suscribirDespliegue(projectId, null);
+    control?.desconectar();
+    detenerWorker();
+    set({ conectado: false, ejecutando: false });
+  },
+
   habilitarWorker: (habilitar) => {
     const { projectId, workerSessionId } = get();
     set({ workerHabilitado: habilitar, workerStats: null });
@@ -322,7 +354,7 @@ export const useDistributedExecutionStore = create<DistributedExecutionState>((s
   desplegar: async () => {
     const { projectId, manifest: anterior, ejecutores, vistoEn } = get();
     if (!projectId || !control?.conectado) {
-      set({ errorLocal: 'No hay conexión con el broker: revisa MQTT antes de desplegar.' });
+      set({ errorLocal: 'No hay conexión con el broker: revisa la conexión MQTT antes de desplegar.' });
       return false;
     }
     set({ desplegando: true, errorLocal: null, mensaje: 'Compilando y particionando el modelo…' });

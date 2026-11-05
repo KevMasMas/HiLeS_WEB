@@ -144,4 +144,40 @@ describe('useProjectStore: integración del editor con el proyecto compartido', 
 
     expect(fakeMqtt.published.filter(({ topic }) => topic.endsWith('/document/snapshot'))).toHaveLength(1);
   });
+
+  it('desbloquea la interfaz tras 1000ms si el broker MQTT está desconectado (fallback offline)', async () => {
+    const [{ useProjectStore }, { useEditorStore }] = await Promise.all([
+      import('./useProjectStore'),
+      import('./useEditorStore'),
+    ]);
+
+    // Simular que la conexión al broker falla o nunca se establece
+    const connectSpy = vi.spyOn(fakeMqtt, 'connect').mockImplementation(() => {});
+
+    stop = useProjectStore.getState().start('proyecto-offline');
+    expect(useProjectStore.getState().ready).toBe(false);
+
+    // Antes de 1000ms sigue esperando
+    await vi.advanceTimersByTimeAsync(800);
+    expect(useProjectStore.getState().ready).toBe(false);
+
+    // Tras 1000ms se activa el desbloqueo offline para no atrapar al usuario
+    await vi.advanceTimersByTimeAsync(200);
+    expect(useProjectStore.getState().ready).toBe(true);
+
+    // El usuario puede trabajar localmente
+    useEditorStore.getState().addNode('SERVICE', { x: 50, y: 50 });
+    expect(useEditorStore.getState().nodes).toHaveLength(1);
+
+    // Si más tarde el broker se conecta, se sincroniza adecuadamente
+    connectSpy.mockRestore();
+    fakeMqtt.connect();
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(fakeMqtt.published.filter(({ topic }) => topic.endsWith('/document/snapshot'))).toHaveLength(1);
+
+    useEditorStore.getState().addNode('SERVICE', { x: 90, y: 90 });
+    await vi.advanceTimersByTimeAsync(150);
+    expect(fakeMqtt.published.some(({ topic }) => topic.endsWith('/document/ops'))).toBe(true);
+  });
 });

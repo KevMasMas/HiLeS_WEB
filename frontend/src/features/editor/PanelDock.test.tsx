@@ -1,5 +1,34 @@
-import { describe, expect, it } from 'vitest';
-import { getExecutionAvailability, getNextDockPanel, type DockPanel } from './panelState';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { beforeAll, describe, expect, it } from 'vitest';
+import {
+  applyWorkspacePanelAction,
+  getNextDockPanel,
+  type DockPanel,
+  type WorkspacePanelsState,
+} from './panelState';
+
+const storage = new Map<string, string>();
+
+beforeAll(() => {
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    value: {
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      setInterval: () => 0,
+      clearInterval: () => undefined,
+      location: { protocol: 'http:', href: 'http://localhost/' },
+      history: { replaceState: () => undefined },
+    },
+  });
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+    },
+  });
+});
 
 describe('PanelDock interactions', () => {
   it('opens a panel, switches tabs and closes the active panel', () => {
@@ -24,36 +53,111 @@ describe('PanelDock interactions', () => {
   });
 });
 
-describe('TopBar action regression', () => {
-  it('enables local execution only when the motor is ready', () => {
-    expect(getExecutionAvailability({
-      modo: 'local',
-      ocupado: false,
-      estadoLocal: 'lista',
-      sesionRemotaActiva: false,
-    })).toMatchObject({ stepDisabled: false, runDisabled: false, resetDisabled: false, stopVisible: false });
+describe('Workspace panel mutual exclusion', () => {
+  it('prevents PanelDock and DistributedPanel from colliding on desktop', () => {
+    let estado: WorkspacePanelsState = {
+      activePanel: 'simulation',
+      distributedOpen: false,
+      paletteOpen: true,
+    };
 
-    expect(getExecutionAvailability({
-      modo: 'local',
-      ocupado: true,
-      estadoLocal: 'ejecutando',
-      sesionRemotaActiva: false,
-    })).toMatchObject({ stepDisabled: true, runDisabled: true, resetDisabled: true });
+    estado = applyWorkspacePanelAction(estado, { type: 'open-distributed' }, false);
+    expect(estado).toEqual({
+      activePanel: null,
+      distributedOpen: true,
+      paletteOpen: true,
+    });
+
+    estado = applyWorkspacePanelAction(estado, { type: 'toggle-dock', panel: 'mqtt' }, false);
+    expect(estado).toEqual({
+      activePanel: 'mqtt',
+      distributedOpen: false,
+      paletteOpen: true,
+    });
   });
 
-  it('requires an active Pico session and exposes the stop action', () => {
-    expect(getExecutionAvailability({
-      modo: 'pico',
-      ocupado: false,
-      estadoLocal: 'inactiva',
-      sesionRemotaActiva: false,
-    })).toMatchObject({ stepDisabled: true, runDisabled: true, resetDisabled: true, stopVisible: true, stopDisabled: true });
+  it('prevents bottom-sheet collisions between Palette, PanelDock and DistributedPanel on mobile', () => {
+    let estado: WorkspacePanelsState = {
+      activePanel: null,
+      distributedOpen: false,
+      paletteOpen: true,
+    };
 
-    expect(getExecutionAvailability({
-      modo: 'pico',
-      ocupado: false,
-      estadoLocal: 'inactiva',
-      sesionRemotaActiva: true,
-    })).toMatchObject({ stepDisabled: false, runDisabled: false, resetDisabled: false, stopVisible: true, stopDisabled: false });
+    estado = applyWorkspacePanelAction(estado, { type: 'open-distributed' }, true);
+    expect(estado).toEqual({
+      activePanel: null,
+      distributedOpen: true,
+      paletteOpen: false,
+    });
+
+    estado = applyWorkspacePanelAction(estado, { type: 'toggle-palette' }, true);
+    expect(estado).toEqual({
+      activePanel: null,
+      distributedOpen: false,
+      paletteOpen: true,
+    });
+
+    estado = applyWorkspacePanelAction(estado, { type: 'set-dock', panel: 'simulation' }, true);
+    expect(estado).toEqual({
+      activePanel: 'simulation',
+      distributedOpen: false,
+      paletteOpen: false,
+    });
+  });
+});
+
+describe('Unified execution controls and connection mode UI', () => {
+  it('renders a single global set of Iniciar/Paso/Detener/Reiniciar controls and zero legacy Local/Pico toggles', async () => {
+    const { TopBar } = await import('./TopBar');
+    const { PanelDock } = await import('./PanelDock');
+    const noop = () => undefined;
+
+    const html = renderToStaticMarkup(
+      <div>
+        <TopBar
+          projectId="proyecto-demo"
+          projectDraft="proyecto-demo"
+          fileName="proyecto-demo.json"
+          statusMessage={null}
+          canUndo={false}
+          canRedo={false}
+          paletteOpen={false}
+          activePanel="simulation"
+          distributedOpen
+          onProjectDraftChange={noop}
+          onProjectCommit={noop}
+          onNewProject={noop}
+          onImport={noop}
+          onExport={noop}
+          onUndo={noop}
+          onRedo={noop}
+          onTogglePalette={noop}
+          onTogglePanel={noop}
+          onSelectPanel={noop}
+          onToggleDistributed={noop}
+          onOpenDistributed={noop}
+          onCloseDistributed={noop}
+        />
+        <PanelDock activePanel="simulation" onPanelChange={noop} onOpenDistributed={noop} />
+      </div>,
+    );
+
+    const contarAriaLabel = (etiqueta: string) =>
+      (html.match(new RegExp(`aria-label="${etiqueta}"`, 'g')) ?? []).length;
+
+    expect(contarAriaLabel('Iniciar')).toBe(1);
+    expect(contarAriaLabel('Paso')).toBe(1);
+    expect(contarAriaLabel('Detener')).toBe(1);
+    expect(contarAriaLabel('Reiniciar')).toBe(1);
+
+    expect(html).toContain('data-tour="controles-ejecucion"');
+    expect(html).toContain('data-tour="modo-conexion"');
+    expect(html).toContain('data-tour="estado-distribuido"');
+    expect(html).toContain('data-tour="proyecto"');
+
+    expect(html).not.toContain('Modo Local');
+    expect(html).not.toContain('Modo Pico');
+    expect(html).not.toContain('Sesión remota');
+    expect(html).not.toContain('aria-label="Ejecutar"');
   });
 });

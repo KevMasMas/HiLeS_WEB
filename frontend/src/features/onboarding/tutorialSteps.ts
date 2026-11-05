@@ -1,5 +1,7 @@
 export type TemaTutorial = 'bienvenida' | 'canvas' | 'elementos' | 'conexiones' | 'colaboracion' | 'despliegue' | 'ejecucion';
 
+export type ContextoPanelTutorial = 'distributed' | 'simulation' | 'mqtt' | 'none';
+
 export interface PasoTutorial {
   tema: TemaTutorial;
   titulo: string;
@@ -9,58 +11,107 @@ export interface PasoTutorial {
   accion: string;
   /** Selector CSS del control que se resalta; `null` centra la tarjeta. */
   objetivo: string | null;
+  /** Panel que conviene abrir automáticamente para mostrar el control real. */
+  panel?: ContextoPanelTutorial;
 }
 
-export const CLAVE_TUTORIAL_COMPLETADO = 'hiles_tutorial_completado_v1';
+export const CLAVE_TUTORIAL_COMPLETADO = 'hiles_tutorial_completado_v2';
 
 export const pasosTutorial: PasoTutorial[] = [
   {
     tema: 'bienvenida',
-    titulo: 'Bienvenido a HiLeS Web',
-    explicacion: 'HiLeS describe sistemas con bloques. Un Structural Block agrupa elementos; dentro hay Services (entradas y salidas), Functional Blocks (cálculos) y redes de Petri. Luego puedes ejecutar cada bloque en una Raspberry Pi Pico W o en un navegador.',
-    accion: 'Si el lienzo está vacío, pulsa «Cargar ejemplo mínimo» para seguir el recorrido con un modelo listo.',
+    titulo: 'Bienvenido a HiLeS Web distribuido',
+    explicacion: 'HiLeS permite diseñar sistemas jerárquicos con Structural Blocks, Functional Blocks, Services y redes de Petri, y ejecutarlos repartidos entre varias Raspberry Pi Pico W y navegadores conectados al mismo proyecto.',
+    accion: 'Usa los botones de abajo para cargar el ejemplo mínimo sin hardware (todo en el navegador) o el ejemplo multi-Pico de tres bloques.',
     objetivo: null,
-  },
-  {
-    tema: 'canvas',
-    titulo: 'El lienzo',
-    explicacion: 'Aquí se dibuja el modelo. Con poco zoom los bloques se muestran resumidos; al acercarte aparecen sus elementos internos.',
-    accion: 'Usa la rueda del ratón para acercarte y arrastra con el botón derecho para moverte por el lienzo.',
-    objetivo: '.react-flow',
-  },
-  {
-    tema: 'elementos',
-    titulo: 'Agregar elementos',
-    explicacion: 'El botón Elementos abre la paleta con Structural Blocks, Services, Functional Blocks, Sample, Hold, Places y Transitions.',
-    accion: 'Abre «Elementos» y arrastra un elemento al lienzo. Suéltalo dentro de un Structural Block para que forme parte de él.',
-    objetivo: '[data-tour="elementos"]',
-  },
-  {
-    tema: 'conexiones',
-    titulo: 'Conectar puertos',
-    explicacion: 'Las conexiones llevan datos entre puertos: CCH para valores continuos, DCH para eventos y LCH para pulsos lógicos. Los puertos deben tener el mismo tipo de dato.',
-    accion: 'En la paleta elige un conector y arrastra desde un puerto de salida (›) hasta un puerto de entrada (‹).',
-    objetivo: '.react-flow',
+    panel: 'none',
   },
   {
     tema: 'colaboracion',
-    titulo: 'Trabajar en equipo',
-    explicacion: 'Todas las personas con el mismo enlace editan el mismo proyecto. Verás sus avatares, cursores y lo que seleccionan, y puedes seguir a alguien para que tu vista acompañe su selección.',
-    accion: 'Pulsa «Compartir», copia el enlace y ábrelo en otra pestaña. Luego abre la lista de colaboradores y prueba «Seguir».',
-    objetivo: '[data-tour="compartir"]',
+    titulo: 'Proyecto compartido: colaborador frente a ejecutor',
+    explicacion: 'El identificador «Proyecto» agrupa a quienes editan el mismo lienzo mediante «Compartir». Ser colaborador significa ver cursores y editar el modelo; ser ejecutor es distinto y opcional: solo ejecuta fragmentos quien registra su navegador o una Pico con este mismo projectId.',
+    accion: 'Revisa el campo «Proyecto» o usa «Compartir» (en pantallas estrechas dentro de «⋯») para copiar el enlace colaborativo.',
+    objetivo: '[data-tour="proyecto"]',
+    panel: 'none',
+  },
+  {
+    tema: 'colaboracion',
+    titulo: 'Modo de conexión: Local / LAN frente a Remoto',
+    explicacion: 'El modo de conexión define cómo hablas con el broker MQTT: «Local / LAN» para un broker en tu equipo o red Wi-Fi local, y «Remoto (Internet)» con WebSockets cifrados (wss://) para trabajar desde distintas redes. Las credenciales viven solo en memoria de sesión.',
+    accion: 'Pulsa el indicador de modo de conexión o revisa el panel «Conexión» para elegir entre Local / LAN y Remoto.',
+    objetivo: '[data-tour="modo-conexion"]',
+    panel: 'mqtt',
+  },
+  {
+    tema: 'canvas',
+    titulo: 'El lienzo, marcaje ×N y estados vivos',
+    explicacion: 'Al alejar el zoom los Structural Blocks muestran una vista resumida; al acercarte aparecen sus elementos internos, los valores en tiempo real y el conteo exacto de tokens (×N) en cada Place.',
+    accion: 'Acércate con la rueda del ratón o pellizco táctil para inspeccionar los bloques internos del modelo.',
+    objetivo: '.react-flow',
+    panel: 'none',
+  },
+  {
+    tema: 'elementos',
+    titulo: 'Paleta de elementos HiLeS',
+    explicacion: 'Desde «Elementos» añades Structural Blocks, Functional Blocks (con código Python o expresiones), Services de entrada/salida, conversores Sample/Hold y redes de Petri (Place y Transition).',
+    accion: 'Abre «Elementos» y arrastra o toca un componente para colocarlo dentro de un Structural Block.',
+    objetivo: '[data-tour="elementos"]',
+    panel: 'none',
+  },
+  {
+    tema: 'conexiones',
+    titulo: 'Canales locales y entre ejecutores',
+    explicacion: 'Une puertos compatibles con Continuous Channel (datos continuos), Discrete Event (eventos) o Logical / Petri Channel. Si dos bloques se asignan a placas o navegadores distintos, HiLeS enruta el canal automáticamente por MQTT.',
+    accion: 'Selecciona el tipo de conector en la paleta antes de arrastrar desde una salida (›) hacia una entrada (‹).',
+    objetivo: '.react-flow',
+    panel: 'none',
   },
   {
     tema: 'despliegue',
-    titulo: 'Asignar y desplegar',
-    explicacion: 'En Ejecutores eliges dónde corre cada Structural Block: una Pico W, este navegador u otro navegador. Desplegar divide el modelo en fragmentos y espera la confirmación (ACK) de cada ejecutor.',
-    accion: 'Abre «Ejecutores», activa «Ejecutar aquí», asigna los bloques y pulsa «Desplegar». Espera a que todos digan «ACK recibido».',
-    objetivo: '[data-tour="ejecutores"]',
+    titulo: 'Registrar este navegador y reconocer Picos',
+    explicacion: 'En «Ejecutores» puedes activar «Ejecutar aquí» para ofrecer esta pestaña como worker sin hardware físico. Las Raspberry Pi Pico W encendidas aparecen automáticamente si su HILES_PROJECT_ID coincide con el proyecto actual.',
+    accion: 'Activa «Ejecutar aquí» si quieres correr bloques en tu navegador y verifica en la lista las Picos conectadas y su memoria libre.',
+    objetivo: '[data-tour="ejecutar-aqui"]',
+    panel: 'distributed',
+  },
+  {
+    tema: 'despliegue',
+    titulo: 'Asignar Structural Blocks y sobreescribir Functional Blocks',
+    explicacion: 'Cada Structural Block se asigna a una Pico W o navegador y todos sus elementos internos heredan ese destino. Cuando un cálculo puntual requiera correr en otro nodo, puedes sobreescribir el destino de ese Functional Block individual.',
+    accion: 'En «Destino por bloque», elige el ejecutor de cada Structural Block (por ejemplo, dos Picos distintas o «Este navegador»).',
+    objetivo: '[data-tour="mapa-asignaciones"]',
+    panel: 'distributed',
+  },
+  {
+    tema: 'despliegue',
+    titulo: 'Configurar una Pico nueva y proteger credenciales',
+    explicacion: 'El asistente «Preparar otra Raspberry Pi Pico» genera localmente config_local.py con Wi-Fi, host MQTT, identidad única y projectId. HiLeS nunca guarda contraseñas en el proyecto compartido, la URL ni mensajes MQTT.',
+    accion: 'Despliega «Preparar otra Raspberry Pi Pico» cuando necesites aprovisionar una placa nueva y copia el archivo con Thonny conservando umqtt/.',
+    objetivo: '[data-tour="preparar-pico"]',
+    panel: 'distributed',
+  },
+  {
+    tema: 'despliegue',
+    titulo: 'Desplegar, fragmentos y confirmación ACK',
+    explicacion: '«Desplegar» valida los destinos, compila el modelo a IR v2, publica el manifiesto y envía a cada ejecutor únicamente su fragmento propietario. La fase pasa a «Listo» cuando todos responden «ACK recibido».',
+    accion: 'Pulsa «Desplegar» cuando todos los bloques tengan un ejecutor válido y confirma que cada fragmento reciba su ACK.',
+    objetivo: '[data-tour="desplegar"]',
+    panel: 'distributed',
   },
   {
     tema: 'ejecucion',
-    titulo: 'Ejecutar y observar',
-    explicacion: 'Iniciar y Paso controlan a todos los ejecutores a la vez. La etiqueta de la barra superior indica si está desconectado, desplegando, listo, ejecutando o con error, sin abrir la consola.',
-    accion: 'Pulsa «Iniciar» o «Paso», inyecta un valor en la Entrada y mira el resultado en «Estado agregado» y en el lienzo.',
-    objetivo: '[data-tour="estado-distribuido"]',
+    titulo: 'Introducir valores mediante Services',
+    explicacion: 'El panel «Entradas» detecta automáticamente los Services con puerto de salida y envía valores tipados (booleanos, enteros, reales, texto o JSON) directo al ejecutor propietario de ese Service.',
+    accion: 'Elige un Service de entrada, envía un valor de prueba y revisa el «Estado agregado» por propietario.',
+    objetivo: '[data-tour="panel-entradas"]',
+    panel: 'simulation',
+  },
+  {
+    tema: 'ejecucion',
+    titulo: 'Controles globales únicos y estados offline / obsoleto',
+    explicacion: '«Iniciar», «Paso», «Detener» y «Reiniciar» gobiernan sincronizadamente todo el despliegue desde la barra superior. Si una placa cae a «offline» o «degradado», o rechaza un fragmento por memoria, verás el diagnóstico accionable y sus elementos quedarán marcados como «Obsoleto» mientras aún puedes detener o reiniciar los ejecutores activos.',
+    accion: 'Usa «Iniciar» o «Paso» en la barra superior y consulta el chip de fase siempre que necesites diagnosticar un ejecutor.',
+    objetivo: '[data-tour="controles-ejecucion"]',
+    panel: 'none',
   },
 ];

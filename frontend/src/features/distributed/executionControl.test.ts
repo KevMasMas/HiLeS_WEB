@@ -81,13 +81,29 @@ describe('fachada única de ejecución distribuida', () => {
     expect(control).toMatchObject({ puedeIniciar: false, puedeAvanzar: false, puedeDetener: true, puedeReiniciar: true });
   });
 
-  it('bloquea la operación si un destino está desconectado', () => {
+  it('bloquea iniciar y paso si un destino cae, pero permite detener o reiniciar los restantes', () => {
     const control = crearControlEjecucionDistribuida({
       ...base,
       ejecutores: { ...base.ejecutores, 'pico:pico02w': estado('pico:pico02w', 'offline') },
     });
     expect(control.fase.fase).toBe('error');
-    expect(control.puedeIniciar).toBe(false);
+    expect(control).toMatchObject({
+      puedeIniciar: false,
+      puedeAvanzar: false,
+      puedeDetener: true,
+      puedeReiniciar: true,
+    });
     expect(control.motivoBloqueo).toMatch(/desconectado/);
+  });
+
+  it('bloquea también detener y reiniciar cuando no hay conexión con el broker', () => {
+    const control = crearControlEjecucionDistribuida({ ...base, conectado: false });
+    expect(control.fase.fase).toBe('desconectado');
+    expect(control).toMatchObject({
+      puedeIniciar: false,
+      puedeAvanzar: false,
+      puedeDetener: false,
+      puedeReiniciar: false,
+    });
   });
 });

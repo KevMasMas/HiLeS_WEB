@@ -48,13 +48,15 @@ export const crearControlEjecucionDistribuida = (
   const listo = fase.fase === 'listo';
   const ejecutando = fase.fase === 'ejecutando';
   const ocupado = entrada.desplegando || fase.fase === 'desplegando';
+  const tieneDespliegue = Boolean(entrada.manifest?.fragments.length);
   const puedeOperar = entrada.conectado && !ocupado && (listo || ejecutando);
+  const puedeRecuperar = entrada.conectado && !ocupado && tieneDespliegue && (listo || ejecutando || fase.fase === 'error');
   return {
     fase,
     puedeIniciar: puedeOperar && listo,
     puedeAvanzar: puedeOperar && listo,
-    puedeDetener: puedeOperar,
-    puedeReiniciar: puedeOperar,
+    puedeDetener: puedeRecuperar,
+    puedeReiniciar: puedeRecuperar,
     motivoBloqueo: puedeOperar ? null : fase.detalle,
   };
 };

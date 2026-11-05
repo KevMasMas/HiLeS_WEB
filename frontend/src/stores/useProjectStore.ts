@@ -78,12 +78,18 @@ export const useProjectStore = create<ProjectState>((set) => ({
     const stopCursor = client.onRemoteCursor((cursors) => { if (active === client) set({ cursors }); });
     let unsubscribeEditor: (() => void) | undefined;
     let readyTimer: ReturnType<typeof setTimeout> | null = null;
-    const stopStatus = mqttClient.onStatusChange((status) => {
-      if (status !== 'CONNECTED' || active !== client || unsubscribeEditor || readyTimer !== null) return;
-      // Give retained snapshot delivery a turn before observing/publishing local edits.
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const iniciarSincronizacion = () => {
+      if (active !== client || unsubscribeEditor || readyTimer !== null) return;
+      // Esperar 500ms para permitir la llegada del snapshot retenido antes de publicar cambios locales
       readyTimer = setTimeout(() => {
         readyTimer = null;
         if (active !== client) return;
+        if (fallbackTimer !== null) {
+          clearTimeout(fallbackTimer);
+          fallbackTimer = null;
+        }
         set({ ready: true });
         const editor = useEditorStore.getState();
         client.establecerDocumentoBase(gotSnapshot ? client.obtenerDocumentoActual() ?? initial : serializeModel(editor.nodes, editor.edges));
@@ -93,11 +99,32 @@ export const useProjectStore = create<ProjectState>((set) => ({
           client.notificarCambioLocal(serializeModel(state.nodes, state.edges), 'Local editor change');
         });
       }, 500);
+    };
+
+    // Desbloqueo de seguridad: si tras 1000ms MQTT no se ha conectado (broker local apagado,
+    // red inaccesible o trabajo offline), habilitar la interfaz localmente para no congelar la pantalla.
+    fallbackTimer = setTimeout(() => {
+      fallbackTimer = null;
+      if (active === client) {
+        set({ ready: true });
+      }
+    }, 1000);
+
+    const stopStatus = mqttClient.onStatusChange((status) => {
+      if (status === 'CONNECTED') {
+        iniciarSincronizacion();
+      }
     });
+
+    if (mqttClient.getStatus() === 'CONNECTED') {
+      iniciarSincronizacion();
+    }
+
     client.conectar();
     return () => {
       if (active === client) active = null;
       if (readyTimer !== null) clearTimeout(readyTimer);
+      if (fallbackTimer !== null) clearTimeout(fallbackTimer);
       unsubscribeEditor?.(); stopDoc(); stopPresence(); stopCursor(); stopStatus();
       client.desconectar();
       set({ ready: false, collaborators: [], cursors: [], clientId: null, displayName: null });

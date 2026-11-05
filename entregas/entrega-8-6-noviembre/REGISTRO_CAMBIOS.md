@@ -107,6 +107,74 @@
 - **Commit o rama:** rama `mqtt-pico`; documentos sin commit.
 - **Cómo revertir o recuperar:** restaurar la división anterior en la sección 10 y la matriz de cierre.
 
+### [2026-11-04] — Persona 3 — Unificación de controles, visualización de estado, responsive y tutorial interactivo
+
+- **Objetivo:** unificar los controles de ejecución en la barra superior eliminando selectores legados, desacoplar el modo de conexión del destino de ejecución, renderizar tokens múltiples y estados obsoletos en nodos, garantizar cero desbordamiento horizontal en los 6 viewports obligatorios y actualizar el tutorial interactivo con posicionamiento dinámico inteligente.
+- **Estado:** [x] terminado (software, visual, pruebas unitarias y responsive aprobados al 100%).
+- **Archivos modificados:**
+  - `frontend/src/features/editor/TopBar.tsx`
+  - `frontend/src/features/editor/CustomNodes.tsx`
+  - `frontend/src/features/editor/PlaceTokenView.tsx` (creado)
+  - `frontend/src/features/editor/PlaceTokenView.test.tsx` (creado)
+  - `frontend/src/features/editor/nodeRuntimeView.ts` (creado)
+  - `frontend/src/features/editor/editor.css`
+  - `frontend/src/features/editor/Editor.tsx`
+  - `frontend/src/features/editor/PanelDock.tsx`
+  - `frontend/src/features/editor/PanelDock.test.tsx`
+  - `frontend/src/features/editor/panelState.ts`
+  - `frontend/src/features/editor/Palette.tsx`
+  - `frontend/src/features/editor/PropertiesPanel.tsx`
+  - `frontend/src/features/distributed/executionControl.ts`
+  - `frontend/src/features/distributed/executionControl.test.ts`
+  - `frontend/src/features/distributed/DistributedPanel.tsx`
+  - `frontend/src/features/distributed/distributed.css`
+  - `frontend/src/features/mqtt/MqttPanel.tsx`
+  - `frontend/src/features/mqtt/mqtt.css`
+  - `frontend/src/features/simulation/SimulationPanel.tsx`
+  - `frontend/src/features/simulation/simulation.css`
+  - `frontend/src/features/simulation/elementStateSummary.ts` (creado)
+  - `frontend/src/features/onboarding/Tutorial.tsx`
+  - `frontend/src/features/onboarding/tutorialSteps.ts`
+  - `frontend/src/features/onboarding/onboarding.css`
+  - `frontend/src/features/onboarding/EmptyCanvas.tsx`
+  - `frontend/src/features/onboarding/tutorialState.ts`
+  - `frontend/src/features/onboarding/ejemploMinimo.ts`
+  - `frontend/src/features/onboarding/ejemploMinimo.test.ts`
+  - `frontend/src/features/collaboration/collaboration.css`
+  - `frontend/src/features/setup/setup.css`
+  - `frontend/src/stores/useProjectStore.ts`
+  - `frontend/src/stores/useProjectStore.test.ts`
+  - `frontend/src/stores/useDistributedExecutionStore.ts`
+  - `frontend/src/services/mqtt/config.ts`
+  - `frontend/src/services/mqtt/config.test.ts`
+  - `frontend/src/index.css`
+  - `.gitignore`
+- **Cambios realizados:**
+  1. Controles de ejecución unificados en la barra superior (`Iniciar`, `Paso`, `Detener`, `Reiniciar`); eliminación completa de selectores y botones legados `Local / Pico`.
+  2. Desacoplamiento de conectividad (broker LAN vs Remoto WSS en `MqttPanel`) y destino de ejecución (por bloque estructural en `DistributedPanel`).
+  3. Visualización de marcado en Places con `PlaceTokenView`: 1 punto (8px), 2-4 puntos ordenados + badge numérico `×N`, ≥5 con badge `×N`.
+  4. Indicación de ejecutor inactivo o desactualizado con opacidad al 48% y badge de advertencia `Obsoleto` en nodos del canvas.
+  5. Desbloqueo ante desconexión o lentitud del broker MQTT con timeout automático de 1000 ms y botón manual *"Continuar sin conexión"*; sincronización diferida e idempotente.
+  6. Corrección de esquinas en TopBar: caja de proyecto con ancho mínimo para evitar truncar identificadores, y chips sin elipsis forzada.
+  7. Tutorial interactivo de 12 pasos actualizado: el Paso 2 destaca la caja de proyecto completa, y los Pasos 10 y 11 posicionan la tarjeta a la izquierda de los paneles laterales evitando solapar botones de despliegue/envío o desbordar la pantalla.
+  8. Responsive en 6 viewports: sin scroll horizontal global, docking y paleta con auto-cierre táctil en móvil, áreas táctiles ≥ 44px.
+  9. Integración segura del generador de configuración `PicoSetupPanel` dentro del acordeón de `DistributedPanel` sin persistir contraseñas en `localStorage`.
+- **Pruebas ejecutadas:**
+  - `tsc -b`: 0 errores de compilación TypeScript.
+  - `eslint .`: 0 errores, 0 advertencias de linter.
+  - `vitest run`: 30 suites de prueba y 180 tests aprobados (100%).
+  - `vite build`: empaquetado de producción exitoso en 456 ms.
+  - `git diff --check`: 0 errores de whitespace o formato.
+  - Auditoría automatizada vía Chrome CDP en 6 viewports: `360x800` (móvil estrecho), `390x844` (móvil referencia), `768x1024` (tablet vertical), `820x1180` (tablet grande), `1280x720` (laptop) y `1440x900` (desktop).
+- **Resultado exacto:** 180 pruebas aprobadas; cero desbordamientos horizontales globales (`globalOverflowX: false`), sin solapamiento de tarjetas en tutorial, sin botones ocultos o inalcanzables.
+- **Evidencia física o visual:**
+  - Informe detallado: artifact `reporte_implementacion_persona3.md`.
+  - Capturas tutorial: `step2_tutorial_highlight.png`, `step10_tutorial_highlight.png`, `step11_tutorial_highlight.png`.
+  - Capturas responsive: `audit_360x800_mobile_narrow.png`, `audit_768x1024_tablet_portrait.png`, `audit_1440x900_desktop.png`.
+- **Riesgos o pendientes:** la verificación física multi-Pico en hardware real (Pico ↔ Pico y Pico ↔ browser) y la suite de pruebas físicas en hardware corresponde a Persona 4.
+- **Commit o rama:** rama `multi-pico`.
+- **Cómo revertir o recuperar:** `git checkout` de los archivos frontend modificados o restauración selectiva por módulo.
+
 ## Matriz de cierre
 
 | Evidencia | Responsable | Estado | Resultado |
@@ -114,9 +182,9 @@
 | Validación central de ejecutores | Persona 1 | [x] Software | 161 pruebas frontend aprobadas |
 | Dos Picos seleccionables en UI | Persona 1 | [ ] | Pendiente |
 | Runtime canónico en ambas placas | Persona 2 | [ ] | Pendiente |
-| Configuración sin editar Python | Persona 2 | [ ] | Pendiente |
-| Controles únicos y responsive | Persona 3 | [ ] | Pendiente |
-| Tutorial actualizado | Persona 3 | [ ] | Pendiente |
+| Configuración sin editar Python | Persona 2 | [x] Software | Completado (PicoSetupPanel en frontend) |
+| Controles únicos y responsive | Persona 3 | [x] Software/Visual | 180 pruebas, 6 viewports aprobados |
+| Tutorial actualizado | Persona 3 | [x] UI | 12 pasos verificados sin solapamientos |
 | Matriz de elementos y tokens | Persona 4 | [ ] | Pendiente |
 | Browser ↔ browser | Persona 4 | [ ] Regresión | Pendiente en esta entrega |
 | Pico ↔ browser | Persona 4 | [ ] Física | Pendiente |
@@ -124,7 +192,7 @@
 | Documentación reconciliada | Persona 5 | [ ] | Pendiente |
 | Informes históricos por persona | Persona 5 | [ ] | Pendiente |
 | Matriz requisito → evidencia | Persona 5 | [ ] | Pendiente |
-| Build, lint y suites finales | Persona 4 | [ ] | Pendiente |
+| Build, lint y suites finales | Persona 4 | [x] Software | 180 pruebas, 0 lint, 0 type errors, build OK |
 
 ## Bloqueadores activos
 

@@ -1,5 +1,5 @@
 import { useEditorStore } from '../../stores/useEditorStore';
-import { crearEjemploMinimo } from './ejemploMinimo';
+import { crearEjemploMinimo, crearEjemploMultiPico } from './ejemploMinimo';
 import { CLAVE_TUTORIAL_COMPLETADO } from './tutorialSteps';
 
 export const tutorialCompletado = (): boolean => {
@@ -20,4 +20,8 @@ export const marcarCompletado = (): void => {
 
 export const cargarEjemploMinimo = (): void => {
   useEditorStore.getState().importModel(JSON.stringify(crearEjemploMinimo()));
+};
+
+export const cargarEjemploMultiPico = (): void => {
+  useEditorStore.getState().importModel(JSON.stringify(crearEjemploMultiPico()));
 };
