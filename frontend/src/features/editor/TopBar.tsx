@@ -4,15 +4,13 @@ import { MARCA } from '../../assets/brand/brand';
 import { mqttClient } from '../../services/mqtt/MqttClient';
 import type { MqttConnectionStatus } from '../../services/mqtt/config';
 import { useDistributedExecutionStore } from '../../stores/useDistributedExecutionStore';
-import { useRemoteExecutionStore } from '../../stores/useRemoteExecutionStore';
-import { useSimulationStore } from '../../stores/useSimulationStore';
 import { ShareDialog } from '../collaboration/ShareDialog';
 import { DistributedPanel } from '../distributed/DistributedPanel';
-import { useFaseDistribuida } from '../distributed/useFaseDistribuida';
+import { useControlEjecucionDistribuida } from '../distributed/useFaseDistribuida';
 import { EmptyCanvas } from '../onboarding/EmptyCanvas';
 import { Tutorial } from '../onboarding/Tutorial';
 import { tutorialCompletado } from '../onboarding/tutorialState';
-import { getExecutionAvailability, type DockPanel } from './panelState';
+import type { DockPanel } from './panelState';
 
 interface TopBarProps {
   projectId: string;
@@ -40,18 +38,6 @@ const etiquetaConexion: Record<MqttConnectionStatus, string> = {
   CONNECTED: 'Conectado',
   ERROR: 'Error',
 };
-
-const etiquetaEstadoSimulacion = (estado: string): string => ({
-  inactiva: 'Sin modelo',
-  lista: 'Lista',
-  ejecutando: 'Ejecutando',
-  estabilizada: 'Estable',
-  pausada: 'Pausada',
-  detenida: 'Detenida',
-  error: 'Error',
-  sin_modelo: 'Sin modelo',
-  'sin modelo': 'Sin modelo',
-}[estado] ?? estado.replaceAll('_', ' '));
 
 const IconButton: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { icon: string; label: string }> = ({ icon, label, ...props }) => (
   <button type="button" {...props} className={`topbar-button ${props.className ?? ''}`.trim()} title={props.title ?? label} aria-label={props['aria-label'] ?? label}>
@@ -83,33 +69,12 @@ export const TopBar: React.FC<TopBarProps> = ({
   const [panelDistribuido, setPanelDistribuido] = useState(false);
   const [compartir, setCompartir] = useState(false);
   const [tutorial, setTutorial] = useState(() => !tutorialCompletado());
-  const simulation = useSimulationStore();
-  const remote = useRemoteExecutionStore();
-  const fase = useFaseDistribuida();
-  const esPico = simulation.modoEjecucion === 'pico';
-  const availability = getExecutionAvailability({
-    modo: simulation.modoEjecucion,
-    ocupado: simulation.ocupado,
-    estadoLocal: simulation.estado,
-    sesionRemotaActiva: remote.sesionActiva,
-  });
-  const executionStatus = esPico ? remote.estadoRemoto ?? 'sin_modelo' : simulation.estado;
+  const controlEjecucion = useControlEjecucionDistribuida();
+  const fase = controlEjecucion.fase;
+  const enviarComando = useDistributedExecutionStore((state) => state.enviarComando);
 
   useEffect(() => mqttClient.onStatusChange(setMqttStatus), []);
   useEffect(() => useDistributedExecutionStore.getState().iniciar(projectId), [projectId]);
-
-  const runStep = () => {
-    if (esPico) remote.enviarComando('paso');
-    else void simulation.paso();
-  };
-  const run = () => {
-    if (esPico) remote.enviarComando('iniciar');
-    else void simulation.ejecutar();
-  };
-  const reset = () => {
-    if (esPico) remote.enviarComando('reiniciar');
-    else simulation.reiniciar();
-  };
 
   return (
     <header className="topbar" aria-label="Barra principal de HiLeS">
@@ -155,11 +120,11 @@ export const TopBar: React.FC<TopBarProps> = ({
           <IconButton icon="⌁" label="MQTT" className={activePanel === 'mqtt' ? 'is-active' : ''} aria-pressed={activePanel === 'mqtt'} onClick={() => onTogglePanel('mqtt')} />
           <IconButton icon="⛁" label="Ejecutores" data-tour="ejecutores" title="Asignar bloques, desplegar y ver el estado distribuido" className={panelDistribuido ? 'is-active' : ''} aria-pressed={panelDistribuido} onClick={() => setPanelDistribuido((valor) => !valor)} />
         </div>
-        <div className="topbar__group topbar__group--execution" aria-label="Simulación local o Pico">
-          <IconButton icon="▶" label="Paso" onClick={runStep} disabled={availability.stepDisabled} title="Ejecutar un paso de simulación" />
-          <IconButton icon="⏩" label="Ejecutar" onClick={run} disabled={availability.runDisabled} title="Ejecutar la simulación" />
-          {availability.stopVisible && <IconButton icon="■" label="Detener" onClick={() => remote.enviarComando('detener')} disabled={availability.stopDisabled} />}
-          <IconButton icon="↺" label="Reiniciar" onClick={reset} disabled={availability.resetDisabled} />
+        <div className="topbar__group topbar__group--execution" aria-label="Ejecución distribuida">
+          <IconButton icon="▶" label="Paso" onClick={() => enviarComando('step')} disabled={!controlEjecucion.puedeAvanzar} title="Ejecutar un paso en todos los fragmentos" />
+          <IconButton icon="⏩" label="Ejecutar" onClick={() => enviarComando('start')} disabled={!controlEjecucion.puedeIniciar} title="Iniciar el despliegue distribuido" />
+          <IconButton icon="■" label="Detener" onClick={() => enviarComando('stop')} disabled={!controlEjecucion.puedeDetener} />
+          <IconButton icon="↺" label="Reiniciar" onClick={() => enviarComando('reset')} disabled={!controlEjecucion.puedeReiniciar} />
         </div>
         <div className="topbar__group" aria-label="Equipo y ayuda">
           <IconButton icon="⤴" label="Compartir" data-tour="compartir" title="Copiar el enlace o el projectId" onClick={() => setCompartir(true)} />
@@ -168,8 +133,6 @@ export const TopBar: React.FC<TopBarProps> = ({
       </nav>
 
       <div className="topbar__status" aria-label="Estado del proyecto y la ejecución">
-        <span className={`topbar-chip is-${simulation.modoEjecucion}`}>{esPico ? 'Pico' : 'Local'}</span>
-        <span className="topbar-chip" title={`Estado de la simulación: ${etiquetaEstadoSimulacion(String(executionStatus))}`}>{etiquetaEstadoSimulacion(String(executionStatus))}</span>
         <button
           type="button"
           data-tour="estado-distribuido"

@@ -40,6 +40,12 @@ export function validarMensajeEstadoEjecutorV3(
   if (mensaje.executor_id !== esperado.executorId) return { ok: false, motivo: 'El executorId del payload no coincide con el tópico MQTT.' };
   if (typeof mensaje.tipo !== 'string' || !TIPOS_EJECUTOR.has(mensaje.tipo)) return { ok: false, motivo: 'El tipo de ejecutor no es válido.' };
   if (typeof mensaje.estado !== 'string' || !ESTADOS_EJECUTOR.has(mensaje.estado)) return { ok: false, motivo: 'El estado publicado no es válido.' };
+  for (const campo of ['version', 'firmware_version', 'board_model']) {
+    const valorCampo = mensaje[campo];
+    if (valorCampo !== undefined && (typeof valorCampo !== 'string' || valorCampo.trim() === '')) {
+      return { ok: false, motivo: `El campo ${campo} del ejecutor no es válido.` };
+    }
+  }
   if (typeof mensaje.last_seen_ms !== 'number' || !Number.isFinite(mensaje.last_seen_ms) || mensaje.last_seen_ms < 0) {
     return { ok: false, motivo: 'El ejecutor no publicó una marca de actividad válida.' };
   }

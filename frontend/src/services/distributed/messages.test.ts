@@ -7,6 +7,8 @@ const estadoPico = {
   executor_id: 'pico:pico01w',
   tipo: 'pico',
   estado: 'online',
+  firmware_version: '3.0.0',
+  board_model: 'Raspberry Pi Pico W with RP2040',
   capacidades: { ir_versions: [2], lenguajes: ['python', 'expresion'], max_fragment_bytes: 30000, max_elementos: 64 },
   last_seen_ms: 1000,
 };
@@ -16,6 +18,12 @@ describe('validación del estado MQTT de ejecutores', () => {
     expect(validarMensajeEstadoEjecutorV3(estadoPico, {
       projectId: 'proyecto-hl950c', executorId: 'pico:pico01w',
     }).ok).toBe(true);
+  });
+
+  it('rechaza metadatos de firmware o placa vacíos', () => {
+    expect(validarMensajeEstadoEjecutorV3({ ...estadoPico, board_model: '' }, {
+      projectId: 'proyecto-hl950c', executorId: 'pico:pico01w',
+    }).ok).toBe(false);
   });
 
   it('rechaza proyecto, tópico, protocolo y capacidades inconsistentes', () => {

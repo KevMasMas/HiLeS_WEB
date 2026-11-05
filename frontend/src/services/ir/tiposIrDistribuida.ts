@@ -29,6 +29,9 @@ export interface EjecutorDisponibleV3 {
   executor_id: string;
   tipo: TipoEjecutorV3;
   estado: EstadoEjecutorV3;
+  version?: string;
+  firmware_version?: string;
+  board_model?: string;
   capacidades: CapacidadesEjecutorV3;
 }
 

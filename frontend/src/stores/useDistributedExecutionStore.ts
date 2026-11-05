@@ -25,6 +25,7 @@ import {
   type NodoHiles,
 } from '../features/distributed/assignments';
 import { TransporteMqttDistribuido } from '../features/distributed/distributedTransport';
+import { comandoPermitido, crearControlEjecucionDistribuida } from '../features/distributed/executionControl';
 import { useEditorStore } from './useEditorStore';
 
 export interface ErrorVisibleDistribuido {
@@ -410,8 +411,22 @@ export const useDistributedExecutionStore = create<DistributedExecutionState>((s
   },
 
   enviarComando: (comando) => {
-    const { projectId, manifest } = get();
+    const estado = get();
+    const { projectId, manifest } = estado;
     if (!projectId || !manifest) return false;
+    const controlEjecucion = crearControlEjecucionDistribuida({
+      conectado: estado.conectado,
+      manifest,
+      acks: estado.acks,
+      ejecutores: estado.ejecutores,
+      desplegando: estado.desplegando,
+      ejecutando: estado.ejecutando,
+      errorLocal: estado.errorLocal,
+    });
+    if (!comandoPermitido(controlEjecucion, comando)) {
+      set({ mensaje: `No se puede ejecutar «${comando}»: ${controlEjecucion.motivoBloqueo ?? controlEjecucion.fase.detalle}` });
+      return false;
+    }
     const ok = publicarControl(topicsDistribuidosV3.command(projectId, manifest.deployment_id), {
       protocol_version: PROTOCOLO_EJECUCION_DISTRIBUIDA_VERSION,
       project_id: projectId,

@@ -4,6 +4,7 @@ import { useDistributedExecutionStore } from '../../stores/useDistributedExecuti
 import { HilesElementType } from '../../types/hiles';
 import { enfocarElemento } from '../collaboration/focus';
 import { HelpHint } from '../onboarding/HelpHint';
+import { PicoSetupPanel } from '../setup/PicoSetupPanel';
 import { AssignmentSelector } from './AssignmentSelector';
 import {
   ETIQUETA_ESTADO_EJECUTOR,
@@ -15,7 +16,7 @@ import {
   validarDestinosDespliegue,
   type NodoHiles,
 } from './assignments';
-import { useFaseDistribuida } from './useFaseDistribuida';
+import { useControlEjecucionDistribuida } from './useFaseDistribuida';
 import './distributed.css';
 
 interface DistributedPanelProps {
@@ -72,9 +73,8 @@ export const DistributedPanel: React.FC<DistributedPanelProps> = ({ onClose }) =
     [store.ejecutores],
   );
   const manifest = store.manifest;
-  const ejecutandoRemoto = Boolean(manifest?.fragments.length)
-    && manifest!.fragments.every((fragmento) => store.ejecutores[fragmento.executor_id]?.estado === 'running');
-  const fase = useFaseDistribuida();
+  const controlEjecucion = useControlEjecucionDistribuida();
+  const fase = controlEjecucion.fase;
   const vista = agregarSnapshots(manifest, store.snapshots, store.ejecutores);
   const nombres = new Map(nodos.map((nodo) => [nodo.id, nodo.data.name]));
   const servicios = vista.filter((item) => nodos.find((nodo) => nodo.id === item.elementId)?.data.hilesType === HilesElementType.SERVICE);
@@ -85,7 +85,6 @@ export const DistributedPanel: React.FC<DistributedPanelProps> = ({ onClose }) =
     ahora,
   }), [ahora, nodos, store.ejecutores, store.projectId, store.vistoEn]);
   const listoParaDesplegar = store.conectado && !store.desplegando && nodos.length > 0 && erroresDestino.length === 0;
-  const acksListos = fase.fase === 'listo' || fase.fase === 'ejecutando';
 
   return (
     <aside className="dist-panel" aria-label="Ejecución distribuida">
@@ -133,6 +132,8 @@ export const DistributedPanel: React.FC<DistributedPanelProps> = ({ onClose }) =
                 <strong>{etiquetaEjecutor(ejecutor.executor_id, local)}</strong>
                 <span className={`state-pill is-${ejecutor.estado}`}>{ETIQUETA_ESTADO_EJECUTOR[ejecutor.estado]}</span>
                 <small>
+                  {ejecutor.board_model && <>{ejecutor.board_model} · </>}
+                  {(ejecutor.firmware_version ?? ejecutor.version) && <>Firmware {ejecutor.firmware_version ?? ejecutor.version} · </>}
                   {ejecutor.capacidades.memoria_libre_bytes !== undefined && <>Memoria libre {Math.round(ejecutor.capacidades.memoria_libre_bytes / 1024)} KB · </>}
                   {ejecutor.active_deployment_id ? <>Época {ejecutor.active_epoch} · </> : 'Sin fragmento · '}
                   Actividad {haceCuanto(store.vistoEn[ejecutor.executor_id])}
@@ -141,6 +142,11 @@ export const DistributedPanel: React.FC<DistributedPanelProps> = ({ onClose }) =
             </li>
           ))}
         </ul>
+      </section>
+
+      <section className="dist-section" aria-labelledby="dist-pico-setup">
+        <h3 id="dist-pico-setup">Configuración de placas</h3>
+        <PicoSetupPanel projectId={store.projectId ?? ''} />
       </section>
 
       <section className="dist-section" aria-labelledby="dist-mapa">
@@ -215,10 +221,10 @@ export const DistributedPanel: React.FC<DistributedPanelProps> = ({ onClose }) =
           </ul>
         )}
         <div className="button-row">
-          <button type="button" className="btn" disabled={!acksListos || ejecutandoRemoto} onClick={() => store.enviarComando('start')}>▶ Iniciar</button>
-          <button type="button" className="btn" disabled={!acksListos} onClick={() => store.enviarComando('step')}>⏭ Paso</button>
-          <button type="button" className="btn" disabled={!acksListos} onClick={() => store.enviarComando('stop')}>■ Detener</button>
-          <button type="button" className="btn" disabled={!acksListos} onClick={() => store.enviarComando('reset')}>↺ Reiniciar</button>
+          <button type="button" className="btn" disabled={!controlEjecucion.puedeIniciar} onClick={() => store.enviarComando('start')}>▶ Iniciar</button>
+          <button type="button" className="btn" disabled={!controlEjecucion.puedeAvanzar} onClick={() => store.enviarComando('step')}>⏭ Paso</button>
+          <button type="button" className="btn" disabled={!controlEjecucion.puedeDetener} onClick={() => store.enviarComando('stop')}>■ Detener</button>
+          <button type="button" className="btn" disabled={!controlEjecucion.puedeReiniciar} onClick={() => store.enviarComando('reset')}>↺ Reiniciar</button>
         </div>
         {store.mensaje && <p className="dist-muted" role="status">{store.mensaje}</p>}
       </section>
