@@ -1,0 +1,177 @@
+{
+  "descripcion": "Services booleano, numérico y texto conectados a Functional Blocks de expresión",
+  "modelo_id": "services-expresiones-tipos-05",
+  "version": 1,
+  "ir_version": 2,
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "services-expresiones-tipos-05",
+    "version": 1,
+    "nombre": "Services y expresiones tipadas",
+    "metadata": {
+      "documento_schema_version": 2,
+      "compilado_en": "2026-11-06T09:00:00.000-05:00",
+      "bloque_raiz_id": null
+    },
+    "entradas_externas": [
+      {
+        "elemento_id": "service-boolean",
+        "nombre": "Entrada booleana",
+        "puerto_salida": "boolean-out",
+        "tipo_dato": "boolean"
+      },
+      {
+        "elemento_id": "service-number",
+        "nombre": "Entrada numérica",
+        "puerto_salida": "number-out",
+        "tipo_dato": "integer"
+      },
+      {
+        "elemento_id": "service-text",
+        "nombre": "Entrada de texto",
+        "puerto_salida": "text-out",
+        "tipo_dato": "string"
+      }
+    ],
+    "elementos": [
+      {
+        "id": "service-boolean",
+        "tipo": "service",
+        "nombre": "Entrada booleana",
+        "tipo_dato": "boolean",
+        "salidas": ["boolean-out"],
+        "entradas": []
+      },
+      {
+        "id": "expression-not",
+        "tipo": "functional_block",
+        "nombre": "Negación",
+        "habilitado": true,
+        "lenguaje": "expresion",
+        "expresion": {
+          "op": "not",
+          "args": [{ "var": "flag" }]
+        },
+        "entradas": [
+          { "puerto": "flag-in", "variable": "flag", "tipo_dato": "boolean" }
+        ],
+        "salidas": [
+          { "puerto": "not-out", "variable": "negado", "tipo_dato": "boolean" }
+        ]
+      },
+      {
+        "id": "service-number",
+        "tipo": "service",
+        "nombre": "Entrada numérica",
+        "tipo_dato": "integer",
+        "salidas": ["number-out"],
+        "entradas": []
+      },
+      {
+        "id": "expression-double",
+        "tipo": "functional_block",
+        "nombre": "Duplicar",
+        "habilitado": true,
+        "lenguaje": "expresion",
+        "expresion": {
+          "op": "*",
+          "args": [{ "var": "value" }, { "lit": 2 }]
+        },
+        "entradas": [
+          { "puerto": "value-in", "variable": "value", "tipo_dato": "integer" }
+        ],
+        "salidas": [
+          { "puerto": "double-out", "variable": "double", "tipo_dato": "integer" }
+        ]
+      },
+      {
+        "id": "service-text",
+        "tipo": "service",
+        "nombre": "Entrada de texto",
+        "tipo_dato": "string",
+        "salidas": ["text-out"],
+        "entradas": []
+      },
+      {
+        "id": "expression-text",
+        "tipo": "functional_block",
+        "nombre": "Texto transparente",
+        "habilitado": true,
+        "lenguaje": "expresion",
+        "expresion": { "var": "text" },
+        "entradas": [
+          { "puerto": "text-in", "variable": "text", "tipo_dato": "string" }
+        ],
+        "salidas": [
+          { "puerto": "text-copy-out", "variable": "copy", "tipo_dato": "string" }
+        ]
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "cch-boolean",
+        "tipo": "cch",
+        "origen": "service-boolean",
+        "puerto_origen": "boolean-out",
+        "destino": "expression-not",
+        "puerto_destino": "flag-in"
+      },
+      {
+        "id": "cch-number",
+        "tipo": "cch",
+        "origen": "service-number",
+        "puerto_origen": "number-out",
+        "destino": "expression-double",
+        "puerto_destino": "value-in"
+      },
+      {
+        "id": "cch-text",
+        "tipo": "cch",
+        "origen": "service-text",
+        "puerto_origen": "text-out",
+        "destino": "expression-text",
+        "puerto_destino": "text-in"
+      }
+    ]
+  },
+  "estado_inicial": {
+    "service-boolean": {},
+    "expression-not": {},
+    "service-number": {},
+    "expression-double": {},
+    "service-text": {},
+    "expression-text": {}
+  },
+  "pasos": [
+    {
+      "entradas": {
+        "service-boolean": true,
+        "service-number": 7,
+        "service-text": "hola"
+      },
+      "elementos_esperados": {
+        "service-boolean": { "valor": true },
+        "expression-not": { "salida": false },
+        "service-number": { "valor": 7 },
+        "expression-double": { "salida": 14 },
+        "service-text": { "valor": "hola" },
+        "expression-text": { "salida": "hola" }
+      }
+    },
+    {
+      "entradas": {
+        "service-boolean": false,
+        "service-number": -2,
+        "service-text": "listo"
+      },
+      "elementos_esperados": {
+        "service-boolean": { "valor": false },
+        "expression-not": { "salida": true },
+        "service-number": { "valor": -2 },
+        "expression-double": { "salida": -4 },
+        "service-text": { "valor": "listo" },
+        "expression-text": { "salida": "listo" }
+      }
+    }
+  ]
+}

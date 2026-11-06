@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import { MARCA } from '../../assets/brand/brand';
 import { mqttClient } from '../../services/mqtt/MqttClient';
@@ -15,6 +15,7 @@ import { useControlEjecucionDistribuida } from '../distributed/useFaseDistribuid
 import { EmptyCanvas } from '../onboarding/EmptyCanvas';
 import { Tutorial } from '../onboarding/Tutorial';
 import { tutorialCompletado } from '../onboarding/tutorialState';
+import { isTutorialVisible } from '../onboarding/tutorialVisibility';
 import type { DockPanel } from './panelState';
 
 export interface TopBarProps {
@@ -27,6 +28,7 @@ export interface TopBarProps {
   paletteOpen: boolean;
   activePanel: DockPanel;
   distributedOpen: boolean;
+  tutorialEnabled?: boolean;
   onProjectDraftChange: (value: string) => void;
   onProjectCommit: () => void;
   onNewProject: () => void;
@@ -78,6 +80,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   paletteOpen,
   activePanel,
   distributedOpen,
+  tutorialEnabled = true,
   onProjectDraftChange,
   onProjectCommit,
   onNewProject,
@@ -97,6 +100,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   const [tutorial, setTutorial] = useState(() => typeof document !== 'undefined' && !tutorialCompletado());
   const [menuAbierto, setMenuAbierto] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const cerrarTutorial = useCallback(() => setTutorial(false), []);
 
   const perfilMqtt = useSyncExternalStore(
     subscribeMqttProfile,
@@ -403,8 +407,8 @@ export const TopBar: React.FC<TopBarProps> = ({
       )}
       {compartir && <ShareDialog projectId={projectId} onClose={() => setCompartir(false)} />}
       <Tutorial
-        abierto={tutorial}
-        onClose={() => setTutorial(false)}
+        abierto={isTutorialVisible(tutorialEnabled, tutorial)}
+        onClose={cerrarTutorial}
         onAbrirEjecutores={onOpenDistributed}
         onAbrirPanel={onSelectPanel}
       />

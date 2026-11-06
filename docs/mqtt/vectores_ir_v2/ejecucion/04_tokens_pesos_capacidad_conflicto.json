@@ -1,0 +1,330 @@
+{
+  "descripcion": "Conformidad Petri con cero, uno y varios tokens, pesos, capacidad y conflicto atómico",
+  "modelo_id": "tokens-pesos-capacidad-conflicto-04",
+  "version": 1,
+  "ir_version": 2,
+  "modelo": {
+    "ir_version": 2,
+    "modelo_id": "tokens-pesos-capacidad-conflicto-04",
+    "version": 1,
+    "nombre": "Tokens, pesos, capacidad y conflicto",
+    "metadata": {
+      "documento_schema_version": 2,
+      "compilado_en": "2026-11-06T09:00:00.000-05:00",
+      "bloque_raiz_id": null
+    },
+    "entradas_externas": [
+      {
+        "elemento_id": "habilitar-peso",
+        "nombre": "Habilitar movimiento con peso",
+        "puerto_salida": "peso-out",
+        "tipo_dato": "boolean"
+      },
+      {
+        "elemento_id": "habilitar-conflicto",
+        "nombre": "Habilitar conflicto",
+        "puerto_salida": "conflicto-out",
+        "tipo_dato": "boolean"
+      },
+      {
+        "elemento_id": "habilitar-capacidad",
+        "nombre": "Habilitar límite de capacidad",
+        "puerto_salida": "capacidad-out",
+        "tipo_dato": "boolean"
+      }
+    ],
+    "elementos": [
+      {
+        "id": "habilitar-peso",
+        "tipo": "service",
+        "nombre": "Habilitar movimiento con peso",
+        "tipo_dato": "boolean",
+        "salidas": ["peso-out"],
+        "entradas": []
+      },
+      {
+        "id": "habilitar-conflicto",
+        "tipo": "service",
+        "nombre": "Habilitar conflicto",
+        "tipo_dato": "boolean",
+        "salidas": ["conflicto-out"],
+        "entradas": []
+      },
+      {
+        "id": "habilitar-capacidad",
+        "tipo": "service",
+        "nombre": "Habilitar límite de capacidad",
+        "tipo_dato": "boolean",
+        "salidas": ["capacidad-out"],
+        "entradas": []
+      },
+      {
+        "id": "lugar-cero",
+        "tipo": "place",
+        "nombre": "Lugar vacío",
+        "tokens": 0,
+        "capacidad": 3
+      },
+      {
+        "id": "peso-origen",
+        "tipo": "place",
+        "nombre": "Origen con tres tokens",
+        "tokens": 3,
+        "capacidad": 3
+      },
+      {
+        "id": "transicion-peso",
+        "tipo": "transition",
+        "nombre": "Mover dos tokens",
+        "habilitada": true,
+        "puerto_condicion": "condicion",
+        "puerto_accion": "accion-peso"
+      },
+      {
+        "id": "peso-destino",
+        "tipo": "place",
+        "nombre": "Destino del peso",
+        "tokens": 0,
+        "capacidad": 3
+      },
+      {
+        "id": "conflicto-origen",
+        "tipo": "place",
+        "nombre": "Origen compartido",
+        "tokens": 1,
+        "capacidad": 1
+      },
+      {
+        "id": "transicion-conflicto-a",
+        "tipo": "transition",
+        "nombre": "Ruta A",
+        "habilitada": true,
+        "puerto_condicion": "condicion",
+        "puerto_accion": "accion-a"
+      },
+      {
+        "id": "transicion-conflicto-b",
+        "tipo": "transition",
+        "nombre": "Ruta B",
+        "habilitada": true,
+        "puerto_condicion": "condicion",
+        "puerto_accion": "accion-b"
+      },
+      {
+        "id": "conflicto-destino-a",
+        "tipo": "place",
+        "nombre": "Destino A",
+        "tokens": 0,
+        "capacidad": 1
+      },
+      {
+        "id": "conflicto-destino-b",
+        "tipo": "place",
+        "nombre": "Destino B",
+        "tokens": 0,
+        "capacidad": 1
+      },
+      {
+        "id": "capacidad-origen",
+        "tipo": "place",
+        "nombre": "Origen para capacidad",
+        "tokens": 2,
+        "capacidad": 2
+      },
+      {
+        "id": "transicion-capacidad",
+        "tipo": "transition",
+        "nombre": "Movimiento bloqueado por capacidad",
+        "habilitada": true,
+        "puerto_condicion": "condicion",
+        "puerto_accion": "accion-capacidad"
+      },
+      {
+        "id": "capacidad-destino",
+        "tipo": "place",
+        "nombre": "Destino casi lleno",
+        "tokens": 1,
+        "capacidad": 2
+      }
+    ],
+    "conexiones": [
+      {
+        "id": "cch-habilitar-peso",
+        "tipo": "cch",
+        "origen": "habilitar-peso",
+        "puerto_origen": "peso-out",
+        "destino": "transicion-peso",
+        "puerto_destino": "condicion"
+      },
+      {
+        "id": "arco-peso-entrada",
+        "tipo": "arco",
+        "origen": "peso-origen",
+        "destino": "transicion-peso",
+        "peso": 2
+      },
+      {
+        "id": "arco-peso-salida",
+        "tipo": "arco",
+        "origen": "transicion-peso",
+        "destino": "peso-destino",
+        "peso": 2
+      },
+      {
+        "id": "cch-conflicto-a",
+        "tipo": "cch",
+        "origen": "habilitar-conflicto",
+        "puerto_origen": "conflicto-out",
+        "destino": "transicion-conflicto-a",
+        "puerto_destino": "condicion"
+      },
+      {
+        "id": "cch-conflicto-b",
+        "tipo": "cch",
+        "origen": "habilitar-conflicto",
+        "puerto_origen": "conflicto-out",
+        "destino": "transicion-conflicto-b",
+        "puerto_destino": "condicion"
+      },
+      {
+        "id": "arco-conflicto-a-entrada",
+        "tipo": "arco",
+        "origen": "conflicto-origen",
+        "destino": "transicion-conflicto-a",
+        "peso": 1
+      },
+      {
+        "id": "arco-conflicto-a-salida",
+        "tipo": "arco",
+        "origen": "transicion-conflicto-a",
+        "destino": "conflicto-destino-a",
+        "peso": 1
+      },
+      {
+        "id": "arco-conflicto-b-entrada",
+        "tipo": "arco",
+        "origen": "conflicto-origen",
+        "destino": "transicion-conflicto-b",
+        "peso": 1
+      },
+      {
+        "id": "arco-conflicto-b-salida",
+        "tipo": "arco",
+        "origen": "transicion-conflicto-b",
+        "destino": "conflicto-destino-b",
+        "peso": 1
+      },
+      {
+        "id": "cch-habilitar-capacidad",
+        "tipo": "cch",
+        "origen": "habilitar-capacidad",
+        "puerto_origen": "capacidad-out",
+        "destino": "transicion-capacidad",
+        "puerto_destino": "condicion"
+      },
+      {
+        "id": "arco-capacidad-entrada",
+        "tipo": "arco",
+        "origen": "capacidad-origen",
+        "destino": "transicion-capacidad",
+        "peso": 2
+      },
+      {
+        "id": "arco-capacidad-salida",
+        "tipo": "arco",
+        "origen": "transicion-capacidad",
+        "destino": "capacidad-destino",
+        "peso": 2
+      }
+    ]
+  },
+  "estado_inicial": {
+    "habilitar-peso": {},
+    "habilitar-conflicto": {},
+    "habilitar-capacidad": {},
+    "lugar-cero": { "tokens": 0 },
+    "peso-origen": { "tokens": 3 },
+    "transicion-peso": { "habilitada": false, "disparada": false },
+    "peso-destino": { "tokens": 0 },
+    "conflicto-origen": { "tokens": 1 },
+    "transicion-conflicto-a": { "habilitada": false, "disparada": false },
+    "transicion-conflicto-b": { "habilitada": false, "disparada": false },
+    "conflicto-destino-a": { "tokens": 0 },
+    "conflicto-destino-b": { "tokens": 0 },
+    "capacidad-origen": { "tokens": 2 },
+    "transicion-capacidad": { "habilitada": false, "disparada": false },
+    "capacidad-destino": { "tokens": 1 }
+  },
+  "pasos": [
+    {
+      "entradas": {
+        "habilitar-peso": true,
+        "habilitar-conflicto": false,
+        "habilitar-capacidad": false
+      },
+      "elementos_esperados": {
+        "habilitar-peso": { "valor": true },
+        "habilitar-conflicto": { "valor": false },
+        "habilitar-capacidad": { "valor": false },
+        "lugar-cero": { "tokens": 0 },
+        "peso-origen": { "tokens": 1 },
+        "transicion-peso": { "habilitada": false, "disparada": true },
+        "peso-destino": { "tokens": 2 },
+        "conflicto-origen": { "tokens": 1 },
+        "transicion-conflicto-a": { "habilitada": false, "disparada": false },
+        "transicion-conflicto-b": { "habilitada": false, "disparada": false },
+        "conflicto-destino-a": { "tokens": 0 },
+        "conflicto-destino-b": { "tokens": 0 },
+        "capacidad-origen": { "tokens": 2 },
+        "transicion-capacidad": { "habilitada": false, "disparada": false },
+        "capacidad-destino": { "tokens": 1 }
+      }
+    },
+    {
+      "entradas": {
+        "habilitar-peso": false,
+        "habilitar-conflicto": true
+      },
+      "elementos_esperados": {
+        "habilitar-peso": { "valor": false },
+        "habilitar-conflicto": { "valor": true },
+        "habilitar-capacidad": { "valor": false },
+        "lugar-cero": { "tokens": 0 },
+        "peso-origen": { "tokens": 1 },
+        "transicion-peso": { "habilitada": false, "disparada": false },
+        "peso-destino": { "tokens": 2 },
+        "conflicto-origen": { "tokens": 1 },
+        "transicion-conflicto-a": { "habilitada": true, "disparada": false },
+        "transicion-conflicto-b": { "habilitada": true, "disparada": false },
+        "conflicto-destino-a": { "tokens": 0 },
+        "conflicto-destino-b": { "tokens": 0 },
+        "capacidad-origen": { "tokens": 2 },
+        "transicion-capacidad": { "habilitada": false, "disparada": false },
+        "capacidad-destino": { "tokens": 1 }
+      }
+    },
+    {
+      "entradas": {
+        "habilitar-conflicto": false,
+        "habilitar-capacidad": true
+      },
+      "elementos_esperados": {
+        "habilitar-peso": { "valor": false },
+        "habilitar-conflicto": { "valor": false },
+        "habilitar-capacidad": { "valor": true },
+        "lugar-cero": { "tokens": 0 },
+        "peso-origen": { "tokens": 1 },
+        "transicion-peso": { "habilitada": false, "disparada": false },
+        "peso-destino": { "tokens": 2 },
+        "conflicto-origen": { "tokens": 1 },
+        "transicion-conflicto-a": { "habilitada": false, "disparada": false },
+        "transicion-conflicto-b": { "habilitada": false, "disparada": false },
+        "conflicto-destino-a": { "tokens": 0 },
+        "conflicto-destino-b": { "tokens": 0 },
+        "capacidad-origen": { "tokens": 2 },
+        "transicion-capacidad": { "habilitada": true, "disparada": false },
+        "capacidad-destino": { "tokens": 1 }
+      }
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import { PanelDock } from './PanelDock';
 import { TopBar } from './TopBar';
 import {
   applyWorkspacePanelAction,
+  sameWorkspacePanelsState,
   type DockPanel,
   type WorkspacePanelAction,
 } from './panelState';
@@ -118,10 +119,16 @@ export const Editor: React.FC = () => {
       paletteOpen: useEditorStore.getState().paletteOpen,
     };
     const siguiente = applyWorkspacePanelAction(actual, accion, esVistaMovil());
-    setPaneles({
-      activePanel: siguiente.activePanel,
-      distributedOpen: siguiente.distributedOpen,
-    });
+    if (sameWorkspacePanelsState(actual, siguiente)) return;
+    if (
+      siguiente.activePanel !== actual.activePanel
+      || siguiente.distributedOpen !== actual.distributedOpen
+    ) {
+      setPaneles({
+        activePanel: siguiente.activePanel,
+        distributedOpen: siguiente.distributedOpen,
+      });
+    }
     if (siguiente.paletteOpen !== actual.paletteOpen) {
       setPaletteOpen(siguiente.paletteOpen);
     }
@@ -139,6 +146,7 @@ export const Editor: React.FC = () => {
         paletteOpen={paletteOpen}
         activePanel={paneles.activePanel}
         distributedOpen={paneles.distributedOpen}
+        tutorialEnabled={Boolean(displayName)}
         onProjectDraftChange={setProjectDraft}
         onProjectCommit={commitProjectId}
         onNewProject={newProject}

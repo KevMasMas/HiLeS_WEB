@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import {
   applyWorkspacePanelAction,
   getNextDockPanel,
+  sameWorkspacePanelsState,
   type DockPanel,
   type WorkspacePanelsState,
 } from './panelState';
@@ -54,6 +55,19 @@ describe('PanelDock interactions', () => {
 });
 
 describe('Workspace panel mutual exclusion', () => {
+  it('recognizes a no-op panel transition without forcing another render', () => {
+    const current: WorkspacePanelsState = {
+      activePanel: null,
+      distributedOpen: false,
+      paletteOpen: false,
+    };
+
+    expect(sameWorkspacePanelsState(
+      current,
+      applyWorkspacePanelAction(current, { type: 'set-dock', panel: null }, false),
+    )).toBe(true);
+  });
+
   it('prevents PanelDock and DistributedPanel from colliding on desktop', () => {
     let estado: WorkspacePanelsState = {
       activePanel: 'simulation',
@@ -107,6 +121,14 @@ describe('Workspace panel mutual exclusion', () => {
 });
 
 describe('Unified execution controls and connection mode UI', () => {
+  it('keeps the automatic tutorial closed until the display name is confirmed', async () => {
+    const { isTutorialVisible } = await import('../onboarding/tutorialVisibility');
+
+    expect(isTutorialVisible(false, true)).toBe(false);
+    expect(isTutorialVisible(true, true)).toBe(true);
+    expect(isTutorialVisible(true, false)).toBe(false);
+  });
+
   it('renders a single global set of Iniciar/Paso/Detener/Reiniciar controls and zero legacy Local/Pico toggles', async () => {
     const { TopBar } = await import('./TopBar');
     const { PanelDock } = await import('./PanelDock');

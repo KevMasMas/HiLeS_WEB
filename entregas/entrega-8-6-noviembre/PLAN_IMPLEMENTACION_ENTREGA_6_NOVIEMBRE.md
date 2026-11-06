@@ -70,7 +70,7 @@ La entrega dejará el estado y la interfaz preparados para un broker remoto, per
 - [x] Corregir desbordamientos y barras de desplazamiento innecesarias en escritorio, tablet y celular.
 - [x] Mantener scroll interno únicamente en listas o paneles cuyo contenido realmente lo requiera.
 - [x] Actualizar el tutorial para el flujo proyecto → conexión → ejecutores → asignación → despliegue → entrada → ejecución.
-- [ ] Probar todos los tipos de elemento soportados y los tres tipos de canal en browser y MicroPython.
+- [x] Probar todos los tipos de elemento soportados y los tres tipos de canal en browser y MicroPython.
 - [x] Añadir casos con varios tokens y una representación visual legible de la cantidad.
 - [ ] Generar y validar un paquete de firmware canónico idéntico para Pico W y Pico 2 W.
 - [ ] Inventariar ambas placas, respaldarlas, sincronizar el runtime y comprobar checksums sin reemplazar `config_local.py` ni `umqtt/`.
@@ -419,7 +419,7 @@ frontend/src/index.css
 
 ---
 
-### Persona 4 — conformidad, integración y pruebas físicas
+### Juan David Romero (Persona 4) — conformidad, integración y pruebas físicas
 
 **Dependencias:** recibe las piezas aprobadas de Personas 1 a 3.
 
@@ -427,20 +427,22 @@ frontend/src/index.css
 
 #### Tareas
 
-- [ ] Construir la matriz de elementos y canales de la sección 7.
-- [ ] Comparar browser y MicroPython con los mismos vectores IR v2.
-- [ ] Añadir pruebas de varios tokens, pesos, capacidad y conflicto.
-- [ ] Confirmar reinicio, retardos, Sample, Hold y varias salidas Python.
-- [ ] Probar rutas CCH, DCH y LCH entre ejecutores compatibles.
-- [ ] Documentar restricciones reales de Places/Transitions entre fragmentos.
-- [ ] Corregir únicamente defectos reproducidos por un vector mínimo.
-- [ ] Congelar un commit de integración y ejecutar las suites completas.
-- [ ] Probar browser ↔ browser, Pico ↔ browser y Pico ↔ Pico.
-- [ ] Probar desconexión, reconexión, retained, Last Will y redespliegue.
-- [ ] Verificar el ejemplo general y el anillo de semáforos.
-- [ ] Coordinar la matriz responsive con Persona 3 y registrar el resultado técnico.
+- [x] Construir la matriz de elementos y canales de la sección 7.
+- [x] Comparar browser y MicroPython con los mismos vectores IR v2.
+- [x] Añadir pruebas de varios tokens, pesos, capacidad y conflicto.
+- [x] Confirmar reinicio, retardos, Sample, Hold y varias salidas Python.
+- [x] Probar rutas CCH, DCH y LCH entre ejecutores compatibles.
+- [x] Documentar restricciones reales de Places/Transitions entre fragmentos.
+- [x] Corregir únicamente defectos reproducidos por un vector mínimo; no se encontró un defecto de producción nuevo y se corrigió una expectativa inicial del vector 04 antes de aceptarlo.
+- [x] Congelar un commit de integración y ejecutar las suites completas.
+- [x] Probar browser ↔ browser en software y sobre el broker real.
+- [ ] Probar Pico ↔ browser y Pico ↔ Pico físicas; no se detectaron placas y no se sustituyen por dobles.
+- [x] Probar desconexión, reconexión, retained, Last Will y redespliegue.
+- [x] Verificar el ejemplo general y el anillo de semáforos.
+- [x] Coordinar la matriz responsive con Persona 3 y registrar el resultado técnico; se conserva su evidencia de seis viewports y Juan David Romero verificó además desde otro navegador la entrada con nombre y la colaboración simultánea por LAN.
 - [ ] Probar el tutorial con una persona que no haya implementado el flujo.
-- [ ] Preparar y ensayar una demostración de máximo diez minutos.
+- [x] Preparar una demostración de máximo diez minutos.
+- [ ] Ensayar la demostración completa con una persona del equipo y las placas físicas.
 
 #### Archivos bajo su control
 
@@ -511,8 +513,8 @@ Persona 5 puede proponer correcciones documentales en archivos mantenidos por ot
 Persona 1: contrato de estado/comandos ───────┐
                                               ├── Persona 3: interfaz única
 Persona 2: firmware y aprovisionamiento ──────┤
-                                              ├── Persona 4: integración y pruebas
-Persona 4: motor y conformidad ───────────────┤
+                                              ├── Juan David Romero (Persona 4): integración y pruebas
+Juan David Romero (Persona 4): motor y conformidad ──┤
                                               │
 Persona 3: responsive y tutorial ─────────────┘
 
@@ -569,34 +571,34 @@ Reglas de integración:
 - [ ] Registrar hashes de commit y paquete de firmware.
 - [ ] Etiquetar limitaciones P1/P2 sin presentarlas como terminadas.
 - [ ] Preparar commit final y push únicamente después de aprobar la matriz.
-- [ ] Persona 5 publica el informe final únicamente con resultados confirmados por Persona 4.
+- [ ] Persona 5 publica el informe final únicamente con resultados confirmados por Juan David Romero (Persona 4).
 
 ## 13. Matriz de pruebas obligatoria
 
 | Prueba | Browser ↔ Browser | Pico ↔ Browser | Pico ↔ Pico |
 |---|---:|---:|---:|
-| Registro de ejecutores | [ ] | [ ] | [ ] |
-| Asignación colaborativa | [ ] | [ ] | [ ] |
-| Fragmentos y ACK | [ ] | [ ] | [ ] |
-| CCH remoto | [ ] | [ ] | [ ] |
-| DCH remoto | [ ] | [ ] | [ ] |
-| LCH/token remoto | [ ] | [ ] | [ ] |
-| Entrada por Service | [ ] | [ ] | [ ] |
-| Functional Block Python | [ ] | [ ] | [ ] |
-| Varios tokens | [ ] | [ ] | [ ] |
-| Reinicio | [ ] | [ ] | [ ] |
-| Desconexión/reconexión | [ ] | [ ] | [ ] |
-| Estado agregado igual en dos colaboradores | [ ] | [ ] | [ ] |
+| Registro de ejecutores | [x] | [ ] | [ ] |
+| Asignación colaborativa | [x] | [ ] | [ ] |
+| Fragmentos y ACK | [x] | [ ] | [ ] |
+| CCH remoto | [x] | [ ] | [ ] |
+| DCH remoto | [x] | [ ] | [ ] |
+| LCH/token remoto | [x] | [ ] | [ ] |
+| Entrada por Service | [x] | [ ] | [ ] |
+| Functional Block Python | [x] | [ ] | [ ] |
+| Varios tokens | [x] | [ ] | [ ] |
+| Reinicio | [x] | [ ] | [ ] |
+| Desconexión/reconexión | [x] | [ ] | [ ] |
+| Estado agregado igual en dos colaboradores | [x] | [ ] | [ ] |
 
 Además:
 
 - [x] Suite completa de frontend.
-- [ ] Suite completa de firmware.
+- [x] Suite completa de firmware.
 - [x] ESLint.
 - [x] TypeScript.
 - [x] Build de producción.
 - [x] `git diff --check`.
-- [ ] Paquete Pico comparado por checksum.
+- [x] Paquete Pico comparado por checksum.
 - [x] Auditoría de secretos.
 
 ## 14. Secuencia de demostración
@@ -621,7 +623,7 @@ La entrega se considera aprobada solamente si:
 - [ ] Pico ↔ navegador ejecuta al menos un flujo de datos completo.
 - [x] No existen dos sistemas de controles visibles para la misma ejecución.
 - [x] El modo de conexión no se confunde con el destino de un bloque.
-- [ ] Todos los elementos generales cuentan con evidencia de conformidad.
+- [x] Todos los elementos generales cuentan con evidencia de conformidad en software; falta repetir la matriz sobre Pico física.
 - [x] Varios tokens se representan y ejecutan correctamente.
 - [x] No hay desbordamiento horizontal global en los viewports obligatorios.
 - [x] El tutorial coincide con la interfaz entregada.

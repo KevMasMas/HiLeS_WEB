@@ -97,13 +97,13 @@
 - **Cambios realizados:**
   1. Persona 5 quedó dedicada exclusivamente a documentación, informes, cronología y trazabilidad.
   2. Persona 5 no modificará código de producción ni asumirá pruebas físicas.
-  3. Persona 4 absorbió integración, suites finales y matrices browser/Pico además de la conformidad del motor.
+  3. Juan David Romero (Persona 4) absorbió integración, suites finales y matrices browser/Pico además de la conformidad del motor.
   4. Personas 1 a 4 deberán entregar informes verificables a Persona 5 al cerrar cada bloque.
   5. Todo informe se contrastará con commits, archivos, pruebas o evidencia antes de incorporarse.
 - **Pruebas ejecutadas:** revisión de coherencia de responsables, dependencias, cronograma y matriz de cierre.
 - **Resultado exacto:** cuatro frentes técnicos y un frente documental sin propiedad simultánea de archivos de producción.
 - **Evidencia física o visual:** no aplica; cambio organizativo.
-- **Riesgos o pendientes:** Persona 4 concentra conformidad e integración; Personas 1 a 3 deben entregar piezas probadas y no delegar defectos de sus módulos. Persona 5 necesita recibir informes a tiempo para no reconstruir todo al cierre.
+- **Riesgos o pendientes:** Juan David Romero (Persona 4) concentra conformidad e integración; Personas 1 a 3 deben entregar piezas probadas y no delegar defectos de sus módulos. Persona 5 necesita recibir informes a tiempo para no reconstruir todo al cierre.
 - **Commit o rama:** rama `mqtt-pico`; documentos sin commit.
 - **Cómo revertir o recuperar:** restaurar la división anterior en la sección 10 y la matriz de cierre.
 
@@ -171,9 +171,50 @@
   - Informe detallado: artifact `reporte_implementacion_persona3.md`.
   - Capturas tutorial: `step2_tutorial_highlight.png`, `step10_tutorial_highlight.png`, `step11_tutorial_highlight.png`.
   - Capturas responsive: `audit_360x800_mobile_narrow.png`, `audit_768x1024_tablet_portrait.png`, `audit_1440x900_desktop.png`.
-- **Riesgos o pendientes:** la verificación física multi-Pico en hardware real (Pico ↔ Pico y Pico ↔ browser) y la suite de pruebas físicas en hardware corresponde a Persona 4.
+- **Riesgos o pendientes:** la verificación física multi-Pico en hardware real (Pico ↔ Pico y Pico ↔ browser) y la suite de pruebas físicas en hardware corresponde a Juan David Romero (Persona 4).
 - **Commit o rama:** rama `multi-pico`.
 - **Cómo revertir o recuperar:** `git checkout` de los archivos frontend modificados o restauración selectiva por módulo.
+
+### [2026-11-06 09:30] — Juan David Romero (Persona 4) — Conformidad Browser/MicroPython e integración distribuida
+
+- **Objetivo:** demostrar con una fuente de verdad compartida que los motores Browser y MicroPython conservan la misma semántica para elementos, canales, retardos y Petri; cerrar Browser ↔ Browser y separar la evidencia simulada de las pruebas físicas pendientes.
+- **Estado:** [x] conformidad e integración de software terminadas; [!] Pico ↔ Browser y Pico ↔ Pico físicas pendientes porque no se detectó hardware.
+- **Archivos creados:**
+  - `frontend/src/engine/__tests__/ConformidadIrV2.test.ts`
+  - `frontend/src/engine/__tests__/ConformidadCanalesDistribuidos.test.ts`
+  - `docs/mqtt/vectores_ir_v2/ejecucion/04_tokens_pesos_capacidad_conflicto.json`
+  - `docs/mqtt/vectores_ir_v2/ejecucion/05_services_expresiones_tipos.json`
+  - `docs/mqtt/vectores_ir_v2/MATRIZ_CONFORMIDAD_PERSONA_4.md`
+  - `frontend/src/features/onboarding/tutorialVisibility.ts`
+- **Archivos modificados:** este plan, este registro, `Editor.tsx`, `TopBar.tsx`, `panelState.ts` y `PanelDock.test.tsx`.
+- **Cambios realizados:**
+  1. El frontend ejecuta los mismos cinco vectores IR v2 que MicroPython, compara cada snapshot, reinicia y repite cada escenario para detectar estado residual.
+  2. Se añadió conformidad explícita para Services booleano, numérico y texto, Functional Blocks de expresión y Python con varias salidas, Sample, Hold, retardos y reinicio.
+  3. Se añadió un vector Petri con 0/1/N tokens, peso dos, capacidad insuficiente y dos transiciones en conflicto; Browser y MicroPython conservan exactamente los mismos tokens.
+  4. Dos motores de fragmento navegador se conectan directamente mediante rutas CCH, DCH y LCH. CCH coalesce al último valor, DCH mantiene FIFO/capacidad y LCH dispara una sola vez la red Petri local del receptor.
+  5. Se documentó que los arcos Petri nunca cruzan fragmentos: Place y Transition unidos por `arco` permanecen juntos; un pulso LCH sí puede cruzar MQTT y activar estado local.
+  6. Se ejecutaron colaboración y distribución sobre Mosquitto WebSocket real. El runner obtuvo cuatro ACK, resultado `5 → 6`, veinte snapshots, dos descartes por deduplicación/época y caída observable de `browser:c`.
+  7. Se preparó un guion técnico de diez minutos y una matriz que diferencia Browser real, dobles de protocolo y placas físicas.
+  8. El tutorial queda inactivo mientras se solicita el nombre para evitar que robe el foco y cierre el teclado en PC o móvil.
+  9. Las transiciones de panel sin cambios ya no generan otro estado, eliminando el ciclo `Maximum update depth exceeded` observado durante la prueba visual.
+  10. Dos navegadores entraron al mismo proyecto por LAN como `Juan Romero` y `Codex - Persona 4`; la presencia y un cambio de nombre se sincronizaron mediante Mosquitto.
+- **Pruebas ejecutadas:**
+  - frontend: **32 archivos y 187/187 pruebas aprobadas**;
+  - firmware: **169/169 pruebas aprobadas**;
+  - ESLint: aprobado sin errores;
+  - TypeScript y build Vite: aprobados, **290 módulos transformados**;
+  - `git diff --check`: aprobado;
+  - paquete canónico: 33 archivos y aprovisionamiento sobre filesystem simulado aprobado;
+  - `test-project-collaboration.mjs`: cuatro clientes, retained, presencia, cursor y aislamiento de proyectos aprobados;
+  - `test-distributed-mqtt.mjs --mode=memory`: seis etapas aprobadas;
+  - `test-distributed-mqtt.mjs --mode=mqtt`: seis etapas aprobadas sobre broker real;
+  - `test-distributed-physical.ps1 -Mode DryRun -AllowNoDevice`: terminó correctamente y reportó cero placas.
+- **Resultado exacto:** paridad de cinco vectores en los dos motores; Browser ↔ Browser aprobado para CCH/DCH/LCH, presencia, edición compartida y control distribuido; firmware, frontend, build, lint, empaquetado y MQTT aprobados dentro del alcance sin hardware.
+- **Evidencia física o visual:** no se detectó ninguna Pico ni puerto serial. En `proyecto-anboq6`, dos navegadores por LAN mostraron simultáneamente a `Juan Romero` y `Codex - Persona 4`; el cambio `Sumar uno` → `Sumar uno · Codex` apareció en el lienzo compartido. Se conserva además la evidencia de seis viewports de Persona 3.
+- **Errores encontrados y corrección:** la primera expectativa del vector Petri marcaba una transición como habilitada después de consumir sus tokens y se corrigió al valor común `false`. En la UI, identidad y tutorial competían por el foco, y el tutorial repetía una transición de panel sin cambios hasta agotar la profundidad de renderizado; ambos defectos quedaron cubiertos por pruebas de regresión.
+- **Riesgos o pendientes:** faltan Pico ↔ Browser y Pico ↔ Pico físicas, inventario real, memoria/RSSI, prueba del tutorial con una persona nueva y ensayo humano completo. El runner de red usa Mosquitto real, pero los ejecutores `pico:*` son dobles Node.js y no sustituyen MicroPython ni Wi-Fi.
+- **Commit o rama:** rama `multi-pico`; commit de integración de Juan David Romero preparado para esta subida.
+- **Cómo revertir o recuperar:** retirar los dos tests y los dos vectores nuevos, restaurar este plan/registro y eliminar la matriz de conformidad. No existen migraciones ni estado persistente.
 
 ## Matriz de cierre
 
@@ -185,14 +226,14 @@
 | Configuración sin editar Python | Persona 2 | [x] Software | Completado (PicoSetupPanel en frontend) |
 | Controles únicos y responsive | Persona 3 | [x] Software/Visual | 180 pruebas, 6 viewports aprobados |
 | Tutorial actualizado | Persona 3 | [x] UI | 12 pasos verificados sin solapamientos |
-| Matriz de elementos y tokens | Persona 4 | [ ] | Pendiente |
-| Browser ↔ browser | Persona 4 | [ ] Regresión | Pendiente en esta entrega |
-| Pico ↔ browser | Persona 4 | [ ] Física | Pendiente |
-| Pico ↔ Pico | Persona 4 | [ ] Física | Pendiente |
+| Matriz de elementos y tokens | Juan David Romero (Persona 4) | [x] Software | Cinco vectores compartidos; 0/1/N tokens, pesos, capacidad y conflicto aprobados |
+| Browser ↔ browser | Juan David Romero (Persona 4) | [x] Software/MQTT | CCH, DCH, LCH, retained, ACK, colaboración y desconexión aprobados |
+| Pico ↔ browser | Juan David Romero (Persona 4) | [ ] Física | Pendiente |
+| Pico ↔ Pico | Juan David Romero (Persona 4) | [ ] Física | Pendiente |
 | Documentación reconciliada | Persona 5 | [ ] | Pendiente |
 | Informes históricos por persona | Persona 5 | [ ] | Pendiente |
 | Matriz requisito → evidencia | Persona 5 | [ ] | Pendiente |
-| Build, lint y suites finales | Persona 4 | [x] Software | 180 pruebas, 0 lint, 0 type errors, build OK |
+| Build, lint y suites finales | Juan David Romero (Persona 4) | [x] Software | 187 frontend + 169 firmware, 0 lint, 0 type errors, build OK |
 
 ## Bloqueadores activos
 

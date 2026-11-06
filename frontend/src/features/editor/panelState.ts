@@ -19,6 +19,15 @@ export type WorkspacePanelAction =
   | { type: 'close-distributed' }
   | { type: 'toggle-palette' };
 
+export const sameWorkspacePanelsState = (
+  left: WorkspacePanelsState,
+  right: WorkspacePanelsState,
+): boolean => (
+  left.activePanel === right.activePanel
+  && left.distributedOpen === right.distributedOpen
+  && left.paletteOpen === right.paletteOpen
+);
+
 /**
  * Coordina los paneles laterales para que el dock y el panel de ejecutores no
  * se superpongan, y en móvil tampoco se apilen sobre la paleta.
