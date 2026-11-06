@@ -479,6 +479,17 @@ class DistributedWorkerV3Tests(unittest.TestCase):
                 self.assertEqual(sha256_hex(python_bytes), expected_summary["hash"])
                 self.assertEqual(sha256_hex(fragment), expected_summary["hash"])
 
+    def test_status_publishes_firmware_version_and_board_model(self):
+        broker = FakeBroker()
+        rig = _Rig(broker, "status-project", "03")
+        rig.worker.board_model = "Raspberry Pi Pico W with RP2040"
+        _tick_all([rig], rounds=4)
+
+        topic = v3_executor_status_topic("status-project", "pico:03")
+        status = json.loads(broker.retained[topic].decode("utf-8"))
+        self.assertEqual(status["firmware_version"], status["version"])
+        self.assertEqual(status["board_model"], "Raspberry Pi Pico W with RP2040")
+
     def test_two_workers_do_not_consume_foreign_fragments(self):
         scenario = self.scenarios["deploy-4"]
         project_id = scenario["project_id"]

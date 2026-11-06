@@ -38,7 +38,24 @@ Pruebas del motor HiLeS (Persona 3, Juan Ramos):
 
 ## Copiar el firmware a una Pico W
 
-La validación física sigue pendiente. Cuando la placa esté disponible:
+La validación física de Pico 1/Pico 2 sigue pendiente. El empaquetado y el
+aprovisionamiento en un filesystem de prueba se pueden verificar sin hardware:
+
+```powershell
+& .\scripts\prepare-pico-deployment.ps1
+& .\scripts\test-pico-provisioning.ps1
+```
+
+El ZIP incluye `MANIFEST.sha256.json`; el generador comprueba el SHA-256 de
+cada archivo incluido contra su fuente. `test-distributed-physical.ps1` ofrece
+los modos `Inventory`, `Backup` y `Deploy` para un filesystem accesible. En
+`Deploy`, siempre respalda primero, verifica los archivos copiados y preserva
+`config_local.py`, `umqtt/` y `lib/umqtt/`. Solo retira archivos dados
+explícitamente con `-ObsoletePath`. El volumen `RPI-RP2` del bootloader UF2 no
+es el filesystem de MicroPython y se rechaza como destino.
+
+El script no habla con el puerto COM ni sustituye Thonny/`mpremote`: no usar
+`-DevicePath COMx`. Para el hardware, cuando esté disponible:
 
 1. Instalar MicroPython en la Pico W y abrir Thonny o `mpremote`.
 2. Copiar `firmware/pico/core/`, `firmware/pico/devices/`, `firmware/pico/platform/`, `firmware/pico/pubsub/` y `firmware/pico/hiles/`, conservando todos sus `__init__.py`.

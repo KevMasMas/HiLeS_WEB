@@ -60,8 +60,27 @@ Get-FileHash .\output\hiles-pico-w-deploy.zip -Algorithm SHA256
 Get-Content .\output\hiles-pico-w-deploy.sha256
 ```
 
-Los hashes deben coincidir. Extraer el ZIP en una carpeta nueva. El paquete no
-incluye credenciales, `config_local.py`, ejemplos, tests, bytecode ni `umqtt`.
+Los hashes deben coincidir. El ZIP contiene `MANIFEST.sha256.json`, que enumera
+el SHA-256 de cada archivo del paquete y se verifica contra las fuentes al
+generarlo. Extraer el ZIP en una carpeta nueva. El paquete no incluye
+credenciales, `config_local.py`, ejemplos, tests, bytecode ni `umqtt`.
+
+El aprovisionador PowerShell puede inventariar, respaldar y sincronizar un
+filesystem de Pico accesible, conservando `config_local.py` y `umqtt/`:
+
+```powershell
+& .\scripts\test-pico-provisioning.ps1
+& .\scripts\test-distributed-physical.ps1 -Mode Inventory -DevicePath C:\ruta\al\filesystem
+& .\scripts\test-distributed-physical.ps1 -Mode Backup -DevicePath C:\ruta\al\filesystem
+& .\scripts\test-distributed-physical.ps1 -Mode Deploy -DevicePath C:\ruta\al\filesystem `
+  -ObsoletePath devices\modulo_obsoleto.py
+```
+
+`-ObsoletePath` es opcional; solo se elimina lo indicado explícitamente y
+después del respaldo. No pasar un puerto COM como `-DevicePath`: el script no
+usa serial y rechaza el volumen `RPI-RP2` del bootloader UF2. Para la Pico
+física se usa Thonny o `mpremote` según los pasos siguientes; la prueba con un
+filesystem simulado no sustituye la verificación de Pico 1 y Pico 2 reales.
 
 Archivos críticos que deben estar dentro del ZIP:
 

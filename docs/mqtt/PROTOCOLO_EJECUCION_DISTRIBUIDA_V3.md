@@ -24,6 +24,8 @@ Los segmentos MQTT no pueden estar vacíos ni contener `/`, `+`, `#` o NUL. Los 
 
 Cada worker anuncia:
 
+- `version` (compatibilidad) y `firmware_version`;
+- `board_model` reportado por MicroPython (por ejemplo, `Raspberry Pi Pico W with RP2040` o `Raspberry Pi Pico 2 W with RP2350`; `unknown` si la plataforma no expone el dato);
 - versiones IR aceptadas;
 - lenguajes `python` y/o `expresion`;
 - bytes y elementos máximos por fragmento;

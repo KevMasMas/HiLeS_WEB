@@ -50,7 +50,7 @@ def build_default_application(config=None, clock=None, machine_module=None,
         gc.collect()
         from hiles.engine_task_v2 import EngineTaskV2
         from devices.watchdog_task import WatchdogTask
-        from platform.hardware import create_led_output, resolve_device_id
+        from platform.hardware import create_led_output, resolve_board_model, resolve_device_id
         from platform.mqtt_client import create_mqtt_client
         from platform.wifi import WifiConnection
         from pubsub.mqtt_transport import MqttTransport
@@ -68,7 +68,7 @@ def build_default_application(config=None, clock=None, machine_module=None,
         from .hiles.distributed_worker import DistributedWorker
         from .hiles.engine_task_v2 import EngineTaskV2
         from .devices.watchdog_task import WatchdogTask
-        from .platform.hardware import create_led_output, resolve_device_id
+        from .platform.hardware import create_led_output, resolve_board_model, resolve_device_id
         from .platform.mqtt_client import create_mqtt_client
         from .platform.wifi import WifiConnection
         from .pubsub.mqtt_transport import MqttTransport
@@ -171,6 +171,7 @@ def build_default_application(config=None, clock=None, machine_module=None,
         project_id=project_id,
         executor_id=executor_id,
         device_id=device_id,
+        board_model=resolve_board_model(),
         max_fragment_bytes=getattr(config, "WORKER_MAX_FRAGMENT_BYTES", 30000),
         max_elementos=getattr(config, "WORKER_MAX_ELEMENTS", 64),
         status_period_ms=getattr(config, "WORKER_STATUS_PERIOD_MS", 5000),

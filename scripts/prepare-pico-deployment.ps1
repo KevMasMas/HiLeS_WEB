@@ -8,6 +8,7 @@ $checksumPath = Join-Path $repoRoot 'output\hiles-pico-w-deploy.sha256'
 
 $requiredDirectories = @('core', 'devices', 'hiles', 'platform', 'pubsub')
 $requiredFiles = @('main.py', 'config_local.example.py')
+$manifestEntryName = 'MANIFEST.sha256.json'
 
 foreach ($relativePath in $requiredFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $sourceRoot $relativePath) -PathType Leaf)) {
@@ -29,6 +30,19 @@ $files = @(
     foreach ($directory in $requiredDirectories) {
         Get-ChildItem -LiteralPath (Join-Path $sourceRoot $directory) -Recurse -File -Filter '*.py' |
             Where-Object { $_.FullName -notmatch '[\\/]__pycache__[\\/]' }
+    }
+)
+$manifestFiles = @(
+    foreach ($file in $files) {
+        $sourcePrefix = $sourceRoot.TrimEnd('\') + '\'
+        [pscustomobject]@{
+            path = $file.FullName.Substring($sourcePrefix.Length).Replace('\', '/')
+            sha256 = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+    }
+    [pscustomobject]@{
+        path = 'LEEME_PRIMERO.md'
+        sha256 = (Get-FileHash -LiteralPath $guidePath -Algorithm SHA256).Hash.ToLowerInvariant()
     }
 )
 
@@ -66,6 +80,19 @@ try {
             'LEEME_PRIMERO.md',
             [System.IO.Compression.CompressionLevel]::Optimal
         ) | Out-Null
+        $manifestEntry = $archive.CreateEntry($manifestEntryName, [System.IO.Compression.CompressionLevel]::Optimal)
+        $manifestStream = $manifestEntry.Open()
+        try {
+            $manifestJson = [ordered]@{
+                manifest_version = 1
+                files = $manifestFiles
+            } | ConvertTo-Json -Depth 6
+            $manifestBytes = [System.Text.UTF8Encoding]::new($false).GetBytes($manifestJson)
+            $manifestStream.Write($manifestBytes, 0, $manifestBytes.Length)
+        }
+        finally {
+            $manifestStream.Dispose()
+        }
     }
     finally {
         $archive.Dispose()
@@ -93,7 +120,8 @@ try {
         'pubsub/__init__.py',
         'pubsub/mqtt_transport.py',
         'pubsub/topics.py',
-        'LEEME_PRIMERO.md'
+        'LEEME_PRIMERO.md',
+        $manifestEntryName
     )) {
         if ($required -notin $entryNames) {
             throw "El ZIP no contiene $required"
@@ -101,6 +129,27 @@ try {
     }
     if ($entryNames | Where-Object { $_ -match '(__pycache__|\.pyc$|^examples/|^config_local\.py$)' }) {
         throw 'El ZIP contiene archivos locales o generados que no deben subirse.'
+    }
+    if ($entryNames.Count -ne ($manifestFiles.Count + 1)) {
+        throw 'El ZIP contiene archivos fuera del manifiesto canónico.'
+    }
+    foreach ($file in $manifestFiles) {
+        $entry = $zip.GetEntry($file.path)
+        if ($null -eq $entry) {
+            throw "El manifiesto referencia un archivo ausente: $($file.path)"
+        }
+        $entryStream = $entry.Open()
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $archiveHash = ([System.BitConverter]::ToString($sha256.ComputeHash($entryStream))).Replace('-', '').ToLowerInvariant()
+        }
+        finally {
+            $entryStream.Dispose()
+            $sha256.Dispose()
+        }
+        if ($archiveHash -ne $file.sha256) {
+            throw "El checksum del paquete no coincide con la fuente: $($file.path)"
+        }
     }
 }
 finally {

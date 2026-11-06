@@ -158,6 +158,7 @@ class DistributedWorker(Task):
         project_id="default",
         executor_id=None,
         device_id="pico01",
+        board_model="unknown",
         tipo="pico",
         max_fragment_bytes=DEFAULT_MAX_FRAGMENT_BYTES,
         max_elementos=MAX_ELEMENTOS,
@@ -189,6 +190,7 @@ class DistributedWorker(Task):
             if executor_id is not None
             else build_executor_id(device_id, self.tipo)
         )
+        self.board_model = board_model.strip() if isinstance(board_model, str) and board_model.strip() else "unknown"
         self.max_fragment_bytes = int(max_fragment_bytes)
         self.max_elementos = int(max_elementos)
         self.lenguajes = list(lenguajes)
@@ -411,6 +413,8 @@ class DistributedWorker(Task):
             "tipo": self.tipo,
             "estado": state,
             "version": FIRMWARE_WORKER_VERSION,
+            "firmware_version": FIRMWARE_WORKER_VERSION,
+            "board_model": self.board_model,
             "capacidades": self.capabilities(),
             "last_seen_ms": self.scheduler.clock.now_ms(),
         }

@@ -355,12 +355,12 @@ frontend/src/features/distributed/*.test.ts
 - [ ] Comparar ambas contra el manifiesto del paquete canónico.
 - [ ] Respaldar cada placa antes de cambiar archivos.
 - [ ] Sincronizar módulos faltantes y retirar solo obsoletos explícitos.
-- [ ] Preservar `config_local.py` y `umqtt/`.
+- [x] Preservar `config_local.py` y `umqtt/`.
 - [ ] Verificar Pico W RP2040 y Pico 2 W RP2350 con el mismo runtime general.
-- [ ] Añadir versión de firmware y modelo de placa al estado publicado si falta.
+- [x] Añadir versión de firmware y modelo de placa al estado publicado si falta.
 - [x] Preparar el formulario/generador seguro de `config_local.py`.
-- [ ] Investigar Web Serial y entregar resultado funcional o fallback documentado.
-- [ ] Probar incorporación de una identidad `pico03w` simulada o física sin código nuevo.
+- [x] Investigar Web Serial y entregar resultado funcional o fallback documentado.
+- [x] Probar incorporación de una identidad `pico03w` simulada o física sin código nuevo.
 
 #### Archivos bajo su control
 
@@ -374,10 +374,10 @@ frontend/src/features/setup/**
 
 #### Criterio de cierre
 
-- Las dos placas tienen los mismos archivos de runtime y configuraciones locales distintas.
-- El paquete generado se compara por checksum con las fuentes.
-- Una Pico nueva se prepara cambiando datos, no código.
-- Las credenciales no aparecen en logs, Git ni mensajes MQTT.
+- [ ] Las dos placas tienen los mismos archivos de runtime y configuraciones locales distintas.
+- [x] El paquete generado se compara por checksum con las fuentes.
+- [x] Una Pico nueva se prepara cambiando datos, no código.
+- [x] Las credenciales no aparecen en logs, Git ni mensajes MQTT.
 
 ---
 
