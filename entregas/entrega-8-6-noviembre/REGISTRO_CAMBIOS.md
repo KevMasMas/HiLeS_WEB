@@ -1,7 +1,8 @@
 # Registro de cambios — entrega del 6 de noviembre de 2026
 
-**Rama:** `mqtt-pico`  
+**Rama:** `multi-pico` (creada desde `mqtt-pico` en `f7cc9b6`; corrección de Persona 5 del 7 de noviembre)\
 **Commit base:** `f7cc9b6`  
+**Último commit verificado:** `d15d5a0`\
 **Plan:** `PLAN_IMPLEMENTACION_ENTREGA_6_NOVIEMBRE.md`  
 **Regla de identificación:** usar únicamente `Persona 1`, `Persona 2`, etc.; no registrar nombres propios.  
 **Seguridad:** no copiar SSID, contraseñas, tokens, credenciales MQTT ni el contenido real de `config_local.py`.
@@ -216,24 +217,101 @@
 - **Commit o rama:** rama `multi-pico`; commit de integración de Juan David Romero preparado para esta subida.
 - **Cómo revertir o recuperar:** retirar los dos tests y los dos vectores nuevos, restaurar este plan/registro y eliminar la matriz de conformidad. No existen migraciones ni estado persistente.
 
+### [2026-11-05 21:01] — Persona 2 — Identidad de placa, manifiesto SHA-256 y aprovisionamiento seguro
+
+> **Entrada reconstruida por Persona 5 el 7 de noviembre a partir del commit `c61dbad`**, porque el registro no tenía una entrada de Persona 2. Persona 2 debe confirmarla o corregirla.
+
+- **Objetivo:** hacer repetible la preparación de dos o más Picos sin divergencias de runtime.
+- **Estado:** [x] software; [!] inventario, respaldo y sincronización de las dos placas reales pendientes.
+- **Archivos modificados:**
+  - `firmware/pico/platform/hardware.py` (`resolve_board_model`)
+  - `firmware/pico/hiles/distributed_worker.py` (`board_model`, `firmware_version`)
+  - `firmware/pico/main.py`
+  - `firmware/tests/test_architecture.py`, `firmware/tests/test_distributed_worker.py`, `firmware/tests/README.md`
+  - `scripts/prepare-pico-deployment.ps1`, `scripts/test-distributed-physical.ps1`
+  - `scripts/test-pico-provisioning.ps1` (creado)
+  - `output/hiles-pico-w-deploy.zip`, `output/hiles-pico-w-deploy.sha256`
+  - `docs/mqtt/GUIA_PRUEBA_PICO_W.md`, `docs/mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md`
+  - este plan (casillas de Persona 2)
+- **Cambios realizados:**
+  1. El estado v3 publica `firmware_version` y `board_model`, el modelo reportado por MicroPython o `unknown`.
+  2. El paquete incluye `MANIFEST.sha256.json` y el generador compara cada archivo con su fuente.
+  3. El aprovisionador ofrece los modos `Inventory`, `Backup` y `Deploy`. Siempre respalda antes de desplegar, preserva `config_local.py`, `umqtt/` y `lib/umqtt/`, solo retira lo que indica `-ObsoletePath` y rechaza el volumen UF2.
+- **Pruebas ejecutadas (reverificadas por Persona 5 sobre `d15d5a0`):**
+  - firmware: 169/169 OK;
+  - `scripts/test-pico-provisioning.ps1`: PASS;
+  - SHA-256 del ZIP igual al archivo `.sha256`.
+- **Evidencia física o visual:** ninguna. El aprovisionador se probó sobre un filesystem simulado, no sobre las placas.
+- **Riesgos o pendientes:**
+  - inventario real de Pico 1 y Pico 2;
+  - mismo runtime en RP2040 y RP2350.
+  - Las casillas "formulario/generador seguro", "Web Serial con fallback" y "`pico03w`" se apoyan en `PicoSetupPanel.tsx` y `picoConfig*`, creados en el commit `6aac632` de Persona 1.
+- **Commit o rama:** `multi-pico`, `c61dbad`.
+- **Cómo revertir o recuperar:** `git revert c61dbad`; las placas no se modificaron.
+
+### [2026-11-07] — Persona 5 — Cronología, informes, evidencia y reconciliación documental
+
+- **Objetivo:** documentar qué hizo cada persona, cómo funciona y cómo se reproduce el proyecto, y cuál es su estado real, contrastando cada afirmación con Git y pruebas.
+- **Estado:** [x] terminado al corte `d15d5a0`; se actualizará si Personas 1 a 4 agregan evidencia física.
+- **Archivos creados:**
+  - `entregas/entrega-8-6-noviembre/CRONOLOGIA_PROYECTO.md`
+  - `entregas/entrega-8-6-noviembre/INFORMES_POR_PERSONA.md`
+  - `entregas/entrega-8-6-noviembre/MATRIZ_REQUISITO_EVIDENCIA.md`
+  - `entregas/entrega-8-6-noviembre/INFORME_FINAL_ENTREGA_8.md`
+  - `entregas/entrega-8-6-noviembre/GUION_DEMOSTRACION.md`
+  - `docs/architecture/ARQUITECTURA_SISTEMA.md`
+  - `docs/GUIA_AGREGAR_PICO_Y_EJECUTORES.md`
+- **Archivos modificados:**
+  - `README.md`
+  - `docs/GUIA_REPLICACION_COMPLETA_WINDOWS.md`
+  - `docs/mqtt/GUIA_PRUEBA_PICO_W.md`, `docs/mqtt/GUIA_ENSAYO_REMOTO_SIN_PICO.md`, `docs/mqtt/FICHA_CONEXION_MQTT.md`
+  - `docs/architecture/ARQUITECTURA_PICO.md`, `docs/ux/REVISION_VISUAL_Y_ACCESIBILIDAD.md`
+  - este registro y el plan
+- **Cambios realizados:**
+  1. Cronología de la rama `multi-pico` desde el 27 de agosto hasta `d15d5a0`, con la equivalencia entre alias Git y número de persona en cada entrega.
+  2. Informe por integrante: responsabilidades, aportes, archivos, decisiones, pruebas, resultados y pendientes.
+  3. Matriz requisito → evidencia con los estados Verificado, Declarado, Pendiente e Inconsistente.
+  4. Se retiraron instrucciones obsoletas: modo **Pico / MQTT**, rama `mqtt-pico`, cifras antiguas, controles dentro del panel e IP fija.
+  5. Arquitectura, instalación, uso, recuperación, flujo para agregar una Pico y guion de demostración actualizados.
+  6. Se registró la entrada faltante de Persona 2, marcada como reconstruida.
+- **Pruebas ejecutadas (solo verificación, sin cambiar código):**
+  - `vitest run`: 32 archivos y 187 pruebas. **Intermitente:** de 11 corridas, 8 terminaron 186/187 por timeout en `PanelDock.test.tsx:132`; el archivo aislado aprueba 7/7;
+  - `tsc -b`, `eslint .`, `vite build` y `git diff --check`: aprobados;
+  - firmware: 169/169 OK;
+  - `test-pico-provisioning.ps1`: PASS;
+  - SHA-256 del paquete: coincide.
+- **Resultado exacto:** las cifras declaradas por Persona 4 se confirman, con la observación de la prueba intermitente. No se reprodujeron las pruebas sobre broker real ni las visuales; quedan como declaradas.
+- **Evidencia física o visual:** no aplica. Persona 5 no ejecuta pruebas físicas.
+- **Riesgos o pendientes devueltos a su responsable** (detalle en `INFORME_FINAL_ENTREGA_8.md` §5):
+  - `output/hiles-pico-w-deploy/config_local.py` está versionado en Git y la auditoría de secretos no puede darse por cerrada. Persona 5 no abrió su contenido;
+  - prueba intermitente `PanelDock.test.tsx`;
+  - capturas de Persona 3 fuera del repositorio;
+  - nombres propios en las entradas de Persona 4;
+  - el generador de configuración no incluye todos los avisos del plan §6.3.
+- **Commit o rama:** `multi-pico`, cambios locales de documentación sobre `d15d5a0`.
+- **Cómo revertir o recuperar:** eliminar los siete archivos creados y restaurar los modificados con `git checkout -- <archivo>`. No hay cambios de código.
+
 ## Matriz de cierre
+
+Actualizada por Persona 5 el 7 de noviembre sobre `d15d5a0`. Detalle por requisito en [`MATRIZ_REQUISITO_EVIDENCIA.md`](MATRIZ_REQUISITO_EVIDENCIA.md).
 
 | Evidencia | Responsable | Estado | Resultado |
 |---|---|---|---|
-| Validación central de ejecutores | Persona 1 | [x] Software | 161 pruebas frontend aprobadas |
+| Validación central de ejecutores | Persona 1 | [x] Software | Incluida en las 187 pruebas actuales |
 | Dos Picos seleccionables en UI | Persona 1 | [ ] | Pendiente |
-| Runtime canónico en ambas placas | Persona 2 | [ ] | Pendiente |
-| Configuración sin editar Python | Persona 2 | [x] Software | Completado (PicoSetupPanel en frontend) |
-| Controles únicos y responsive | Persona 3 | [x] Software/Visual | 180 pruebas, 6 viewports aprobados |
-| Tutorial actualizado | Persona 3 | [x] UI | 12 pasos verificados sin solapamientos |
-| Matriz de elementos y tokens | Juan David Romero (Persona 4) | [x] Software | Cinco vectores compartidos; 0/1/N tokens, pesos, capacidad y conflicto aprobados |
-| Browser ↔ browser | Juan David Romero (Persona 4) | [x] Software/MQTT | CCH, DCH, LCH, retained, ACK, colaboración y desconexión aprobados |
-| Pico ↔ browser | Juan David Romero (Persona 4) | [ ] Física | Pendiente |
-| Pico ↔ Pico | Juan David Romero (Persona 4) | [ ] Física | Pendiente |
-| Documentación reconciliada | Persona 5 | [ ] | Pendiente |
-| Informes históricos por persona | Persona 5 | [ ] | Pendiente |
-| Matriz requisito → evidencia | Persona 5 | [ ] | Pendiente |
-| Build, lint y suites finales | Juan David Romero (Persona 4) | [x] Software | 187 frontend + 169 firmware, 0 lint, 0 type errors, build OK |
+| Runtime canónico en ambas placas | Persona 2 | [ ] | Pendiente; paquete y aprovisionamiento simulado verificados |
+| Configuración sin editar Python | Personas 1 y 2 | [x] Software | `PicoSetupPanel` (`6aac632`) |
+| Controles únicos y responsive | Persona 3 | [x] Software / [!] Visual declarada | Controles verificados en el código; capturas no versionadas |
+| Tutorial actualizado | Persona 3 | [x] UI | 12 pasos confirmados en `tutorialSteps.ts` |
+| Matriz de elementos y tokens | Persona 4 | [x] Software | Cinco vectores compartidos; firmware 169 OK |
+| Browser ↔ browser | Persona 4 | [x] Software/MQTT (declarado) | CCH, DCH, LCH, retained, ACK, colaboración y desconexión |
+| Pico ↔ browser | Persona 4 | [ ] Física | Pendiente |
+| Pico ↔ Pico | Persona 4 | [ ] Física | Pendiente |
+| Auditoría de secretos | Responsable del paquete | [!] | `output/hiles-pico-w-deploy/config_local.py` versionado; revisar |
+| Documentación reconciliada | Persona 5 | [x] | Ver `INFORME_FINAL_ENTREGA_8.md` §6 |
+| Informes históricos por persona | Persona 5 | [x] | `INFORMES_POR_PERSONA.md`, `CRONOLOGIA_PROYECTO.md` |
+| Matriz requisito → evidencia | Persona 5 | [x] | `MATRIZ_REQUISITO_EVIDENCIA.md` |
+| Build, lint y suites finales | Persona 4 | [x] Software / [!] intermitencia | 187 frontend (una prueba intermitente) + 169 firmware; lint, tipos y build aprobados |
 
 ## Bloqueadores activos
 

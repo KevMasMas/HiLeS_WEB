@@ -1,13 +1,20 @@
 # Guía completa para replicar y probar HiLeS en otro PC
 
-Esta guía reproduce la entrega del 20 de octubre en Windows 10/11 y valida:
+Esta guía reproduce el estado vigente de la rama `multi-pico` (entrega 8, commit
+`d15d5a0`) en Windows 10/11 y valida:
 
 - React/Vite accesible en la red local;
 - Mosquitto por TCP para la Pico y WebSockets para los navegadores;
 - proyecto compartido por `?project=<id>`, snapshot, edición, presencia y cursores;
-- ejecución local en Pyodide y ejecución remota de Functional Blocks Python en MicroPython;
+- ejecución distribuida v3: cada Structural Block asignado a una Pico o a un navegador;
+- Functional Blocks Python en Pyodide (navegador) y en MicroPython (Pico);
 - scheduler, CCH, DCH, `Sample`, `Hold`, Petri/LCH, retardos y watchdog;
-- un demo manual de cuatro semáforos construido con Services y Functional Blocks generales.
+- un demo de cuatro semáforos construido con Services y Functional Blocks generales.
+
+La arquitectura completa está en
+[`architecture/ARQUITECTURA_SISTEMA.md`](architecture/ARQUITECTURA_SISTEMA.md); para
+sumar placas y elegir ejecutores, ver
+[`GUIA_AGREGAR_PICO_Y_EJECUTORES.md`](GUIA_AGREGAR_PICO_Y_EJECUTORES.md).
 
 ```text
 Navegadores ── MQTT/WebSocket :9001 ──┐
@@ -17,9 +24,9 @@ Pico W ────── MQTT/TCP :1883 ─────────┘
 Vite en el PC ── HTTP :5173 ── navegadores de la LAN
 ```
 
-> Vite, React, lo visual, Pyodide local y el broker corren en el PC. En modo
-> **Pico / MQTT**, el código de los Functional Blocks se ejecuta en la Pico W.
-> La Pico no aloja la interfaz web.
+> Vite, React, lo visual, Pyodide local y el broker corren en el PC. El código de
+> un Functional Block se ejecuta en el ejecutor asignado a su bloque en el panel
+> **Ejecutores**: una Pico W o un navegador. La Pico no aloja la interfaz web.
 
 > Esta configuración es para una LAN de confianza. No publicar 1883, 9001 o
 > 5173 en Internet sin TLS, ACL y una configuración de producción.
@@ -79,12 +86,12 @@ python --version
 git clone https://github.com/KevMasMas/HiLeS_WEB.git
 Set-Location .\HiLeS_WEB
 git fetch --all --prune
-git switch mqtt-pico
+git switch multi-pico
 git pull --ff-only
 git status
 ```
 
-La entrega está en `mqtt-pico` mientras no se fusione a la rama principal. En
+La versión vigente está en `multi-pico` mientras no se fusione a la rama principal. En
 una instalación nueva, `git status` debe estar limpio. Nunca versionar
 `.env.local`, `config_local.py`, `passwords.txt` ni contraseñas.
 
@@ -107,9 +114,20 @@ Firmware con dobles de hardware:
 python -m unittest discover -s firmware/tests -p 'test_*.py'
 ```
 
-Referencia de la revisión: 103 pruebas frontend y 174 de firmware, además de
-lint y build aprobados. Un número mayor es válido; ninguna prueba puede fallar.
-Estas suites no sustituyen la medición física de Wi-Fi, GPIO y memoria.
+Referencia en `d15d5a0` (7 de noviembre de 2026): 187 pruebas frontend y 169 de
+firmware, además de lint, TypeScript y build aprobados. Un número mayor es
+válido. La prueba `PanelDock.test.tsx` puede fallar de forma intermitente por
+timeout en equipos lentos; si falla, repetir `npx vitest run
+src/features/editor/PanelDock.test.tsx` y registrar el resultado. Estas suites
+no sustituyen la medición física de Wi-Fi, GPIO y memoria.
+
+Paquete y aprovisionamiento sin hardware:
+
+```powershell
+& .\scripts\test-pico-provisioning.ps1
+```
+
+Debe imprimir `Pruebas de aprovisionamiento Pico: PASS`.
 
 ## 5. Preparar la red y Mosquitto
 
@@ -308,8 +326,13 @@ Get-FileHash .\output\hiles-pico-w-deploy.zip -Algorithm SHA256
 Get-Content .\output\hiles-pico-w-deploy.sha256
 ```
 
-Los hashes deben coincidir. Extraer el ZIP, copiar
-`config_local.example.py` como `config_local.py` y editar solo la copia:
+Los hashes deben coincidir. Para crear `config_local.py` hay dos caminos:
+
+- **Desde la aplicación (recomendado):** **Ejecutores** → **Configuración de
+  placas** → **Preparar otra Raspberry Pi Pico** → **Descargar config_local.py**.
+  Ver [`GUIA_AGREGAR_PICO_Y_EJECUTORES.md`](GUIA_AGREGAR_PICO_Y_EJECUTORES.md) §3.
+- **A mano:** extraer el ZIP, copiar `config_local.example.py` como
+  `config_local.py` fuera del repositorio y editar solo la copia:
 
 ```python
 WIFI_SSID = "LAB_HILES"
@@ -411,18 +434,22 @@ permite comprobar deduplicación/idempotencia de QoS 1.
 
 1. Abrir `http://IP_DEL_PC:5173/?project=semaforos-fisico`.
 2. Importar el JSON solo en el primer navegador y esperar su sincronización.
-3. Abrir **Ejecutores** y confirmar las Pico `pico:<DEVICE_ID>` disponibles.
+3. Abrir **Ejecutores** y confirmar las Pico `pico:<DEVICE_ID>` disponibles. Si
+   una aparece pero no se puede elegir, el panel indica la causa (otro proyecto,
+   obsoleta, offline, degradada o incompatible).
 4. Activar **Ejecutar aquí** solamente en los navegadores que también deban
    ejecutar un fragmento.
-5. Asignar cada Structural Block a una Pico o navegador diferente.
+5. En **Destino por bloque**, asignar cada Structural Block a una Pico o
+   navegador.
 6. Pulsar **Desplegar** y esperar un ACK por fragmento.
-7. Usar **Inyectar una entrada**, **Iniciar**, **Paso**, **Detener** y
-   **Reiniciar** desde el mismo panel.
-8. Confirmar el estado agregado y el propietario de cada elemento.
+7. Introducir valores desde **Entradas** (barra superior).
+8. Operar con **Iniciar**, **Paso**, **Detener** y **Reiniciar** de la barra
+   superior; es el único juego de controles.
+9. Confirmar el estado agregado y el propietario de cada elemento.
 
-El enlace compartido contiene `project`, pero nunca credenciales. El flujo
-legacy **Pico / MQTT** sigue disponible para un único motor; la entrega
-multi-Pico se prueba desde **Ejecutores** con el protocolo v3.
+El enlace compartido contiene `project`, pero nunca credenciales. El antiguo
+selector **Local / Pico** y el modo **Pico / MQTT** se retiraron en la entrega 8:
+toda ejecución pasa por **Ejecutores** con el protocolo v3.
 
 ## 13. Matriz obligatoria del motor físico
 
@@ -535,9 +562,10 @@ Demo manual:
 
 ## 18. Documentos relacionados
 
-- `entregas/entrega-6-20-octubre/GUIA_DEMO.md`: presentación corta.
-- `entregas/entrega-6-20-octubre/PLAN_IMPLEMENTACION_ENTREGA_20.md`: alcance.
-- `entregas/entrega-6-20-octubre/REGISTRO_CAMBIOS.md`: resultados registrados.
+- `entregas/entrega-8-6-noviembre/GUION_DEMOSTRACION.md`: demostración vigente.
+- `entregas/entrega-8-6-noviembre/INFORME_FINAL_ENTREGA_8.md`: estado y evidencia.
+- `docs/architecture/ARQUITECTURA_SISTEMA.md`: arquitectura y recuperación.
+- `docs/GUIA_AGREGAR_PICO_Y_EJECUTORES.md`: sumar placas y elegir ejecutores.
 - `docs/mqtt/GUIA_PRUEBA_PICO_W.md`: despliegue resumido incluido como
   `LEEME_PRIMERO.md` en el ZIP.
 - `docs/mqtt/CONTRATO_MENSAJES_MQTT.md`: contrato de mensajes.

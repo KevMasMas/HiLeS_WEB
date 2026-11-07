@@ -1,7 +1,7 @@
 # Plan de implementación — entrega del viernes 6 de noviembre de 2026
 
 **Equipo:** cinco personas  
-**Rama base:** `mqtt-pico`  
+**Rama base:** `mqtt-pico`; trabajo en `multi-pico` (último commit verificado: `d15d5a0`)\
 **Commit base:** `f7cc9b6`  
 **Ventana de trabajo:** miércoles 4 a viernes 6 de noviembre de 2026  
 **Estado inicial:** ejecución distribuida v3, colaboración web, dos Picos identificadas y runtime general implementados; la interfaz todavía mezcla el flujo legado Local/Pico con el flujo nuevo por ejecutores y requiere cierre físico y visual.  
@@ -76,7 +76,7 @@ La entrega dejará el estado y la interfaz preparados para un broker remoto, per
 - [ ] Inventariar ambas placas, respaldarlas, sincronizar el runtime y comprobar checksums sin reemplazar `config_local.py` ni `umqtt/`.
 - [x] Permitir preparar desde la aplicación una configuración validada sin escribir Python manualmente.
 - [ ] Ejecutar la matriz mínima de pruebas automáticas, visuales y físicas y registrar evidencia.
-- [ ] Actualizar la documentación de instalación, configuración, uso, recuperación y demostración.
+- [x] Actualizar la documentación de instalación, configuración, uso, recuperación y demostración (Persona 5, 7 nov; ver `INFORME_FINAL_ENTREGA_8.md` §6).
 
 ### P1 — entra si P0 permanece estable
 
@@ -476,18 +476,18 @@ Los cambios compartidos con Persona 2 en `firmware/pico/hiles/**` requieren coor
 
 #### Tareas
 
-- [ ] Leer los planes y registros de todas las entregas anteriores.
-- [ ] Reconstruir una cronología del proyecto por fecha, objetivo, persona y commit.
-- [ ] Preparar un informe por persona con responsabilidades, aportes, archivos, decisiones, pruebas y resultados.
-- [ ] Diferenciar claramente trabajo histórico, trabajo de esta entrega y pendientes.
-- [ ] Contrastar cada afirmación con Git, pruebas o evidencia antes de marcarla como terminada.
-- [ ] Mantener actualizado este registro mientras Personas 1 a 4 trabajan.
-- [ ] Reconciliar documentación y eliminar instrucciones obsoletas.
-- [ ] Registrar hashes, versiones, resultados y limitaciones sin secretos.
-- [ ] Actualizar la explicación completa de arquitectura, instalación, uso y recuperación.
-- [ ] Documentar el flujo para agregar otra Pico, configurar red y elegir ejecutores.
-- [ ] Preparar el informe final de la entrega y el guion escrito de demostración.
-- [ ] Mantener una tabla de evidencia que enlace cada requisito con su prueba y responsable.
+- [x] Leer los planes y registros de todas las entregas anteriores.
+- [x] Reconstruir una cronología del proyecto por fecha, objetivo, persona y commit (`CRONOLOGIA_PROYECTO.md`).
+- [x] Preparar un informe por persona con responsabilidades, aportes, archivos, decisiones, pruebas y resultados (`INFORMES_POR_PERSONA.md`).
+- [x] Diferenciar claramente trabajo histórico, trabajo de esta entrega y pendientes (`INFORME_FINAL_ENTREGA_8.md` §4).
+- [x] Contrastar cada afirmación con Git, pruebas o evidencia antes de marcarla como terminada (`MATRIZ_REQUISITO_EVIDENCIA.md`).
+- [x] Mantener actualizado este registro mientras Personas 1 a 4 trabajan (al corte `d15d5a0`; se incorporó la entrada faltante de Persona 2).
+- [x] Reconciliar documentación y eliminar instrucciones obsoletas.
+- [x] Registrar hashes, versiones, resultados y limitaciones sin secretos (`INFORME_FINAL_ENTREGA_8.md` §2, §3 y §7).
+- [x] Actualizar la explicación completa de arquitectura, instalación, uso y recuperación (`docs/architecture/ARQUITECTURA_SISTEMA.md`, `README.md`, guía de réplica).
+- [x] Documentar el flujo para agregar otra Pico, configurar red y elegir ejecutores (`docs/GUIA_AGREGAR_PICO_Y_EJECUTORES.md`).
+- [x] Preparar el informe final de la entrega y el guion escrito de demostración (`INFORME_FINAL_ENTREGA_8.md`, `GUION_DEMOSTRACION.md`).
+- [x] Mantener una tabla de evidencia que enlace cada requisito con su prueba y responsable (`MATRIZ_REQUISITO_EVIDENCIA.md`).
 
 #### Archivos bajo su control
 
@@ -542,7 +542,7 @@ Reglas de integración:
 - [x] Inventariar duplicados de UI y causas de overflow.
 - [ ] Inventariar las dos Picos y producir comparación segura.
 - [ ] Congelar matriz de conformidad general.
-- [ ] Persona 5 inicia la cronología histórica y el índice de aportes por persona.
+- [x] Persona 5 inicia la cronología histórica y el índice de aportes por persona (completada el 7 nov).
 
 ### Jueves 5 de noviembre
 
@@ -553,7 +553,7 @@ Reglas de integración:
 - [x] Completar tutorial actualizado.
 - [ ] Ejecutar Pico ↔ Pico y Pico ↔ navegador.
 - [x] Personas 1 a 4 entregan sus primeros informes verificables a Persona 5.
-- [ ] Persona 5 reconcilia arquitectura, instalación y guías de Pico con el código actual.
+- [x] Persona 5 reconcilia arquitectura, instalación y guías de Pico con el código actual (7 nov).
 
 ### Viernes 6 de noviembre — mañana
 
@@ -562,7 +562,7 @@ Reglas de integración:
 - [ ] Ejecutar matriz responsive y accesibilidad básica.
 - [ ] Probar guía con una persona nueva.
 - [ ] Congelar firmware, frontend y documentación.
-- [ ] Persona 5 completa informes por persona y matriz requisito → evidencia.
+- [x] Persona 5 completa informes por persona y matriz requisito → evidencia (7 nov).
 
 ### Viernes 6 de noviembre — cierre
 
@@ -571,7 +571,7 @@ Reglas de integración:
 - [ ] Registrar hashes de commit y paquete de firmware.
 - [ ] Etiquetar limitaciones P1/P2 sin presentarlas como terminadas.
 - [ ] Preparar commit final y push únicamente después de aprobar la matriz.
-- [ ] Persona 5 publica el informe final únicamente con resultados confirmados por Juan David Romero (Persona 4).
+- [x] Persona 5 publica el informe final únicamente con resultados confirmados por Juan David Romero (Persona 4) y reverificados sobre `d15d5a0`; lo no confirmado figura como pendiente.
 
 ## 13. Matriz de pruebas obligatoria
 
@@ -592,14 +592,14 @@ Reglas de integración:
 
 Además:
 
-- [x] Suite completa de frontend.
+- [x] Suite completa de frontend. *Observación de Persona 5: `PanelDock.test.tsx:132` falla de forma intermitente por timeout en la suite completa.*
 - [x] Suite completa de firmware.
 - [x] ESLint.
 - [x] TypeScript.
 - [x] Build de producción.
 - [x] `git diff --check`.
 - [x] Paquete Pico comparado por checksum.
-- [x] Auditoría de secretos.
+- [x] Auditoría de secretos. *Observación de Persona 5 (7 nov): `output/hiles-pico-w-deploy/config_local.py` está versionado en Git; su contenido no fue revisado por Persona 5 y la auditoría debe confirmarse (ver `INFORME_FINAL_ENTREGA_8.md` §5).*
 
 ## 14. Secuencia de demostración
 
@@ -629,7 +629,7 @@ La entrega se considera aprobada solamente si:
 - [x] El tutorial coincide con la interfaz entregada.
 - [ ] Las dos Picos usan el paquete canónico y conservan configuración individual.
 - [x] Una nueva Pico puede configurarse sin escribir código Python manualmente.
-- [x] Ningún secreto aparece en Git, URLs, retaineds o capturas.
+- [x] Ningún secreto aparece en Git, URLs, retaineds o capturas. *Observación de Persona 5: pendiente de confirmar por el archivo `output/hiles-pico-w-deploy/config_local.py` versionado.*
 - [ ] Pruebas, build y documentación se encuentran aprobados y registrados.
 
 ## 16. Riesgos y recortes autorizados

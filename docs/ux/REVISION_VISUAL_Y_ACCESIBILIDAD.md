@@ -1,5 +1,16 @@
 # Revisión visual, idioma y accesibilidad — entrega del 30 de octubre
 
+> **Documento histórico.** Describe la interfaz de la entrega 7. En la entrega 8 (commit `ba76303`):
+>
+> - los controles **Iniciar / Paso / Detener / Reiniciar** pasaron a la barra superior;
+> - se retiró el selector **Local / Pico**;
+> - el panel MQTT pasó a llamarse **Conexión**, con modo Local/LAN o Remoto;
+> - el tutorial pasó a 12 pasos;
+> - los Places muestran `×N`;
+> - se revisaron seis viewports.
+>
+> El estado vigente está en [`../architecture/ARQUITECTURA_SISTEMA.md`](../architecture/ARQUITECTURA_SISTEMA.md) y en el registro de la entrega 8.
+
 **Responsable:** Juan Ramos (Persona 3)
 **Alcance:** worker de navegador, colaboración y experiencia de usuario del frontend.
 

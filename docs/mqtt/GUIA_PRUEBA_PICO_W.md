@@ -166,8 +166,14 @@ Abrir el respaldo y comprobar que contiene `config_local.py` antes de copiar.
 
 ### Pico nueva
 
-Copiar `config_local.example.py` como `config_local.py` fuera del repositorio y
-editar la copia.
+Opción recomendada: generar el archivo desde la aplicación en **Ejecutores** →
+**Configuración de placas** → **Preparar otra Raspberry Pi Pico** →
+**Descargar config_local.py** (ver
+[`../GUIA_AGREGAR_PICO_Y_EJECUTORES.md`](../GUIA_AGREGAR_PICO_Y_EJECUTORES.md) §3).
+El formulario no guarda las contraseñas.
+
+Opción manual: copiar `config_local.example.py` como `config_local.py` fuera del
+repositorio y editar la copia.
 
 ### Pico existente
 
@@ -360,8 +366,13 @@ http://IP_DEL_PC:5173/?project=semaforos-fisico
 3. Confirmar que aparecen todas las Pico configuradas para el proyecto.
 4. Si faltan placas, activar **Ejecutar aquí** en uno o más navegadores para
    completar cuatro ejecutores.
-5. Asignar Norte, Este, Sur y Oeste a cuatro ejecutores distintos.
-6. Pulsar **Desplegar** y esperar cuatro `ACK recibido`.
+5. En **Destino por bloque**, asignar Norte, Este, Sur y Oeste a cuatro
+   ejecutores distintos.
+6. Pulsar **Desplegar** y esperar cuatro `ACK recibido`. A partir de aquí se opera
+   con **Iniciar**, **Paso**, **Detener** y **Reiniciar** de la barra superior.
+
+Para una prueba Pico ↔ Pico más corta, usar en un lienzo vacío **Cargar ejemplo
+multi-Pico** (tres Structural Blocks) y asignar SB 1 y SB 2 a placas distintas.
 
 Matrices válidas:
 
@@ -374,12 +385,12 @@ Matrices válidas:
 
 1. Pulsar **Reiniciar** para recuperar el marcado inicial: todos rojos y token
    en Norte.
-2. En **Inyectar una entrada**, enviar:
+2. En el panel **Entradas** de la barra superior, enviar:
    - `sensor-norte = 0`;
    - `sensor-este = 5`;
    - `sensor-sur = 0`;
    - `sensor-oeste = 0`.
-3. Pulsar **Iniciar** o avanzar con **Paso**.
+3. Pulsar **Iniciar** o avanzar con **Paso** en la barra superior.
 4. Comprobar en **Estado agregado**:
    - Norte cede desde rojo;
    - Este pasa a verde;

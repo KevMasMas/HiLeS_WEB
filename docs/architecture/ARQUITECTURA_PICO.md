@@ -27,8 +27,9 @@ El núcleo no debe importar los adaptadores de plataforma. Para ejecutar pruebas
 
 ## Ejecución remota y distribuida
 
-El modo legacy permite que una Pico ejecute un modelo completo. En el protocolo
-v3, el navegador compila el documento, publica un manifiesto y entrega a cada
+El firmware conserva el motor y los tópicos `v1` (una Pico con un modelo
+completo) por compatibilidad y diagnóstico, pero la interfaz ya no ofrece ese
+modo desde la entrega 8. En el protocolo v3, el navegador compila el documento, publica un manifiesto y entrega a cada
 Pico únicamente el fragmento que le pertenece. `DistributedWorker` valida
 proyecto, despliegue, época, propietario, tamaño, hash e IR antes de activar el
 fragmento. Los canales que cruzan ejecutores viajan por MQTT y cada Pico publica
@@ -60,4 +61,9 @@ Toda tarea concreta implementa `update()` y debe retornar rápidamente. Las espe
 
 El presupuesto concreto se define por tarea después de medir el hardware. Como regla inicial, una actualización debe ocupar solo una fracción de su periodo y nunca debe usar una espera para alcanzar ese periodo.
 
-El plan y los criterios comprobables de la entrega actual están en [`PLAN_IMPLEMENTACION_PICO_HILES.md`](../../entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md).
+## Documentos relacionados
+
+- Arquitectura general vigente (frontend, broker, ejecutores y recuperación): [`ARQUITECTURA_SISTEMA.md`](ARQUITECTURA_SISTEMA.md).
+- Contrato distribuido: [`../mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md`](../mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md).
+- Agregar placas y elegir ejecutores: [`../GUIA_AGREGAR_PICO_Y_EJECUTORES.md`](../GUIA_AGREGAR_PICO_Y_EJECUTORES.md).
+- Origen histórico de esta arquitectura (entrega 5): [`PLAN_IMPLEMENTACION_PICO_HILES.md`](../../entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md).
