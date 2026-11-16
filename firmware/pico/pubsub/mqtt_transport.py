@@ -138,7 +138,11 @@ class MqttTransport(Task):
             # lo convierte en ``OSError(-1)``. No es una desconexión: simplemente
             # hay que dejar que el scheduler vuelva a consultar en el siguiente
             # ciclo.
-            if not used_poller and self._is_idle_check_error(exc):
+            # RP2040 y RP2350 pueden producir el mismo ``OSError(-1)`` tras
+            # un despertar espurio de ``poll`` y una llamada a ``wait_msg``.
+            # En ambos caminos significa "todavía no hay payload"; el ping de
+            # keepalive continúa detectando una desconexión real.
+            if self._is_idle_check_error(exc):
                 return
             self._schedule_reconnect(exc)
         except Exception as exc:

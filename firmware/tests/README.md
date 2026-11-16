@@ -25,7 +25,7 @@ Desde la raíz del repositorio se ejecutan con:
 python -m unittest discover -s firmware/tests -t . -v
 ```
 
-Pruebas del motor HiLeS (Persona 3, Juan Ramos):
+Pruebas del motor HiLeS (Persona 3):
 
 - `test_hiles_expressions.py`: gramática y semántica del AST sin `eval`.
 - `test_hiles_model.py`: vectores `validos/` e `invalidos/` compartidos con la web y reglas adicionales de la IR v1.

@@ -32,6 +32,8 @@ export const DisplayNameDialog: React.FC<DisplayNameDialogProps> = ({ onConfirm 
           <span>Nombre para mostrar</span>
           <input
             ref={inputRef}
+            type="text"
+            autoFocus
             value={value}
             maxLength={40}
             autoComplete="name"
@@ -39,7 +41,7 @@ export const DisplayNameDialog: React.FC<DisplayNameDialogProps> = ({ onConfirm 
             placeholder="Ej. Persona 1"
             aria-describedby="identity-help"
             aria-invalid={attempted && !name}
-            onChange={(event) => setValue(event.target.value)}
+            onInput={(event) => setValue(event.currentTarget.value)}
           />
         </label>
         <p id="identity-help" className={attempted && !name ? 'identity-dialog__error' : 'identity-dialog__help'}>

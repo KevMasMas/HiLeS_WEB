@@ -1,4 +1,4 @@
-# Matriz de conformidad — Juan David Romero (Persona 4)
+# Matriz de conformidad — Persona 4
 
 **Fecha de verificación:** 6 de noviembre de 2026
 
@@ -122,12 +122,12 @@ Resultados previos al cierre definitivo:
 - inventario físico: sin placas detectadas, sin escritura ni despliegue.
 
 Estos números corresponden a la regresión completa ejecutada sobre el árbol de
-trabajo de Juan David Romero (Persona 4) antes del commit de integración.
+trabajo de Persona 4 antes del commit de integración.
 
 ## 7. Verificación visual y tutorial
 
-Persona 3 registró seis viewports y el tutorial actualizado. Juan David Romero
-(Persona 4) repitió la entrada desde un segundo navegador conectado por LAN,
+Persona 3 registró seis viewports y el tutorial actualizado. Persona 4 repitió
+la entrada desde un segundo navegador conectado por LAN,
 confirmó dos colaboradores simultáneos y publicó un cambio de nombre que llegó
 al otro navegador por Mosquitto. Durante la prueba se corrigieron el robo de
 foco entre identidad y tutorial y un ciclo de renderizado del panel. La prueba

@@ -463,6 +463,14 @@ class DistributedWorkerV3Tests(unittest.TestCase):
         cls.vectors_data = json.loads(VECTORS_V3_PATH.read_text(encoding="utf-8"))
         cls.scenarios = {item["deployment_id"]: item for item in cls.vectors_data["escenarios"]}
 
+    def test_status_identifies_firmware_and_board_model(self):
+        rig = _Rig(FakeBroker(), "proyecto", "pico03w", executor_id="pico:pico03w")
+        rig.worker.board_model = "Raspberry Pi Pico 2 W with RP2350"
+        status = rig.worker._build_status_payload()
+        self.assertEqual(status["version"], "3.0.0")
+        self.assertEqual(status["firmware_version"], "3.0.0")
+        self.assertEqual(status["board_model"], "Raspberry Pi Pico 2 W with RP2350")
+
     def test_canonical_json_and_sha256_match_typescript_vectors_bit_for_bit(self):
         for scenario in self.vectors_data["escenarios"]:
             manifest = scenario["manifest"]

@@ -767,6 +767,13 @@
 .hiles-node__stale-badge { position: absolute; top: -14px; left: 50%; z-index: 11; transform: translateX(-50%); padding: 1px 5px; border: 1px dashed #d97706; border-radius: 999px; background: #fffbeb; color: #92400e; font: 800 8px/1.2 var(--hiles-font); white-space: nowrap; pointer-events: auto; cursor: help; }
 
 .hiles-structural { position: relative; width: 100%; height: 100%; box-sizing: border-box; }
+.canvas-targets-hidden .hiles-execution-target--internal { display: none; }
+.canvas-targets-toggle { max-width: min(240px, 70vw); min-height: 36px; padding: 7px 10px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #334155; font: inherit; font-size: 12px; cursor: pointer; box-shadow: 0 2px 6px #0f172a14; }
+.canvas-targets-toggle[aria-pressed="true"] { background: #eff6ff; border-color: #2563eb; color: #1d4ed8; }
+.canvas-targets-toggle:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
+.hiles-execution-target { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 2; display: flex; align-items: center; gap: 6px; max-width: 280px; padding: 3px 7px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc; color: #334155; font-size: 10px; line-height: 1.35; box-shadow: 0 1px 3px #0f172a14; pointer-events: none; white-space: nowrap; }
+.hiles-execution-target > span { overflow: hidden; text-overflow: ellipsis; }
+.hiles-execution-target small { color: #64748b; font-size: 9px; }
 .hiles-structural__shape { position: absolute; inset: 0; box-sizing: border-box; border: 3px solid #172033; border-radius: 2px; background: rgba(248,250,252,.94); box-shadow: 0 8px 24px rgba(15,23,42,.08); pointer-events: none; }
 .hiles-structural.is-selected .hiles-structural__shape { border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,.16), 0 8px 24px rgba(15,23,42,.08); }
 .hiles-structural.is-locked .hiles-structural__shape { border-style: double; }

@@ -7,6 +7,7 @@ import { esRuntimeObsoleto } from './nodeRuntimeView';
 import { TRIANGLE_VIEWBOX, triangleVertices } from './triangleGeometry';
 import { useEditorStore } from '../../stores/useEditorStore';
 import { claseColorRuntime } from './runtimeColor';
+import { ExecutionTargetBadge } from './ExecutionTargetBadge';
 
 const positionFor = (side: HilesPort['side']) => ({ left: Position.Left, right: Position.Right, top: Position.Top, bottom: Position.Bottom })[side];
 
@@ -187,6 +188,7 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
         <div aria-hidden="true" className="hiles-structural__shape" style={rotationStyle} />
         <NodeResizer isVisible={selected && !locked} minWidth={200} minHeight={130} lineClassName="hiles-resizer-line" handleClassName="hiles-resizer-handle" onResizeStart={beginHistoryTransaction} onResizeEnd={endHistoryTransaction} />
         <PortHandles ports={ports} />
+        <ExecutionTargetBadge nodeId={id} />
         {summaryMode ? (
           <div className="hiles-structural__summary">
             <strong>{name}</strong>
@@ -224,6 +226,7 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
     : 'right';
   return (
     <div className={`hiles-node ${isPetri ? 'hiles-node--petri' : ''} ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''} ${stale ? 'is-stale' : ''}`}>
+      {(isFunctional || currentNode?.parentId) && <ExecutionTargetBadge nodeId={id} />}
       {stale && <StaleRuntimeBadge />}
       {isFunctional && data.runtime?.error && (
         <span className="hiles-node__error-badge" title={data.runtime.error}>⚠</span>

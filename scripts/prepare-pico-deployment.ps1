@@ -4,6 +4,7 @@ $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $sourceRoot = Join-Path $repoRoot 'firmware\pico'
 $guidePath = Join-Path $repoRoot 'docs\mqtt\GUIA_PRUEBA_PICO_W.md'
 $outputPath = Join-Path $repoRoot 'output\hiles-pico-w-deploy.zip'
+$expandedPath = Join-Path $repoRoot 'output\hiles-pico-w-deploy'
 $checksumPath = Join-Path $repoRoot 'output\hiles-pico-w-deploy.sha256'
 
 $requiredDirectories = @('core', 'devices', 'hiles', 'platform', 'pubsub')
@@ -45,9 +46,43 @@ $manifestFiles = @(
         sha256 = (Get-FileHash -LiteralPath $guidePath -Algorithm SHA256).Hash.ToLowerInvariant()
     }
 )
+$manifestJson = [ordered]@{
+    manifest_version = 1
+    firmware_version = '3.0.0'
+    runtime_file_count = $files.Count
+    excluded = @('config_local.py', 'umqtt/', 'lib/umqtt/', 'examples/', '__pycache__/')
+    files = $manifestFiles
+} | ConvertTo-Json -Depth 6
 
 $outputDirectory = Split-Path -Parent $outputPath
 [System.IO.Directory]::CreateDirectory($outputDirectory) | Out-Null
+
+# La carpeta expandida es un artefacto limpio, no un lugar para guardar
+# credenciales. Detenerse antes de borrar si alguien dejó allí su configuración.
+[System.IO.Directory]::CreateDirectory($expandedPath) | Out-Null
+$expandedConfig = Join-Path $expandedPath 'config_local.py'
+if (Test-Path -LiteralPath $expandedConfig -PathType Leaf) {
+    throw 'Mueva output/hiles-pico-w-deploy/config_local.py fuera de la carpeta de despliegue antes de regenerar el paquete.'
+}
+foreach ($directory in $requiredDirectories) {
+    $targetDirectory = Join-Path $expandedPath $directory
+    if (Test-Path -LiteralPath $targetDirectory -PathType Container) {
+        Remove-Item -LiteralPath $targetDirectory -Recurse -Force
+    }
+}
+foreach ($file in $files) {
+    $sourcePrefix = $sourceRoot.TrimEnd('\') + '\'
+    $relativePath = $file.FullName.Substring($sourcePrefix.Length)
+    $targetPath = Join-Path $expandedPath $relativePath
+    [System.IO.Directory]::CreateDirectory((Split-Path -Parent $targetPath)) | Out-Null
+    Copy-Item -LiteralPath $file.FullName -Destination $targetPath -Force
+}
+Copy-Item -LiteralPath $guidePath -Destination (Join-Path $expandedPath 'LEEME_PRIMERO.md') -Force
+[System.IO.File]::WriteAllText(
+    (Join-Path $expandedPath $manifestEntryName),
+    ($manifestJson + [Environment]::NewLine),
+    [System.Text.UTF8Encoding]::new($false)
+)
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
@@ -83,10 +118,6 @@ try {
         $manifestEntry = $archive.CreateEntry($manifestEntryName, [System.IO.Compression.CompressionLevel]::Optimal)
         $manifestStream = $manifestEntry.Open()
         try {
-            $manifestJson = [ordered]@{
-                manifest_version = 1
-                files = $manifestFiles
-            } | ConvertTo-Json -Depth 6
             $manifestBytes = [System.Text.UTF8Encoding]::new($false).GetBytes($manifestJson)
             $manifestStream.Write($manifestBytes, 0, $manifestBytes.Length)
         }

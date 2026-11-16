@@ -60,8 +60,44 @@ Get-FileHash .\output\hiles-pico-w-deploy.zip -Algorithm SHA256
 Get-Content .\output\hiles-pico-w-deploy.sha256
 ```
 
-Los hashes deben coincidir. Extraer el ZIP en una carpeta nueva. El paquete no
-incluye credenciales, `config_local.py`, ejemplos, tests, bytecode ni `umqtt`.
+Los hashes deben coincidir. El ZIP contiene `MANIFEST.sha256.json`, que enumera
+el SHA-256 de cada archivo del paquete y se verifica contra las fuentes al
+generarlo. Extraer el ZIP en una carpeta nueva. El paquete no incluye
+credenciales, `config_local.py`, ejemplos, tests, bytecode ni `umqtt`.
+
+El aprovisionador PowerShell puede inventariar, respaldar y sincronizar un
+filesystem de Pico accesible, conservando `config_local.py` y `umqtt/`:
+
+```powershell
+& .\scripts\test-pico-provisioning.ps1
+& .\scripts\test-distributed-physical.ps1 -Mode Inventory -DevicePath C:\ruta\al\filesystem
+& .\scripts\test-distributed-physical.ps1 -Mode Backup -DevicePath C:\ruta\al\filesystem
+& .\scripts\test-distributed-physical.ps1 -Mode Deploy -DevicePath C:\ruta\al\filesystem `
+  -ObsoletePath devices\modulo_obsoleto.py
+```
+
+`-ObsoletePath` es opcional; solo se elimina lo indicado explícitamente y
+después del respaldo. No pasar un puerto COM como `-DevicePath`: el script no
+usa serial y rechaza el volumen `RPI-RP2` del bootloader UF2. Para la Pico
+física se usa Thonny o `mpremote` según los pasos siguientes; la prueba con un
+filesystem simulado no sustituye la verificación de Pico 1 y Pico 2 reales.
+
+Para dos Picos físicas conectadas por COM, el flujo reproducible recomendado es
+`manage-pico-fleet.py`. Cerrar Thonny y cualquier monitor serial antes de usarlo:
+
+```powershell
+$thonnyPython = Join-Path $env:LOCALAPPDATA 'Programs\Thonny\python.exe'
+& $thonnyPython .\scripts\manage-pico-fleet.py --ports COM5 COM8 --mode inventory
+& $thonnyPython .\scripts\manage-pico-fleet.py --ports COM5 COM8 --mode backup
+& $thonnyPython .\scripts\manage-pico-fleet.py --ports COM5 COM8 --mode deploy
+```
+
+El modo `deploy` vuelve a respaldar antes de escribir, conserva y verifica
+`config_local.py`, `umqtt/` y `lib/umqtt/`, elimina únicamente los tres módulos
+viales obsoletos permitidos y compara todos los hashes después del reinicio. El
+informe no incluye contenidos ni hashes de credenciales. Si aparece `device is
+busy`, cerrar Thonny/VS Code y repetir; la herramienta hace tres intentos
+acotados antes de fallar.
 
 Archivos críticos que deben estar dentro del ZIP:
 
@@ -103,7 +139,7 @@ pubsub/topics.py
 Alternativa desde PowerShell, con Thonny cerrado y reemplazando `COM5`:
 
 ```powershell
-$thonnyPython = 'D:\usuarios\Monitores\AppData\Local\Programs\Thonny\python.exe'
+$thonnyPython = Join-Path $env:LOCALAPPDATA 'Programs\Thonny\python.exe'
 & $thonnyPython -m mpremote connect COM5 mip install umqtt.simple
 & $thonnyPython -m mpremote connect COM5 exec "from umqtt.simple import MQTTClient; print('UMQTT_OK')"
 ```
@@ -135,7 +171,7 @@ No formatear ni borrar la placa completa. Primero:
 Respaldo alternativo con `mpremote`, cerrando Thonny primero:
 
 ```powershell
-$thonnyPython = 'D:\usuarios\Monitores\AppData\Local\Programs\Thonny\python.exe'
+$thonnyPython = Join-Path $env:LOCALAPPDATA 'Programs\Thonny\python.exe'
 $respaldo = Join-Path $env:TEMP ("hiles-pico-backup-" + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Path $respaldo | Out-Null
 & $thonnyPython -m mpremote connect COM5 fs cp -r : $respaldo

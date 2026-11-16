@@ -82,6 +82,23 @@ usa serial y rechaza el volumen `RPI-RP2` del bootloader UF2. Para la Pico
 física se usa Thonny o `mpremote` según los pasos siguientes; la prueba con un
 filesystem simulado no sustituye la verificación de Pico 1 y Pico 2 reales.
 
+Para dos Picos físicas conectadas por COM, el flujo reproducible recomendado es
+`manage-pico-fleet.py`. Cerrar Thonny y cualquier monitor serial antes de usarlo:
+
+```powershell
+$thonnyPython = Join-Path $env:LOCALAPPDATA 'Programs\Thonny\python.exe'
+& $thonnyPython .\scripts\manage-pico-fleet.py --ports COM5 COM8 --mode inventory
+& $thonnyPython .\scripts\manage-pico-fleet.py --ports COM5 COM8 --mode backup
+& $thonnyPython .\scripts\manage-pico-fleet.py --ports COM5 COM8 --mode deploy
+```
+
+El modo `deploy` vuelve a respaldar antes de escribir, conserva y verifica
+`config_local.py`, `umqtt/` y `lib/umqtt/`, elimina únicamente los tres módulos
+viales obsoletos permitidos y compara todos los hashes después del reinicio. El
+informe no incluye contenidos ni hashes de credenciales. Si aparece `device is
+busy`, cerrar Thonny/VS Code y repetir; la herramienta hace tres intentos
+acotados antes de fallar.
+
 Archivos críticos que deben estar dentro del ZIP:
 
 ```text

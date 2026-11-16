@@ -1,5 +1,13 @@
 # Registro de cambios — entrega del 6 de noviembre de 2026
 
+### [2026-11-13] — Etiquetas de destino de ejecución en el canvas
+
+- Se añadió el botón «Mostrar/Ocultar destinos internos» en la esquina superior derecha del canvas. Las etiquetas internas empiezan ocultas; es una preferencia local de la vista que no modifica el circuito ni la asignación compartida. Cubre todos los elementos internos; los bloques estructurales conservan su etiqueta visible.
+- Se agregó una etiqueta sobre cada bloque estructural y funcional con el ejecutor elegido (Pico, este navegador u otro navegador), incluyendo la herencia de asignación.
+- La etiqueta distingue sin asignar, pendiente de despliegue, sin conexión, degradado, listo, ejecutando y despliegue rechazado. Solo confirma ejecución para elementos del manifiesto con ACK aceptado en la época actual.
+- Archivos: `ExecutionTargetBadge.tsx`, `CustomNodes.tsx` y `editor.css`.
+- Validación: build, TypeScript y ESLint de los componentes modificados aprobados. Revisión visual en el editor pendiente; este cambio no certifica la prueba física de ACK ni del token.
+
 **Rama:** `multi-pico` (creada desde `mqtt-pico` en `f7cc9b6`; corrección de Persona 5 del 7 de noviembre)\
 **Commit base:** `f7cc9b6`  
 **Último commit verificado:** `d15d5a0`\
@@ -98,13 +106,13 @@
 - **Cambios realizados:**
   1. Persona 5 quedó dedicada exclusivamente a documentación, informes, cronología y trazabilidad.
   2. Persona 5 no modificará código de producción ni asumirá pruebas físicas.
-  3. Juan David Romero (Persona 4) absorbió integración, suites finales y matrices browser/Pico además de la conformidad del motor.
+  3. Persona 4 absorbió integración, suites finales y matrices browser/Pico además de la conformidad del motor.
   4. Personas 1 a 4 deberán entregar informes verificables a Persona 5 al cerrar cada bloque.
   5. Todo informe se contrastará con commits, archivos, pruebas o evidencia antes de incorporarse.
 - **Pruebas ejecutadas:** revisión de coherencia de responsables, dependencias, cronograma y matriz de cierre.
 - **Resultado exacto:** cuatro frentes técnicos y un frente documental sin propiedad simultánea de archivos de producción.
 - **Evidencia física o visual:** no aplica; cambio organizativo.
-- **Riesgos o pendientes:** Juan David Romero (Persona 4) concentra conformidad e integración; Personas 1 a 3 deben entregar piezas probadas y no delegar defectos de sus módulos. Persona 5 necesita recibir informes a tiempo para no reconstruir todo al cierre.
+- **Riesgos o pendientes:** Persona 4 concentra conformidad e integración; Personas 1 a 3 deben entregar piezas probadas y no delegar defectos de sus módulos. Persona 5 necesita recibir informes a tiempo para no reconstruir todo al cierre.
 - **Commit o rama:** rama `mqtt-pico`; documentos sin commit.
 - **Cómo revertir o recuperar:** restaurar la división anterior en la sección 10 y la matriz de cierre.
 
@@ -172,11 +180,11 @@
   - Informe detallado: artifact `reporte_implementacion_persona3.md`.
   - Capturas tutorial: `step2_tutorial_highlight.png`, `step10_tutorial_highlight.png`, `step11_tutorial_highlight.png`.
   - Capturas responsive: `audit_360x800_mobile_narrow.png`, `audit_768x1024_tablet_portrait.png`, `audit_1440x900_desktop.png`.
-- **Riesgos o pendientes:** la verificación física multi-Pico en hardware real (Pico ↔ Pico y Pico ↔ browser) y la suite de pruebas físicas en hardware corresponde a Juan David Romero (Persona 4).
+- **Riesgos o pendientes:** la verificación física multi-Pico en hardware real (Pico ↔ Pico y Pico ↔ browser) y la suite de pruebas físicas en hardware corresponde a Persona 4.
 - **Commit o rama:** rama `multi-pico`.
 - **Cómo revertir o recuperar:** `git checkout` de los archivos frontend modificados o restauración selectiva por módulo.
 
-### [2026-11-06 09:30] — Juan David Romero (Persona 4) — Conformidad Browser/MicroPython e integración distribuida
+### [2026-11-06 09:30] — Persona 4 — Conformidad Browser/MicroPython e integración distribuida
 
 - **Objetivo:** demostrar con una fuente de verdad compartida que los motores Browser y MicroPython conservan la misma semántica para elementos, canales, retardos y Petri; cerrar Browser ↔ Browser y separar la evidencia simulada de las pruebas físicas pendientes.
 - **Estado:** [x] conformidad e integración de software terminadas; [!] Pico ↔ Browser y Pico ↔ Pico físicas pendientes porque no se detectó hardware.
@@ -198,10 +206,10 @@
   7. Se preparó un guion técnico de diez minutos y una matriz que diferencia Browser real, dobles de protocolo y placas físicas.
   8. El tutorial queda inactivo mientras se solicita el nombre para evitar que robe el foco y cierre el teclado en PC o móvil.
   9. Las transiciones de panel sin cambios ya no generan otro estado, eliminando el ciclo `Maximum update depth exceeded` observado durante la prueba visual.
-  10. Dos navegadores entraron al mismo proyecto por LAN como `Juan Romero` y `Codex - Persona 4`; la presencia y un cambio de nombre se sincronizaron mediante Mosquitto.
+  10. Dos navegadores entraron al mismo proyecto por LAN como `Persona 3` y `Persona 4`; la presencia y un cambio de nombre se sincronizaron mediante Mosquitto.
 - **Pruebas ejecutadas:**
   - frontend: **32 archivos y 187/187 pruebas aprobadas**;
-  - firmware: **169/169 pruebas aprobadas**;
+  - firmware: **180/180 pruebas aprobadas** después de la integración final;
   - ESLint: aprobado sin errores;
   - TypeScript y build Vite: aprobados, **290 módulos transformados**;
   - `git diff --check`: aprobado;
@@ -211,10 +219,10 @@
   - `test-distributed-mqtt.mjs --mode=mqtt`: seis etapas aprobadas sobre broker real;
   - `test-distributed-physical.ps1 -Mode DryRun -AllowNoDevice`: terminó correctamente y reportó cero placas.
 - **Resultado exacto:** paridad de cinco vectores en los dos motores; Browser ↔ Browser aprobado para CCH/DCH/LCH, presencia, edición compartida y control distribuido; firmware, frontend, build, lint, empaquetado y MQTT aprobados dentro del alcance sin hardware.
-- **Evidencia física o visual:** no se detectó ninguna Pico ni puerto serial. En `proyecto-anboq6`, dos navegadores por LAN mostraron simultáneamente a `Juan Romero` y `Codex - Persona 4`; el cambio `Sumar uno` → `Sumar uno · Codex` apareció en el lienzo compartido. Se conserva además la evidencia de seis viewports de Persona 3.
+- **Evidencia física o visual:** en esa ejecución no se detectó ninguna Pico ni puerto serial. En un proyecto de prueba, dos navegadores por LAN mostraron simultáneamente a Persona 3 y Persona 4; un cambio de nombre apareció en el lienzo compartido. Se conserva además la evidencia de seis viewports de Persona 3.
 - **Errores encontrados y corrección:** la primera expectativa del vector Petri marcaba una transición como habilitada después de consumir sus tokens y se corrigió al valor común `false`. En la UI, identidad y tutorial competían por el foco, y el tutorial repetía una transición de panel sin cambios hasta agotar la profundidad de renderizado; ambos defectos quedaron cubiertos por pruebas de regresión.
 - **Riesgos o pendientes:** faltan Pico ↔ Browser y Pico ↔ Pico físicas, inventario real, memoria/RSSI, prueba del tutorial con una persona nueva y ensayo humano completo. El runner de red usa Mosquitto real, pero los ejecutores `pico:*` son dobles Node.js y no sustituyen MicroPython ni Wi-Fi.
-- **Commit o rama:** rama `multi-pico`; commit de integración de Juan David Romero preparado para esta subida.
+- **Commit o rama:** rama `multi-pico`; commit de integración de Persona 4 preparado para esta subida.
 - **Cómo revertir o recuperar:** retirar los dos tests y los dos vectores nuevos, restaurar este plan/registro y eliminar la matriz de conformidad. No existen migraciones ni estado persistente.
 
 ### [2026-11-05 21:01] — Persona 2 — Identidad de placa, manifiesto SHA-256 y aprovisionamiento seguro
@@ -291,6 +299,20 @@
 - **Commit o rama:** `multi-pico`, cambios locales de documentación sobre `d15d5a0`.
 - **Cómo revertir o recuperar:** eliminar los siete archivos creados y restaurar los modificados con `git checkout -- <archivo>`. No hay cambios de código.
 
+### [2026-11-06] — Persona 4 — Cierre de integración y preparación física de dos Picos
+
+- **Objetivo:** consolidar los cambios locales y remotos, producir un único paquete canónico y dejar COM5/COM8 preparadas para la matriz física.
+- **Estado:** [x] integración y aprovisionamiento; [ ] matriz Pico ↔ Pico/Pico ↔ browser pendiente de ejecutar fuera del aislamiento de red de Codex.
+- **Cambios realizados:** se unificó `MANIFEST.sha256.json`, se retiró `config_local.py` de la carpeta de despliegue, se agregó aprovisionamiento real por `mpremote`, reintento ante puerto ocupado, reinicio final de `main.py`, conservación verificable de `config_local.py`/`umqtt/` y recuperación Wi-Fi mediante `disconnect()` antes de reintentar.
+- **Pruebas ejecutadas:** frontend 187/187; firmware 180/180; ESLint, TypeScript y build aprobados; aprovisionamiento simulado aprobado; Mosquitto validado con cuatro clientes.
+- **Paquete final:** 33 entradas; SHA-256 `AC0D9BC4FE4D8D69CD8B8FAC1D5106C5B689A9201521DD90FB7DF5E3788D1699`.
+- **Evidencia física:** COM5 es Pico W RP2040 con MicroPython 1.28.0; COM8 es Pico 2 W RP2350 con MicroPython 1.29.0. Ambas coinciden con todos los hashes, preservaron configuración y dependencias, y no contienen los módulos viales obsoletos.
+- **Inventario final:** `output/physical-inventory-final-20261106.json` confirma, después de la corrección Wi-Fi, cero archivos faltantes, diferentes u obsoletos en ambas placas; la herramienta reinició los dos runtimes al terminar.
+- **Respaldos:** `D:\usuarios\Monitores\AppData\Local\Temp\hiles-pico-backups-entrega8\fleet-20261106T215135Z\COM5` y `COM8`.
+- **Conectividad:** COM5 publicó `online`. COM8 autenticó Wi-Fi y obtuvo dirección, pero las reglas temporales `codex_sandbox_offline_block_inbound/outbound` bloquearon el intercambio de una nueva sesión MQTT con TCP 1883; no se deshabilitaron controles de seguridad. Se corrigió además el reintento Wi-Fi para no abortar una asociación RP2350 todavía en progreso.
+- **Pendiente inmediato:** cerrar Codex, comprobar que COM8 publique `online`, iniciar el frontend con `?project=proyecto-hl950c` y ejecutar los cuatro ACK y el anillo de token con dos Picos y dos navegadores.
+
+
 ## Matriz de cierre
 
 Actualizada por Persona 5 el 7 de noviembre sobre `d15d5a0`. Detalle por requisito en [`MATRIZ_REQUISITO_EVIDENCIA.md`](MATRIZ_REQUISITO_EVIDENCIA.md).
@@ -299,7 +321,7 @@ Actualizada por Persona 5 el 7 de noviembre sobre `d15d5a0`. Detalle por requisi
 |---|---|---|---|
 | Validación central de ejecutores | Persona 1 | [x] Software | Incluida en las 187 pruebas actuales |
 | Dos Picos seleccionables en UI | Persona 1 | [ ] | Pendiente |
-| Runtime canónico en ambas placas | Persona 2 | [ ] | Pendiente; paquete y aprovisionamiento simulado verificados |
+| Runtime canónico en ambas placas | Persona 2 | [x] Física | COM5 y COM8 coinciden con el firmware y conservan configuración y umqtt |
 | Configuración sin editar Python | Personas 1 y 2 | [x] Software | `PicoSetupPanel` (`6aac632`) |
 | Controles únicos y responsive | Persona 3 | [x] Software / [!] Visual declarada | Controles verificados en el código; capturas no versionadas |
 | Tutorial actualizado | Persona 3 | [x] UI | 12 pasos confirmados en `tutorialSteps.ts` |
@@ -307,11 +329,12 @@ Actualizada por Persona 5 el 7 de noviembre sobre `d15d5a0`. Detalle por requisi
 | Browser ↔ browser | Persona 4 | [x] Software/MQTT (declarado) | CCH, DCH, LCH, retained, ACK, colaboración y desconexión |
 | Pico ↔ browser | Persona 4 | [ ] Física | Pendiente |
 | Pico ↔ Pico | Persona 4 | [ ] Física | Pendiente |
-| Auditoría de secretos | Responsable del paquete | [!] | `output/hiles-pico-w-deploy/config_local.py` versionado; revisar |
+| Auditoría de secretos | Responsable del paquete | [x] Paquete | Configuración local retirada del paquete; plantilla conservada |
 | Documentación reconciliada | Persona 5 | [x] | Ver `INFORME_FINAL_ENTREGA_8.md` §6 |
 | Informes históricos por persona | Persona 5 | [x] | `INFORMES_POR_PERSONA.md`, `CRONOLOGIA_PROYECTO.md` |
 | Matriz requisito → evidencia | Persona 5 | [x] | `MATRIZ_REQUISITO_EVIDENCIA.md` |
-| Build, lint y suites finales | Persona 4 | [x] Software / [!] intermitencia | 187 frontend (una prueba intermitente) + 169 firmware; lint, tipos y build aprobados |
+| Build, lint y suites finales | Persona 4 | [x] Software / [!] intermitencia | 187 frontend + 180 firmware; lint, tipos y build aprobados |
+
 
 ## Bloqueadores activos
 

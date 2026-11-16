@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Background, ConnectionMode, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import { Background, ConnectionMode, Controls, MiniMap, Panel, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import type { Connection, Edge, EdgeMouseHandler, Node, NodeMouseHandler, OnNodeDrag, XYPosition } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './editor.css';
@@ -42,6 +42,7 @@ const CanvasInner: React.FC = () => {
     viewport: { x: number; y: number; zoom: number };
   } | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [showInternalTargets, setShowInternalTargets] = useState(false);
   const [isRightPanning, setIsRightPanning] = useState(false);
   const { screenToFlowPosition, getViewport, setViewport, setCenter } = useReactFlow();
   const cursors = useProjectStore((state) => state.cursors);
@@ -229,6 +230,7 @@ const CanvasInner: React.FC = () => {
 
   return (
     <div
+      className={showInternalTargets ? 'canvas-targets-visible' : 'canvas-targets-hidden'}
       style={{ flex: 1, position: 'relative', cursor: isRightPanning ? 'grabbing' : undefined }}
       ref={reactFlowWrapper}
       onPointerDownCapture={onRightPanStart}
@@ -250,6 +252,17 @@ const CanvasInner: React.FC = () => {
       >
         <Background color="#cbd5e1" gap={20} />
         <Controls />
+        <Panel position="top-right">
+          <button
+            type="button"
+            className="canvas-targets-toggle nodrag nopan"
+            aria-pressed={showInternalTargets}
+            title="Mostrar u ocultar los destinos de ejecución de los elementos internos"
+            onClick={() => setShowInternalTargets((visible) => !visible)}
+          >
+            {showInternalTargets ? 'Ocultar destinos internos' : 'Mostrar destinos internos'}
+          </button>
+        </Panel>
         <MiniMap pannable zoomable nodeColor={(node) => node.data.hilesType === HilesElementType.STRUCTURAL_BLOCK ? '#94a3b8' : '#2563eb'} />
       </ReactFlow>
       {cursors.map((cursor) => {

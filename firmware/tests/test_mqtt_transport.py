@@ -59,6 +59,7 @@ class FakeMqttClient:
         self.incoming = []
         self.check_msg_count = 0
         self.wait_msg_count = 0
+        self.idle_on_wait = False
         self.ping_count = 0
         self.raise_on_check = False
         self.idle_on_check = False
@@ -93,6 +94,8 @@ class FakeMqttClient:
 
     def wait_msg(self):
         self.wait_msg_count += 1
+        if self.idle_on_wait:
+            raise OSError(-1)
         if self.incoming:
             topic, payload = self.incoming.pop(0)
             self.callback(topic, payload)
@@ -224,6 +227,24 @@ class MqttTransportTests(unittest.TestCase):
         self.assertEqual(client.wait_msg_count, 1)
         self.assertEqual(received, [{"accion": "encender"}])
 
+    def test_spurious_poller_wakeup_does_not_disconnect_pico(self):
+        class AlwaysReadyPoller:
+            def poll(self, _timeout):
+                return [(1, 1)]
+
+        clock, scheduler, _node, _wifi, clients, transport = self.create()
+        scheduler.run_pending()
+        client = clients[0]
+        client.idle_on_wait = True
+        transport._socket_poller = AlwaysReadyPoller()
+
+        clock.advance_ms(1)
+        scheduler.run_pending()
+
+        self.assertTrue(transport.connected)
+        self.assertIs(transport.client, client)
+        self.assertEqual(len(clients), 1)
+
     def test_sends_keepalive_ping_before_broker_timeout(self):
         clock, scheduler, _node, _wifi, clients, transport = self.create()
         scheduler.run_pending()
@@ -281,11 +302,43 @@ class MqttTransportTests(unittest.TestCase):
 
 
 class WifiConnectionTests(unittest.TestCase):
+    def test_does_not_abort_connection_attempt_still_in_progress(self):
+        class FakeWlan:
+            def __init__(self):
+                self.connect_count = 0
+                self.disconnect_count = 0
+
+            def active(self, _enabled):
+                return None
+
+            def isconnected(self):
+                return False
+
+            def status(self):
+                return 1
+
+            def connect(self, _ssid, _password):
+                self.connect_count += 1
+
+            def disconnect(self):
+                self.disconnect_count += 1
+
+        clock = FakeClock()
+        wlan = FakeWlan()
+        wifi = WifiConnection("red", "clave", wlan=wlan, retry_interval_ms=5, clock=clock)
+
+        self.assertFalse(wifi.poll())
+        clock.advance_ms(5)
+        self.assertFalse(wifi.poll())
+        self.assertEqual(wlan.connect_count, 1)
+        self.assertEqual(wlan.disconnect_count, 0)
+
     def test_retries_after_connection_loss_without_sleep(self):
         class FakeWlan:
             def __init__(self):
                 self.connected = False
                 self.connect_count = 0
+                self.disconnect_count = 0
 
             def active(self, _enabled):
                 return None
@@ -295,6 +348,9 @@ class WifiConnectionTests(unittest.TestCase):
 
             def connect(self, _ssid, _password):
                 self.connect_count += 1
+
+            def disconnect(self):
+                self.disconnect_count += 1
 
         clock = FakeClock()
         wlan = FakeWlan()
@@ -308,6 +364,7 @@ class WifiConnectionTests(unittest.TestCase):
         clock.advance_ms(1)
         self.assertFalse(wifi.poll())
         self.assertEqual(wlan.connect_count, 2)
+        self.assertEqual(wlan.disconnect_count, 1)
 
 
 class MqttClientFactoryTests(unittest.TestCase):

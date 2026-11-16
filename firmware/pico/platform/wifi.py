@@ -50,6 +50,21 @@ class WifiConnection:
     def start(self):
         self.wlan.active(True)
         now = self._now_ms()
+        if self._started and not self.wlan.isconnected():
+            status_method = getattr(self.wlan, "status", None)
+            status = status_method() if callable(status_method) else None
+            if isinstance(status, int) and status > 0:
+                # La Pico 2 W puede tardar más que el intervalo de reintento
+                # en completar asociación y DHCP. No abortar un intento que
+                # el driver todavía reporta en progreso.
+                self._next_attempt = self._add_ms(now, self.retry_interval_ms)
+                return
+            # CYW43 puede quedar fijado en STAT_WRONG_PASSWORD/CONNECT_FAIL
+            # después de un rechazo transitorio. Limpiar el intento anterior
+            # permite que RP2040 y RP2350 autentiquen de nuevo sin reiniciar.
+            disconnect = getattr(self.wlan, "disconnect", None)
+            if callable(disconnect):
+                disconnect()
         self._started = True
         self._next_attempt = self._add_ms(now, self.retry_interval_ms)
         if not self.wlan.isconnected():

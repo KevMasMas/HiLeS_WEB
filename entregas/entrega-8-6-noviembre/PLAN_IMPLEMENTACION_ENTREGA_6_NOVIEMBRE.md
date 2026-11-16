@@ -351,12 +351,12 @@ frontend/src/features/distributed/*.test.ts
 
 #### Tareas
 
-- [ ] Inventariar Pico 1 y Pico 2 sin mostrar secretos.
-- [ ] Comparar ambas contra el manifiesto del paquete canónico.
-- [ ] Respaldar cada placa antes de cambiar archivos.
-- [ ] Sincronizar módulos faltantes y retirar solo obsoletos explícitos.
+- [x] Inventariar Pico 1 y Pico 2 sin mostrar secretos.
+- [x] Comparar ambas contra el manifiesto del paquete canónico.
+- [x] Respaldar cada placa antes de cambiar archivos.
+- [x] Sincronizar módulos faltantes y retirar solo obsoletos explícitos.
 - [x] Preservar `config_local.py` y `umqtt/`.
-- [ ] Verificar Pico W RP2040 y Pico 2 W RP2350 con el mismo runtime general.
+- [x] Verificar Pico W RP2040 y Pico 2 W RP2350 con el mismo runtime general.
 - [x] Añadir versión de firmware y modelo de placa al estado publicado si falta.
 - [x] Preparar el formulario/generador seguro de `config_local.py`.
 - [x] Investigar Web Serial y entregar resultado funcional o fallback documentado.
@@ -374,7 +374,7 @@ frontend/src/features/setup/**
 
 #### Criterio de cierre
 
-- [ ] Las dos placas tienen los mismos archivos de runtime y configuraciones locales distintas.
+- [x] Las dos placas tienen los mismos archivos de runtime y configuraciones locales distintas.
 - [x] El paquete generado se compara por checksum con las fuentes.
 - [x] Una Pico nueva se prepara cambiando datos, no código.
 - [x] Las credenciales no aparecen en logs, Git ni mensajes MQTT.
@@ -419,7 +419,7 @@ frontend/src/index.css
 
 ---
 
-### Juan David Romero (Persona 4) — conformidad, integración y pruebas físicas
+### Persona 4 — conformidad, integración y pruebas físicas
 
 **Dependencias:** recibe las piezas aprobadas de Personas 1 a 3.
 
@@ -439,7 +439,7 @@ frontend/src/index.css
 - [ ] Probar Pico ↔ browser y Pico ↔ Pico físicas; no se detectaron placas y no se sustituyen por dobles.
 - [x] Probar desconexión, reconexión, retained, Last Will y redespliegue.
 - [x] Verificar el ejemplo general y el anillo de semáforos.
-- [x] Coordinar la matriz responsive con Persona 3 y registrar el resultado técnico; se conserva su evidencia de seis viewports y Juan David Romero verificó además desde otro navegador la entrada con nombre y la colaboración simultánea por LAN.
+- [x] Coordinar la matriz responsive con Persona 3 y registrar el resultado técnico; se conserva su evidencia de seis viewports y Persona 4 verificó además desde otro navegador la entrada con nombre y la colaboración simultánea por LAN.
 - [ ] Probar el tutorial con una persona que no haya implementado el flujo.
 - [x] Preparar una demostración de máximo diez minutos.
 - [ ] Ensayar la demostración completa con una persona del equipo y las placas físicas.
@@ -513,8 +513,8 @@ Persona 5 puede proponer correcciones documentales en archivos mantenidos por ot
 Persona 1: contrato de estado/comandos ───────┐
                                               ├── Persona 3: interfaz única
 Persona 2: firmware y aprovisionamiento ──────┤
-                                              ├── Juan David Romero (Persona 4): integración y pruebas
-Juan David Romero (Persona 4): motor y conformidad ──┤
+                                              ├── Persona 4: integración y pruebas
+Persona 4: motor y conformidad ──────────────────────┤
                                               │
 Persona 3: responsive y tutorial ─────────────┘
 
@@ -571,7 +571,7 @@ Reglas de integración:
 - [ ] Registrar hashes de commit y paquete de firmware.
 - [ ] Etiquetar limitaciones P1/P2 sin presentarlas como terminadas.
 - [ ] Preparar commit final y push únicamente después de aprobar la matriz.
-- [x] Persona 5 publica el informe final únicamente con resultados confirmados por Juan David Romero (Persona 4) y reverificados sobre `d15d5a0`; lo no confirmado figura como pendiente.
+- [x] Persona 5 publica el informe final con resultados confirmados por Persona 4 y lo no confirmado figura como pendiente.
 
 ## 13. Matriz de pruebas obligatoria
 

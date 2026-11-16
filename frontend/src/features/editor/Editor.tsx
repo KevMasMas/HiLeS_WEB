@@ -173,7 +173,7 @@ export const Editor: React.FC = () => {
           onPanelChange={(panel) => aplicarAccionPanel({ type: 'set-dock', panel })}
           onOpenDistributed={() => aplicarAccionPanel({ type: 'open-distributed' })}
         />
-        {!projectReady && (
+        {displayName && !projectReady && (
           <div className="project-sync-loading" role="status" aria-live="polite">
             <div className="project-sync-loading__card">
               <span className="project-sync-loading__spinner" aria-hidden="true" />
