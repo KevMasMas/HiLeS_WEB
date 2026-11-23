@@ -167,6 +167,7 @@ export class ProjectSyncClient {
   private cancelarSuscripcionEstado: (() => void) | null = null;
   private timerDebounce: ReturnType<typeof setTimeout> | null = null;
   private timerHeartbeat: ReturnType<typeof setInterval> | null = null;
+  private vistaActivaPresencia: string | null = null;
   private timerCheckpoint: ReturnType<typeof setTimeout> | null = null;
   private borradorPendiente: { documento: HilesModelDocument; resumen?: string } | null = null;
   private cambioPendienteReintento: { documento: HilesModelDocument; resumen?: string } | null = null;
@@ -432,6 +433,8 @@ export class ProjectSyncClient {
   }
 
   public publicarPresencia(conectado: boolean, vistaActiva?: string | null): boolean {
+    // El latido reutiliza la última vista anunciada (p. ej. la selección actual).
+    if (vistaActiva !== undefined) this.vistaActivaPresencia = conectado ? vistaActiva : null;
     const metadatos = this.convergencia.prepararPublicacionLocal(
       this.ahoraIso(),
       `presence:${this.clientId}`
@@ -799,7 +802,7 @@ export class ProjectSyncClient {
     this.detenerHeartbeatPresencia();
     this.timerHeartbeat = setInterval(() => {
       if (!this.conectado || this.mqtt.getStatus() !== 'CONNECTED') return;
-      this.publicarPresencia(true, null);
+      this.publicarPresencia(true, this.vistaActivaPresencia);
       this.expirarColaboradoresInactivos();
     }, this.presenciaHeartbeatMs);
   }

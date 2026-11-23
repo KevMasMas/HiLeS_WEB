@@ -55,6 +55,9 @@ export class ElementoTransicion implements IElementoHiLeS {
   marcarDisparo(): void {
     this.disparoPendiente = true;
     this.ultimoDisparo = true;
+    // La guarda representa una muestra/pulso. Consumirla al disparar evita
+    // reutilizar un token lógico remoto sin recibir un mensaje nuevo.
+    this.condicion = false;
   }
 
   evaluar(): Map<string, ValorRuntime> {

@@ -1,0 +1,354 @@
+# Registro de cambios — entrega del 6 de noviembre de 2026
+
+### [2026-11-13] — Etiquetas de destino de ejecución en el canvas
+
+- Se añadió el botón «Mostrar/Ocultar destinos internos» en la esquina superior derecha del canvas. Las etiquetas internas empiezan ocultas; es una preferencia local de la vista que no modifica el circuito ni la asignación compartida. Cubre todos los elementos internos; los bloques estructurales conservan su etiqueta visible.
+- Se agregó una etiqueta sobre cada bloque estructural y funcional con el ejecutor elegido (Pico, este navegador u otro navegador), incluyendo la herencia de asignación.
+- La etiqueta distingue sin asignar, pendiente de despliegue, sin conexión, degradado, listo, ejecutando y despliegue rechazado. Solo confirma ejecución para elementos del manifiesto con ACK aceptado en la época actual.
+- Archivos: `ExecutionTargetBadge.tsx`, `CustomNodes.tsx` y `editor.css`.
+- Validación: build, TypeScript y ESLint de los componentes modificados aprobados. Revisión visual en el editor pendiente; este cambio no certifica la prueba física de ACK ni del token.
+
+**Rama:** `multi-pico` (creada desde `mqtt-pico` en `f7cc9b6`; corrección de Persona 5 del 7 de noviembre)\
+**Commit base:** `f7cc9b6`  
+**Último commit verificado:** `d15d5a0`\
+**Plan:** `PLAN_IMPLEMENTACION_ENTREGA_6_NOVIEMBRE.md`  
+**Regla de identificación:** usar únicamente `Persona 1`, `Persona 2`, etc.; no registrar nombres propios.  
+**Seguridad:** no copiar SSID, contraseñas, tokens, credenciales MQTT ni el contenido real de `config_local.py`.
+
+## Estado inicial verificado
+
+- La rama local inicia alineada con `origin/mqtt-pico` en `f7cc9b6` antes de los cambios locales de esta entrega.
+- Existen cambios locales sin commit correspondientes a la corrección del Paso 1; deben preservarse durante la integración.
+- El broker recibió estados v3 válidos de `pico:pico01w` y `pico:pico02w` en `proyecto-hl950c`.
+- Ambas placas publicaron estado `online`, IR v2, lenguajes Python/expresión y capacidades válidas durante la verificación previa.
+- El frontend conserva dos arquitecturas visibles: simulación legado `Local/Pico` y ejecución distribuida por ejecutores.
+- Pico 1 contenía archivos antiguos adicionales en la raíz; Pico 2 mostraba una estructura más limpia. No se concluye todavía que los runtimes sean idénticos hasta ejecutar inventario y checksums.
+- El firmware soporta Places con múltiples tokens, pero la representación visual actual muestra un único indicador aunque el valor sea mayor que uno.
+- La configuración Wi-Fi/MQTT todavía requiere editar o cargar `config_local.py`; no existe aprovisionamiento completo desde la aplicación.
+
+## Formato obligatorio de cada entrada
+
+```text
+### [AAAA-MM-DD HH:MM] — Persona N — título
+
+- Objetivo:
+- Estado: [ ] pendiente / [x] terminado / [!] parcial
+- Archivos modificados:
+- Cambios realizados:
+- Pruebas ejecutadas:
+- Resultado exacto:
+- Evidencia física o visual:
+- Riesgos o pendientes:
+- Commit o rama:
+- Cómo revertir o recuperar:
+```
+
+## Entradas
+
+### [2026-11-04] — Persona 1 — Auditoría y corrección de validaciones multi-Pico
+
+- **Objetivo:** determinar por qué dos Picos conectadas y publicando estados válidos no quedaban reconocidas de forma fiable como destinos seleccionables en los bloques estructurales.
+- **Estado:** [x] corrección de software y pruebas terminadas; [!] verificación visual y despliegue físico todavía pendientes.
+- **Archivos modificados:**
+  - `frontend/src/services/distributed/messages.ts`
+  - `frontend/src/services/distributed/messages.test.ts`
+  - `frontend/src/features/distributed/executorAvailability.ts`
+  - `frontend/src/features/distributed/executorAvailability.test.ts`
+  - `frontend/src/features/distributed/AssignmentSelector.tsx`
+  - `frontend/src/features/distributed/DistributedPanel.tsx`
+  - `frontend/src/features/distributed/assignments.ts`
+  - `frontend/src/features/distributed/assignments.test.ts`
+  - `frontend/src/stores/useDistributedExecutionStore.ts`
+- **Cambios realizados:**
+  1. Se validan payload, protocolo, proyecto, identidad, tipo, estado, actividad y capacidades antes de registrar un ejecutor.
+  2. Se creó una evaluación única de disponibilidad utilizada por el selector y por el despliegue.
+  3. Los estados `online`, `ready` y `running` recientes quedan seleccionables y desplegables.
+  4. Los estados offline, degradado, obsoleto o incompatible permanecen visibles con una causa legible, pero no pueden desplegar.
+  5. La vigencia usa la hora local de recepción del navegador, no el uptime publicado por MicroPython.
+  6. `Desplegar` se bloquea si falta un destino o si el destino elegido no está disponible.
+  7. El panel muestra el `projectId` que deben compartir las Picos.
+- **Pruebas ejecutadas:** compilación TypeScript, suite completa de Vitest, ESLint sobre el alcance y `git diff --check`.
+- **Resultado exacto:** 27 archivos de prueba y 161 pruebas frontend aprobadas; TypeScript, ESLint y comprobación de espacios aprobados.
+- **Evidencia física o visual:** el broker local publicó estados válidos y `online` de `pico:pico01w` y `pico:pico02w` bajo `proyecto-hl950c`. Aún no se registra como aprobada la selección visual ni el despliegue Pico ↔ Pico.
+- **Riesgos o pendientes:** los cambios permanecen locales y sin commit; falta abrir el proyecto exacto en el frontend, seleccionar ambas placas, desplegar y recibir ACK reales.
+- **Commit o rama:** rama `mqtt-pico`; cambios locales posteriores a `f7cc9b6`.
+- **Cómo revertir o recuperar:** revertir únicamente los archivos enumerados o conservarlos en un commit separado antes de integrar el resto del frontend.
+
+### [2026-11-04] — Persona 5 — Creación y priorización de la entrega
+
+- **Objetivo:** convertir las necesidades de frontend, multi-Pico, configuración, tutorial, motor general, responsive y documentación en un plan ejecutable para el viernes 6 de noviembre.
+- **Estado:** [x] plan inicial creado; [ ] asignaciones y horarios pendientes de confirmación del equipo.
+- **Archivos creados:**
+  - `entregas/entrega-8-6-noviembre/PLAN_IMPLEMENTACION_ENTREGA_6_NOVIEMBRE.md`
+  - `entregas/entrega-8-6-noviembre/REGISTRO_CAMBIOS.md`
+- **Cambios realizados:**
+  1. Se separaron modo de conexión y destino de ejecución.
+  2. Se definió una sola experiencia de ejecución y el retiro gradual de controles duplicados.
+  3. Se priorizó Pico ↔ Pico, Pico ↔ navegador y conformidad general de elementos.
+  4. Se definieron criterios responsive para seis viewports.
+  5. Se estableció un flujo de firmware canónico, identidad por placa y configuración sin editar código fuente.
+  6. Se clasificó Web Serial como P1 hasta comprobar estabilidad y compatibilidad.
+  7. Se distribuyó el trabajo entre cinco personas sin nombres propios y con propiedad de archivos.
+- **Pruebas ejecutadas:** auditoría de archivos, historial, guías, stores, paneles, firmware, scripts y documentación existentes.
+- **Resultado exacto:** plan dividido en P0/P1/P2, cinco responsables, cronograma de tres días, matriz de pruebas y doce criterios finales.
+- **Evidencia física o visual:** no aplica; esta entrada documenta planificación y auditoría.
+- **Riesgos o pendientes:** el alcance es amplio para tres días; los recortes autorizados están documentados y no incluyen los criterios críticos multi-Pico.
+- **Commit o rama:** rama `mqtt-pico`; archivos nuevos sin commit.
+- **Cómo revertir o recuperar:** eliminar únicamente la carpeta `entregas/entrega-8-6-noviembre/`.
+
+### [2026-11-04] — Persona 5 — Dedicación exclusiva a documentación y trazabilidad
+
+- **Objetivo:** liberar a una persona de implementación para que documente todo lo realizado por el equipo a partir de informes, entregas anteriores, historial Git y resultados de pruebas.
+- **Estado:** [x] responsabilidades redistribuidas en el plan; [ ] reconstrucción histórica e informes por persona pendientes.
+- **Archivos modificados:**
+  - `entregas/entrega-8-6-noviembre/PLAN_IMPLEMENTACION_ENTREGA_6_NOVIEMBRE.md`
+  - `entregas/entrega-8-6-noviembre/REGISTRO_CAMBIOS.md`
+- **Cambios realizados:**
+  1. Persona 5 quedó dedicada exclusivamente a documentación, informes, cronología y trazabilidad.
+  2. Persona 5 no modificará código de producción ni asumirá pruebas físicas.
+  3. Persona 4 absorbió integración, suites finales y matrices browser/Pico además de la conformidad del motor.
+  4. Personas 1 a 4 deberán entregar informes verificables a Persona 5 al cerrar cada bloque.
+  5. Todo informe se contrastará con commits, archivos, pruebas o evidencia antes de incorporarse.
+- **Pruebas ejecutadas:** revisión de coherencia de responsables, dependencias, cronograma y matriz de cierre.
+- **Resultado exacto:** cuatro frentes técnicos y un frente documental sin propiedad simultánea de archivos de producción.
+- **Evidencia física o visual:** no aplica; cambio organizativo.
+- **Riesgos o pendientes:** Persona 4 concentra conformidad e integración; Personas 1 a 3 deben entregar piezas probadas y no delegar defectos de sus módulos. Persona 5 necesita recibir informes a tiempo para no reconstruir todo al cierre.
+- **Commit o rama:** rama `mqtt-pico`; documentos sin commit.
+- **Cómo revertir o recuperar:** restaurar la división anterior en la sección 10 y la matriz de cierre.
+
+### [2026-11-04] — Persona 3 — Unificación de controles, visualización de estado, responsive y tutorial interactivo
+
+- **Objetivo:** unificar los controles de ejecución en la barra superior eliminando selectores legados, desacoplar el modo de conexión del destino de ejecución, renderizar tokens múltiples y estados obsoletos en nodos, garantizar cero desbordamiento horizontal en los 6 viewports obligatorios y actualizar el tutorial interactivo con posicionamiento dinámico inteligente.
+- **Estado:** [x] terminado (software, visual, pruebas unitarias y responsive aprobados al 100%).
+- **Archivos modificados:**
+  - `frontend/src/features/editor/TopBar.tsx`
+  - `frontend/src/features/editor/CustomNodes.tsx`
+  - `frontend/src/features/editor/PlaceTokenView.tsx` (creado)
+  - `frontend/src/features/editor/PlaceTokenView.test.tsx` (creado)
+  - `frontend/src/features/editor/nodeRuntimeView.ts` (creado)
+  - `frontend/src/features/editor/editor.css`
+  - `frontend/src/features/editor/Editor.tsx`
+  - `frontend/src/features/editor/PanelDock.tsx`
+  - `frontend/src/features/editor/PanelDock.test.tsx`
+  - `frontend/src/features/editor/panelState.ts`
+  - `frontend/src/features/editor/Palette.tsx`
+  - `frontend/src/features/editor/PropertiesPanel.tsx`
+  - `frontend/src/features/distributed/executionControl.ts`
+  - `frontend/src/features/distributed/executionControl.test.ts`
+  - `frontend/src/features/distributed/DistributedPanel.tsx`
+  - `frontend/src/features/distributed/distributed.css`
+  - `frontend/src/features/mqtt/MqttPanel.tsx`
+  - `frontend/src/features/mqtt/mqtt.css`
+  - `frontend/src/features/simulation/SimulationPanel.tsx`
+  - `frontend/src/features/simulation/simulation.css`
+  - `frontend/src/features/simulation/elementStateSummary.ts` (creado)
+  - `frontend/src/features/onboarding/Tutorial.tsx`
+  - `frontend/src/features/onboarding/tutorialSteps.ts`
+  - `frontend/src/features/onboarding/onboarding.css`
+  - `frontend/src/features/onboarding/EmptyCanvas.tsx`
+  - `frontend/src/features/onboarding/tutorialState.ts`
+  - `frontend/src/features/onboarding/ejemploMinimo.ts`
+  - `frontend/src/features/onboarding/ejemploMinimo.test.ts`
+  - `frontend/src/features/collaboration/collaboration.css`
+  - `frontend/src/features/setup/setup.css`
+  - `frontend/src/stores/useProjectStore.ts`
+  - `frontend/src/stores/useProjectStore.test.ts`
+  - `frontend/src/stores/useDistributedExecutionStore.ts`
+  - `frontend/src/services/mqtt/config.ts`
+  - `frontend/src/services/mqtt/config.test.ts`
+  - `frontend/src/index.css`
+  - `.gitignore`
+- **Cambios realizados:**
+  1. Controles de ejecución unificados en la barra superior (`Iniciar`, `Paso`, `Detener`, `Reiniciar`); eliminación completa de selectores y botones legados `Local / Pico`.
+  2. Desacoplamiento de conectividad (broker LAN vs Remoto WSS en `MqttPanel`) y destino de ejecución (por bloque estructural en `DistributedPanel`).
+  3. Visualización de marcado en Places con `PlaceTokenView`: 1 punto (8px), 2-4 puntos ordenados + badge numérico `×N`, ≥5 con badge `×N`.
+  4. Indicación de ejecutor inactivo o desactualizado con opacidad al 48% y badge de advertencia `Obsoleto` en nodos del canvas.
+  5. Desbloqueo ante desconexión o lentitud del broker MQTT con timeout automático de 1000 ms y botón manual *"Continuar sin conexión"*; sincronización diferida e idempotente.
+  6. Corrección de esquinas en TopBar: caja de proyecto con ancho mínimo para evitar truncar identificadores, y chips sin elipsis forzada.
+  7. Tutorial interactivo de 12 pasos actualizado: el Paso 2 destaca la caja de proyecto completa, y los Pasos 10 y 11 posicionan la tarjeta a la izquierda de los paneles laterales evitando solapar botones de despliegue/envío o desbordar la pantalla.
+  8. Responsive en 6 viewports: sin scroll horizontal global, docking y paleta con auto-cierre táctil en móvil, áreas táctiles ≥ 44px.
+  9. Integración segura del generador de configuración `PicoSetupPanel` dentro del acordeón de `DistributedPanel` sin persistir contraseñas en `localStorage`.
+- **Pruebas ejecutadas:**
+  - `tsc -b`: 0 errores de compilación TypeScript.
+  - `eslint .`: 0 errores, 0 advertencias de linter.
+  - `vitest run`: 30 suites de prueba y 180 tests aprobados (100%).
+  - `vite build`: empaquetado de producción exitoso en 456 ms.
+  - `git diff --check`: 0 errores de whitespace o formato.
+  - Auditoría automatizada vía Chrome CDP en 6 viewports: `360x800` (móvil estrecho), `390x844` (móvil referencia), `768x1024` (tablet vertical), `820x1180` (tablet grande), `1280x720` (laptop) y `1440x900` (desktop).
+- **Resultado exacto:** 180 pruebas aprobadas; cero desbordamientos horizontales globales (`globalOverflowX: false`), sin solapamiento de tarjetas en tutorial, sin botones ocultos o inalcanzables.
+- **Evidencia física o visual:**
+  - Informe detallado: artifact `reporte_implementacion_persona3.md`.
+  - Capturas tutorial: `step2_tutorial_highlight.png`, `step10_tutorial_highlight.png`, `step11_tutorial_highlight.png`.
+  - Capturas responsive: `audit_360x800_mobile_narrow.png`, `audit_768x1024_tablet_portrait.png`, `audit_1440x900_desktop.png`.
+- **Riesgos o pendientes:** la verificación física multi-Pico en hardware real (Pico ↔ Pico y Pico ↔ browser) y la suite de pruebas físicas en hardware corresponde a Persona 4.
+- **Commit o rama:** rama `multi-pico`.
+- **Cómo revertir o recuperar:** `git checkout` de los archivos frontend modificados o restauración selectiva por módulo.
+
+### [2026-11-06 09:30] — Persona 4 — Conformidad Browser/MicroPython e integración distribuida
+
+- **Objetivo:** demostrar con una fuente de verdad compartida que los motores Browser y MicroPython conservan la misma semántica para elementos, canales, retardos y Petri; cerrar Browser ↔ Browser y separar la evidencia simulada de las pruebas físicas pendientes.
+- **Estado:** [x] conformidad e integración de software terminadas; [!] Pico ↔ Browser y Pico ↔ Pico físicas pendientes porque no se detectó hardware.
+- **Archivos creados:**
+  - `frontend/src/engine/__tests__/ConformidadIrV2.test.ts`
+  - `frontend/src/engine/__tests__/ConformidadCanalesDistribuidos.test.ts`
+  - `docs/mqtt/vectores_ir_v2/ejecucion/04_tokens_pesos_capacidad_conflicto.json`
+  - `docs/mqtt/vectores_ir_v2/ejecucion/05_services_expresiones_tipos.json`
+  - `docs/mqtt/vectores_ir_v2/MATRIZ_CONFORMIDAD_PERSONA_4.md`
+  - `frontend/src/features/onboarding/tutorialVisibility.ts`
+- **Archivos modificados:** este plan, este registro, `Editor.tsx`, `TopBar.tsx`, `panelState.ts` y `PanelDock.test.tsx`.
+- **Cambios realizados:**
+  1. El frontend ejecuta los mismos cinco vectores IR v2 que MicroPython, compara cada snapshot, reinicia y repite cada escenario para detectar estado residual.
+  2. Se añadió conformidad explícita para Services booleano, numérico y texto, Functional Blocks de expresión y Python con varias salidas, Sample, Hold, retardos y reinicio.
+  3. Se añadió un vector Petri con 0/1/N tokens, peso dos, capacidad insuficiente y dos transiciones en conflicto; Browser y MicroPython conservan exactamente los mismos tokens.
+  4. Dos motores de fragmento navegador se conectan directamente mediante rutas CCH, DCH y LCH. CCH coalesce al último valor, DCH mantiene FIFO/capacidad y LCH dispara una sola vez la red Petri local del receptor.
+  5. Se documentó que los arcos Petri nunca cruzan fragmentos: Place y Transition unidos por `arco` permanecen juntos; un pulso LCH sí puede cruzar MQTT y activar estado local.
+  6. Se ejecutaron colaboración y distribución sobre Mosquitto WebSocket real. El runner obtuvo cuatro ACK, resultado `5 → 6`, veinte snapshots, dos descartes por deduplicación/época y caída observable de `browser:c`.
+  7. Se preparó un guion técnico de diez minutos y una matriz que diferencia Browser real, dobles de protocolo y placas físicas.
+  8. El tutorial queda inactivo mientras se solicita el nombre para evitar que robe el foco y cierre el teclado en PC o móvil.
+  9. Las transiciones de panel sin cambios ya no generan otro estado, eliminando el ciclo `Maximum update depth exceeded` observado durante la prueba visual.
+  10. Dos navegadores entraron al mismo proyecto por LAN como `Persona 3` y `Persona 4`; la presencia y un cambio de nombre se sincronizaron mediante Mosquitto.
+- **Pruebas ejecutadas:**
+  - frontend: **32 archivos y 187/187 pruebas aprobadas**;
+  - firmware: **180/180 pruebas aprobadas** después de la integración final;
+  - ESLint: aprobado sin errores;
+  - TypeScript y build Vite: aprobados, **290 módulos transformados**;
+  - `git diff --check`: aprobado;
+  - paquete canónico: 33 archivos y aprovisionamiento sobre filesystem simulado aprobado;
+  - `test-project-collaboration.mjs`: cuatro clientes, retained, presencia, cursor y aislamiento de proyectos aprobados;
+  - `test-distributed-mqtt.mjs --mode=memory`: seis etapas aprobadas;
+  - `test-distributed-mqtt.mjs --mode=mqtt`: seis etapas aprobadas sobre broker real;
+  - `test-distributed-physical.ps1 -Mode DryRun -AllowNoDevice`: terminó correctamente y reportó cero placas.
+- **Resultado exacto:** paridad de cinco vectores en los dos motores; Browser ↔ Browser aprobado para CCH/DCH/LCH, presencia, edición compartida y control distribuido; firmware, frontend, build, lint, empaquetado y MQTT aprobados dentro del alcance sin hardware.
+- **Evidencia física o visual:** en esa ejecución no se detectó ninguna Pico ni puerto serial. En un proyecto de prueba, dos navegadores por LAN mostraron simultáneamente a Persona 3 y Persona 4; un cambio de nombre apareció en el lienzo compartido. Se conserva además la evidencia de seis viewports de Persona 3.
+- **Errores encontrados y corrección:** la primera expectativa del vector Petri marcaba una transición como habilitada después de consumir sus tokens y se corrigió al valor común `false`. En la UI, identidad y tutorial competían por el foco, y el tutorial repetía una transición de panel sin cambios hasta agotar la profundidad de renderizado; ambos defectos quedaron cubiertos por pruebas de regresión.
+- **Riesgos o pendientes:** faltan Pico ↔ Browser y Pico ↔ Pico físicas, inventario real, memoria/RSSI, prueba del tutorial con una persona nueva y ensayo humano completo. El runner de red usa Mosquitto real, pero los ejecutores `pico:*` son dobles Node.js y no sustituyen MicroPython ni Wi-Fi.
+- **Commit o rama:** rama `multi-pico`; commit de integración de Persona 4 preparado para esta subida.
+- **Cómo revertir o recuperar:** retirar los dos tests y los dos vectores nuevos, restaurar este plan/registro y eliminar la matriz de conformidad. No existen migraciones ni estado persistente.
+
+### [2026-11-05 21:01] — Persona 2 — Identidad de placa, manifiesto SHA-256 y aprovisionamiento seguro
+
+> **Entrada reconstruida por Persona 5 el 7 de noviembre a partir del commit `c61dbad`**, porque el registro no tenía una entrada de Persona 2. Persona 2 debe confirmarla o corregirla.
+
+- **Objetivo:** hacer repetible la preparación de dos o más Picos sin divergencias de runtime.
+- **Estado:** [x] software; [!] inventario, respaldo y sincronización de las dos placas reales pendientes.
+- **Archivos modificados:**
+  - `firmware/pico/platform/hardware.py` (`resolve_board_model`)
+  - `firmware/pico/hiles/distributed_worker.py` (`board_model`, `firmware_version`)
+  - `firmware/pico/main.py`
+  - `firmware/tests/test_architecture.py`, `firmware/tests/test_distributed_worker.py`, `firmware/tests/README.md`
+  - `scripts/prepare-pico-deployment.ps1`, `scripts/test-distributed-physical.ps1`
+  - `scripts/test-pico-provisioning.ps1` (creado)
+  - `output/hiles-pico-w-deploy.zip`, `output/hiles-pico-w-deploy.sha256`
+  - `docs/mqtt/GUIA_PRUEBA_PICO_W.md`, `docs/mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md`
+  - este plan (casillas de Persona 2)
+- **Cambios realizados:**
+  1. El estado v3 publica `firmware_version` y `board_model`, el modelo reportado por MicroPython o `unknown`.
+  2. El paquete incluye `MANIFEST.sha256.json` y el generador compara cada archivo con su fuente.
+  3. El aprovisionador ofrece los modos `Inventory`, `Backup` y `Deploy`. Siempre respalda antes de desplegar, preserva `config_local.py`, `umqtt/` y `lib/umqtt/`, solo retira lo que indica `-ObsoletePath` y rechaza el volumen UF2.
+- **Pruebas ejecutadas (reverificadas por Persona 5 sobre `d15d5a0`):**
+  - firmware: 169/169 OK;
+  - `scripts/test-pico-provisioning.ps1`: PASS;
+  - SHA-256 del ZIP igual al archivo `.sha256`.
+- **Evidencia física o visual:** ninguna. El aprovisionador se probó sobre un filesystem simulado, no sobre las placas.
+- **Riesgos o pendientes:**
+  - inventario real de Pico 1 y Pico 2;
+  - mismo runtime en RP2040 y RP2350.
+  - Las casillas "formulario/generador seguro", "Web Serial con fallback" y "`pico03w`" se apoyan en `PicoSetupPanel.tsx` y `picoConfig*`, creados en el commit `6aac632` de Persona 1.
+- **Commit o rama:** `multi-pico`, `c61dbad`.
+- **Cómo revertir o recuperar:** `git revert c61dbad`; las placas no se modificaron.
+
+### [2026-11-07] — Persona 5 — Cronología, informes, evidencia y reconciliación documental
+
+- **Objetivo:** documentar qué hizo cada persona, cómo funciona y cómo se reproduce el proyecto, y cuál es su estado real, contrastando cada afirmación con Git y pruebas.
+- **Estado:** [x] terminado al corte `d15d5a0`; se actualizará si Personas 1 a 4 agregan evidencia física.
+- **Archivos creados:**
+  - `entregas/entrega-8-6-noviembre/CRONOLOGIA_PROYECTO.md`
+  - `entregas/entrega-8-6-noviembre/INFORMES_POR_PERSONA.md`
+  - `entregas/entrega-8-6-noviembre/MATRIZ_REQUISITO_EVIDENCIA.md`
+  - `entregas/entrega-8-6-noviembre/INFORME_FINAL_ENTREGA_8.md`
+  - `entregas/entrega-8-6-noviembre/GUION_DEMOSTRACION.md`
+  - `docs/architecture/ARQUITECTURA_SISTEMA.md`
+  - `docs/GUIA_AGREGAR_PICO_Y_EJECUTORES.md`
+- **Archivos modificados:**
+  - `README.md`
+  - `docs/GUIA_REPLICACION_COMPLETA_WINDOWS.md`
+  - `docs/mqtt/GUIA_PRUEBA_PICO_W.md`, `docs/mqtt/GUIA_ENSAYO_REMOTO_SIN_PICO.md`, `docs/mqtt/FICHA_CONEXION_MQTT.md`
+  - `docs/architecture/ARQUITECTURA_PICO.md`, `docs/ux/REVISION_VISUAL_Y_ACCESIBILIDAD.md`
+  - este registro y el plan
+- **Cambios realizados:**
+  1. Cronología de la rama `multi-pico` desde el 27 de agosto hasta `d15d5a0`, con la equivalencia entre alias Git y número de persona en cada entrega.
+  2. Informe por integrante: responsabilidades, aportes, archivos, decisiones, pruebas, resultados y pendientes.
+  3. Matriz requisito → evidencia con los estados Verificado, Declarado, Pendiente e Inconsistente.
+  4. Se retiraron instrucciones obsoletas: modo **Pico / MQTT**, rama `mqtt-pico`, cifras antiguas, controles dentro del panel e IP fija.
+  5. Arquitectura, instalación, uso, recuperación, flujo para agregar una Pico y guion de demostración actualizados.
+  6. Se registró la entrada faltante de Persona 2, marcada como reconstruida.
+- **Pruebas ejecutadas (solo verificación, sin cambiar código):**
+  - `vitest run`: 32 archivos y 187 pruebas. **Intermitente:** de 11 corridas, 8 terminaron 186/187 por timeout en `PanelDock.test.tsx:132`; el archivo aislado aprueba 7/7;
+  - `tsc -b`, `eslint .`, `vite build` y `git diff --check`: aprobados;
+  - firmware: 169/169 OK;
+  - `test-pico-provisioning.ps1`: PASS;
+  - SHA-256 del paquete: coincide.
+- **Resultado exacto:** las cifras declaradas por Persona 4 se confirman, con la observación de la prueba intermitente. No se reprodujeron las pruebas sobre broker real ni las visuales; quedan como declaradas.
+- **Evidencia física o visual:** no aplica. Persona 5 no ejecuta pruebas físicas.
+- **Riesgos o pendientes devueltos a su responsable** (detalle en `INFORME_FINAL_ENTREGA_8.md` §5):
+  - `output/hiles-pico-w-deploy/config_local.py` está versionado en Git y la auditoría de secretos no puede darse por cerrada. Persona 5 no abrió su contenido;
+  - prueba intermitente `PanelDock.test.tsx`;
+  - capturas de Persona 3 fuera del repositorio;
+  - nombres propios en las entradas de Persona 4;
+  - el generador de configuración no incluye todos los avisos del plan §6.3.
+- **Commit o rama:** `multi-pico`, cambios locales de documentación sobre `d15d5a0`.
+- **Cómo revertir o recuperar:** eliminar los siete archivos creados y restaurar los modificados con `git checkout -- <archivo>`. No hay cambios de código.
+
+### [2026-11-06] — Persona 4 — Cierre de integración y preparación física de dos Picos
+
+- **Objetivo:** consolidar los cambios locales y remotos, producir un único paquete canónico y dejar COM5/COM8 preparadas para la matriz física.
+- **Estado:** [x] integración y aprovisionamiento; [ ] matriz Pico ↔ Pico/Pico ↔ browser pendiente de ejecutar fuera del aislamiento de red de Codex.
+- **Cambios realizados:** se unificó `MANIFEST.sha256.json`, se retiró `config_local.py` de la carpeta de despliegue, se agregó aprovisionamiento real por `mpremote`, reintento ante puerto ocupado, reinicio final de `main.py`, conservación verificable de `config_local.py`/`umqtt/` y recuperación Wi-Fi mediante `disconnect()` antes de reintentar.
+- **Pruebas ejecutadas:** frontend 187/187; firmware 180/180; ESLint, TypeScript y build aprobados; aprovisionamiento simulado aprobado; Mosquitto validado con cuatro clientes.
+- **Paquete final:** 33 entradas; SHA-256 `AC0D9BC4FE4D8D69CD8B8FAC1D5106C5B689A9201521DD90FB7DF5E3788D1699`.
+- **Evidencia física:** COM5 es Pico W RP2040 con MicroPython 1.28.0; COM8 es Pico 2 W RP2350 con MicroPython 1.29.0. Ambas coinciden con todos los hashes, preservaron configuración y dependencias, y no contienen los módulos viales obsoletos.
+- **Inventario final:** `output/physical-inventory-final-20261106.json` confirma, después de la corrección Wi-Fi, cero archivos faltantes, diferentes u obsoletos en ambas placas; la herramienta reinició los dos runtimes al terminar.
+- **Respaldos:** `D:\usuarios\Monitores\AppData\Local\Temp\hiles-pico-backups-entrega8\fleet-20261106T215135Z\COM5` y `COM8`.
+- **Conectividad:** COM5 publicó `online`. COM8 autenticó Wi-Fi y obtuvo dirección, pero las reglas temporales `codex_sandbox_offline_block_inbound/outbound` bloquearon el intercambio de una nueva sesión MQTT con TCP 1883; no se deshabilitaron controles de seguridad. Se corrigió además el reintento Wi-Fi para no abortar una asociación RP2350 todavía en progreso.
+- **Pendiente inmediato:** cerrar Codex, comprobar que COM8 publique `online`, iniciar el frontend con `?project=proyecto-hl950c` y ejecutar los cuatro ACK y el anillo de token con dos Picos y dos navegadores.
+
+
+## Matriz de cierre
+
+Actualizada por Persona 5 el 7 de noviembre sobre `d15d5a0`. Detalle por requisito en [`MATRIZ_REQUISITO_EVIDENCIA.md`](MATRIZ_REQUISITO_EVIDENCIA.md).
+
+| Evidencia | Responsable | Estado | Resultado |
+|---|---|---|---|
+| Validación central de ejecutores | Persona 1 | [x] Software | Incluida en las 187 pruebas actuales |
+| Dos Picos seleccionables en UI | Persona 1 | [ ] | Pendiente |
+| Runtime canónico en ambas placas | Persona 2 | [x] Física | COM5 y COM8 coinciden con el firmware y conservan configuración y umqtt |
+| Configuración sin editar Python | Personas 1 y 2 | [x] Software | `PicoSetupPanel` (`6aac632`) |
+| Controles únicos y responsive | Persona 3 | [x] Software / [!] Visual declarada | Controles verificados en el código; capturas no versionadas |
+| Tutorial actualizado | Persona 3 | [x] UI | 12 pasos confirmados en `tutorialSteps.ts` |
+| Matriz de elementos y tokens | Persona 4 | [x] Software | Cinco vectores compartidos; firmware 169 OK |
+| Browser ↔ browser | Persona 4 | [x] Software/MQTT (declarado) | CCH, DCH, LCH, retained, ACK, colaboración y desconexión |
+| Pico ↔ browser | Persona 4 | [ ] Física | Pendiente |
+| Pico ↔ Pico | Persona 4 | [ ] Física | Pendiente |
+| Auditoría de secretos | Responsable del paquete | [x] Paquete | Configuración local retirada del paquete; plantilla conservada |
+| Documentación reconciliada | Persona 5 | [x] | Ver `INFORME_FINAL_ENTREGA_8.md` §6 |
+| Informes históricos por persona | Persona 5 | [x] | `INFORMES_POR_PERSONA.md`, `CRONOLOGIA_PROYECTO.md` |
+| Matriz requisito → evidencia | Persona 5 | [x] | `MATRIZ_REQUISITO_EVIDENCIA.md` |
+| Build, lint y suites finales | Persona 4 | [x] Software / [!] intermitencia | 187 frontend + 180 firmware; lint, tipos y build aprobados |
+
+
+## Bloqueadores activos
+
+- Confirmar quién asume cada número de persona.
+- Mantener disponibles las dos Picos, cables y puertos seriales durante la prueba física.
+- Mantener PC, Mosquitto y frontend en la misma red para la matriz LAN.
+- Definir si existe un broker remoto seguro para probar P1; su ausencia no bloquea P0.
+- Evitar que Thonny y otra herramienta reclamen simultáneamente el mismo puerto serial.
+
+## Decisiones que no deben cambiar sin registrar motivo
+
+- El destino se asigna por bloque; el modo de conexión pertenece al proyecto.
+- El firmware continúa siendo general y no incorpora lógica de semáforos.
+- Cada Pico tiene identidad única y comparte el paquete canónico.
+- Las credenciales son locales y no viajan en el documento colaborativo.
+- No se afirma soporte de Internet productivo sin `wss://`, autenticación y control de acceso.
+- No se marca una matriz física como aprobada usando dobles o simuladores.

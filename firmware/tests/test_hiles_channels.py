@@ -174,6 +174,135 @@ class EngineChannelIntegrationTests(unittest.TestCase):
         self.assertEqual(motor.snapshot()["hold-1"], {"evento_pendiente": False})
         self.assertFalse(motor.pending_work())
 
+    def test_remote_outbound_and_inbound_channels_preserve_cch_dch_lch_and_delays(self):
+        # Fragmento emisor: service-a -> (dch remoto con retardo) + fb-b -> (cch remoto)
+        modelo_emisor = validate_ir_v2({
+            "ir_version": 2,
+            "elementos": [
+                {"id": "service-a", "tipo": "service", "nombre": "Entrada", "tipo_dato": "integer",
+                 "salidas": ["out"], "entradas": []},
+                {"id": "fb-b", "tipo": "functional_block", "nombre": "Doble", "habilitado": True,
+                 "lenguaje": "python", "codigo": "x * 2",
+                 "entradas": [{"puerto": "in", "variable": "x", "tipo_dato": "integer"}],
+                 "salidas": [{"puerto": "out", "variable": "res", "tipo_dato": "integer"}]},
+            ],
+            "conexiones": [
+                {"id": "local-a-b", "tipo": "cch", "origen": "service-a", "puerto_origen": "out",
+                 "destino": "fb-b", "puerto_destino": "in"},
+            ],
+        })
+        ruta_dch = {
+            "connection_id": "rem-dch",
+            "tipo": "dch",
+            "tipo_dato": "integer",
+            "source_element_id": "service-a",
+            "source_port_id": "out",
+            "source_executor_id": "pico:a",
+            "target_element_id": "hold-c",
+            "target_port_id": "in",
+            "target_executor_id": "pico:b",
+            "capacidad_cola": 2,
+            "retardo_ms": 50,
+        }
+        ruta_cch = {
+            "connection_id": "rem-cch",
+            "tipo": "cch",
+            "tipo_dato": "integer",
+            "source_element_id": "fb-b",
+            "source_port_id": "out",
+            "source_executor_id": "pico:a",
+            "target_element_id": "fb-d",
+            "target_port_id": "in",
+            "target_executor_id": "pico:b",
+        }
+
+        emitidos = []
+        emisor = HilesEngineV2(
+            modelo_emisor,
+            outbound_routes=[ruta_dch, ruta_cch],
+            remote_sink=lambda conn_id, val: emitidos.append((conn_id, val)),
+        )
+
+        # Fragmento receptor: hold-c (recibe DCH remoto), fb-d (recibe CCH remoto) y transition-t (recibe LCH remoto)
+        modelo_receptor = validate_ir_v2({
+            "ir_version": 2,
+            "elementos": [
+                {"id": "hold-c", "tipo": "hold", "nombre": "Hold C", "habilitado": True, "tipo_dato": "integer",
+                 "puerto_entrada": "in", "puerto_cch": "out", "puerto_lch": "pulse"},
+                {"id": "fb-d", "tipo": "functional_block", "nombre": "Mas diez", "habilitado": True,
+                 "lenguaje": "python", "codigo": "x + 10",
+                 "entradas": [{"puerto": "in", "variable": "x", "tipo_dato": "integer"}],
+                 "salidas": [{"puerto": "out", "variable": "res", "tipo_dato": "integer"}]},
+                {"id": "place-p", "tipo": "place", "nombre": "P", "tokens": 1, "capacidad": 1},
+                {"id": "place-q", "tipo": "place", "nombre": "Q", "tokens": 0, "capacidad": 1},
+                {"id": "trans-t", "tipo": "transition", "nombre": "T", "habilitada": True,
+                 "puerto_condicion": "cond", "puerto_accion": None},
+            ],
+            "conexiones": [
+                {"id": "arc-p-t", "tipo": "arco", "origen": "place-p", "destino": "trans-t", "peso": 1},
+                {"id": "arc-t-q", "tipo": "arco", "origen": "trans-t", "destino": "place-q", "peso": 1},
+            ],
+        })
+        ruta_lch = {
+            "connection_id": "rem-lch",
+            "tipo": "lch",
+            "tipo_dato": "boolean",
+            "source_element_id": "hold-c",
+            "source_port_id": "pulse",
+            "source_executor_id": "pico:a",
+            "target_element_id": "trans-t",
+            "target_port_id": "cond",
+            "target_executor_id": "pico:b",
+        }
+        receptor = HilesEngineV2(
+            modelo_receptor,
+            inbound_routes=[ruta_dch, ruta_cch, ruta_lch],
+        )
+
+        # Paso 1 en emisor: inyectamos 3 muestras en service-a (5, 6, 7).
+        for m in (5, 6, 7):
+            emisor.set_input("service-a", m)
+        emisor.step(0)
+        # El CCH remoto emite inmediatamente 7*2=14; el DCH remoto tiene retardo 50 ms y está pendiente.
+        self.assertEqual(emitidos, [("rem-cch", 14)])
+        self.assertTrue(emisor.pending_work())
+
+        # Paso 2 en emisor sin cambiar entrada y sin vencer retardo: CCH no vuelve a emitir el mismo 14.
+        emitidos.clear()
+        emisor.step(20)
+        self.assertEqual(emitidos, [])
+
+        # Paso 3 en emisor: vence retardo (20 + 30 = 50 ms) -> emite las 3 muestras DCH en orden.
+        emisor.step(30)
+        self.assertEqual(emitidos, [("rem-dch", 5), ("rem-dch", 6), ("rem-dch", 7)])
+
+        # Las inyectamos en el receptor junto con el CCH (14) y un pulso LCH (True).
+        receptor.inject_remote_channel("rem-cch", 14)
+        for _, valor_dch in emitidos:
+            receptor.inject_remote_channel("rem-dch", valor_dch)
+        receptor.inject_remote_channel("rem-lch", True)
+
+        receptor.step(0)
+        snap1 = receptor.snapshot()
+        # fb-d calculó 14 + 10 = 24; hold-c consumió 5, tiene 6 en cola y 7 desbordó (capacidad 2); trans-t disparó.
+        self.assertEqual(snap1["fb-d"]["salida"], 24)
+        self.assertEqual(snap1["hold-c"], {
+            "valor_retenido": 5,
+            "salida": 5,
+            "evento_pendiente": True,
+            "cola_dch": 1,
+            "cola_desbordada": True,
+        })
+        self.assertEqual(snap1["trans-t"]["disparada"], True)
+        self.assertEqual(snap1["place-p"]["tokens"], 0)
+        self.assertEqual(snap1["place-q"]["tokens"], 1)
+
+        # Siguiente paso del receptor: hold-c consume 6 y el pulso LCH sobre trans-t ya se limpió.
+        receptor.step(10)
+        snap2 = receptor.snapshot()
+        self.assertEqual(snap2["hold-c"]["valor_retenido"], 6)
+        self.assertEqual(snap2["trans-t"]["habilitada"], False)
+
 
 if __name__ == "__main__":
     unittest.main()

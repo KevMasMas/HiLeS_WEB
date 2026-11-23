@@ -13,11 +13,16 @@ son fechas límite: ninguna actualización espera con ``sleep``.
 """
 
 from .engine import HilesEngine, InputError
-from .engine_task import LISTA, EngineTask
+from .engine_task import LISTA, SIN_MODELO, EngineTask
 from .engine_v2 import HilesEngineV2
 from .model import IrError, es_entero, es_texto
 from .model_v2 import IR_VERSION_V2, IR_VERSIONES_SOPORTADAS, validate_load_message_v2
 from .python_executor import PythonExecutorError
+
+try:
+    import gc
+except ImportError:  # pragma: no cover
+    gc = None
 
 try:
     from ..pubsub.topics import MODELO_CONFIRMACION
@@ -110,6 +115,36 @@ class EngineTaskV2(EngineTask):
                 "id_mensaje": payload["id_mensaje"],
             },
         )
+
+    def install_compiled_engine(self, engine, modelo_id, version, ir_version=IR_VERSION_V2):
+        """Sustituye atómicamente el motor activo por una instancia ya compilada y validada."""
+
+        self.engine = engine
+        self.ir_version = ir_version
+        self.modelo_id = modelo_id
+        self.version = version
+        self.secuencia = 0
+        self.estado = LISTA
+        self._next_auto_step = None
+        self._dedup_order = []
+        self._dedup_responses = {}
+        self._cola = []
+
+    def clear_active_engine(self):
+        """Libera el motor activo y su estado en memoria (RAM de la Pico W)."""
+
+        self.engine = None
+        self.ir_version = None
+        self.modelo_id = None
+        self.version = None
+        self.secuencia = 0
+        self.estado = SIN_MODELO
+        self._next_auto_step = None
+        self._dedup_order = []
+        self._dedup_responses = {}
+        self._cola = []
+        if gc is not None:
+            gc.collect()
 
     # ------------------------------------------------------------------
     # Entradas locales de dispositivos (sensores y controladores).

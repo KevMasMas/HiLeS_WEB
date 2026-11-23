@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MQTT_MAX_PAYLOAD_BYTES, MQTT_TOPICS } from './config';
+import { buildMqttDeviceTopics, MQTT_MAX_PAYLOAD_BYTES, MQTT_TOPICS } from './config';
 import {
   ControlSecuenciaRemota,
   DeduplicadorMensajes,
@@ -41,6 +41,15 @@ describe('contrato de mensajes MQTT', () => {
     expect(validarMensajeMqtt(MQTT_TOPICS.ERROR, {
       error: 'Acción no soportada',
     })).toMatchObject({ valido: true });
+  });
+
+  it('valida el mismo contrato para pico02 y conserva el topic real', () => {
+    const topic = buildMqttDeviceTopics('pico02').LED_ESTADO;
+    expect(validarMensajeMqtt(topic, {
+      encendido: true,
+      accion_aplicada: 'encender',
+      id_mensaje: 'pico02-led-1',
+    })).toMatchObject({ valido: true, topic });
   });
 
   it('rechaza topics que no pertenecen al contrato', () => {

@@ -1,0 +1,250 @@
+{
+  "schemaVersion": 2,
+  "metadata": {
+    "savedAt": "2026-10-30T21:25:00-05:00",
+    "description": "Tres Structural Blocks distribuidos: entrada, duplicación y decisión mayor que diez."
+  },
+  "network": {
+    "topology": "lineal",
+    "protocol": "hiles-distributed-v3",
+    "nodes": [
+      "sb-entrada",
+      "sb-proceso",
+      "sb-decision"
+    ]
+  },
+  "allElements": [
+    {
+      "id": "sb-entrada",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "SB 1 · Entrada",
+      "layout": { "x": 60, "y": 130, "width": 280, "height": 250 },
+      "ports": [],
+      "properties": {
+        "description": "Primer subsistema: produce el número inicial.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "entrada-numero-sb",
+      "type": "SERVICE",
+      "name": "Número de entrada",
+      "parentId": "sb-entrada",
+      "layout": { "x": 45, "y": 85 },
+      "ports": [
+        {
+          "id": "entrada-numero-sb-out",
+          "name": "numero",
+          "direction": "output",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Valor inicial de la prueba.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "6",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "sb-proceso",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "SB 2 · Procesamiento",
+      "layout": { "x": 410, "y": 130, "width": 280, "height": 250 },
+      "ports": [],
+      "properties": {
+        "description": "Segundo subsistema: duplica el número recibido.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "duplicar-numero-sb",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "Duplicar número",
+      "parentId": "sb-proceso",
+      "layout": { "x": 45, "y": 85 },
+      "ports": [
+        {
+          "id": "duplicar-numero-sb-in",
+          "name": "numero",
+          "direction": "input",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "duplicar-numero-sb-out",
+          "name": "doble",
+          "direction": "output",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Calcula numero por dos.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "codeLanguage": "python",
+        "code": "def calcular(numero):\n    return {'doble': numero * 2}"
+      }
+    },
+    {
+      "id": "sb-decision",
+      "type": "STRUCTURAL_BLOCK",
+      "name": "SB 3 · Decisión",
+      "layout": { "x": 760, "y": 130, "width": 300, "height": 250 },
+      "ports": [],
+      "properties": {
+        "description": "Tercer subsistema: decide si el resultado supera diez.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "decidir-mayor-diez-sb",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "¿Supera 10?",
+      "parentId": "sb-decision",
+      "layout": { "x": 50, "y": 85 },
+      "ports": [
+        {
+          "id": "decidir-mayor-diez-sb-in",
+          "name": "doble",
+          "direction": "input",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "decidir-mayor-diez-sb-out",
+          "name": "es_mayor_que_diez",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Devuelve verdadero si el doble es mayor que diez.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "codeLanguage": "python",
+        "code": "def calcular(doble):\n    return {'es_mayor_que_diez': doble > 10}"
+      }
+    }
+  ],
+  "relationNode": [],
+  "connections": [
+    {
+      "id": "cch-sb-entrada-proceso",
+      "label": "CCH1 · Número",
+      "source": "entrada-numero-sb",
+      "target": "duplicar-numero-sb",
+      "sourceHandle": "entrada-numero-sb-out",
+      "targetHandle": "duplicar-numero-sb-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "integer",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "cch-sb-proceso-decision",
+      "label": "CCH2 · Doble",
+      "source": "duplicar-numero-sb",
+      "target": "decidir-mayor-diez-sb",
+      "sourceHandle": "duplicar-numero-sb-out",
+      "targetHandle": "decidir-mayor-diez-sb-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "integer",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    }
+  ]
+}

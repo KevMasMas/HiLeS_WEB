@@ -5,3 +5,5 @@ export * from './compiladorIr';
 export * from './tiposIrV2';
 export * from './validadorIrV2';
 export * from './compiladorIrV2';
+export * from './tiposIrDistribuida';
+export * from './particionarIr';

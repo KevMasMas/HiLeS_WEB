@@ -192,6 +192,9 @@ class Transition(Element):
             )
         self.disparo_pendiente = True
         self.ultimo_disparo = True
+        # La guarda representa un pulso consumible. Mantenerla activa después
+        # del disparo permitiría reutilizar un evento LCH anterior.
+        self.condicion = False
 
     def _lugares_conectados(self):
         lugares = list(self.consumo.keys())

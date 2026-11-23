@@ -65,6 +65,8 @@ export interface HilesNodeProperties {
   rotation: number;
   code?: string;
   codeLanguage?: CodeLanguage;
+  /** Ejecutor distribuido elegido; viaja en el documento colaborativo. */
+  deploymentTarget?: string;
 }
 
 export interface HilesNodeData extends Record<string, unknown> {

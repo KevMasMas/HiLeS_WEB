@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 2,
+  "metadata": {
+    "savedAt": "2026-10-30T21:10:00-05:00",
+    "description": "Prueba distribuida mínima: entrada numérica, duplicación y decisión mayor que diez."
+  },
+  "network": {
+    "topology": "lineal",
+    "protocol": "hiles-distributed-v3",
+    "nodes": [
+      "entrada-numero",
+      "duplicar-numero",
+      "decidir-mayor-diez"
+    ]
+  },
+  "allElements": [
+    {
+      "id": "entrada-numero",
+      "type": "SERVICE",
+      "name": "1 · Número de entrada",
+      "layout": {
+        "x": 120,
+        "y": 220
+      },
+      "ports": [
+        {
+          "id": "entrada-numero-out",
+          "name": "numero",
+          "direction": "output",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Valor inicial de la prueba. Cambia heldValue para ensayar otro número.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "6",
+        "operatorDirection": "right",
+        "rotation": 0
+      }
+    },
+    {
+      "id": "duplicar-numero",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "2 · Duplicar",
+      "layout": {
+        "x": 430,
+        "y": 220
+      },
+      "ports": [
+        {
+          "id": "duplicar-numero-in",
+          "name": "numero",
+          "direction": "input",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "duplicar-numero-out",
+          "name": "doble",
+          "direction": "output",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Multiplica el número recibido por dos.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "codeLanguage": "python",
+        "code": "def calcular(numero):\n    return {'doble': numero * 2}"
+      }
+    },
+    {
+      "id": "decidir-mayor-diez",
+      "type": "FUNCTIONAL_BLOCK",
+      "name": "3 · ¿El doble supera 10?",
+      "layout": {
+        "x": 750,
+        "y": 220
+      },
+      "ports": [
+        {
+          "id": "decidir-mayor-diez-in",
+          "name": "doble",
+          "direction": "input",
+          "dataType": "integer",
+          "nature": "continuous",
+          "side": "left",
+          "offset": 0.5
+        },
+        {
+          "id": "decidir-mayor-diez-out",
+          "name": "es_mayor_que_diez",
+          "direction": "output",
+          "dataType": "boolean",
+          "nature": "continuous",
+          "side": "right",
+          "offset": 0.5
+        }
+      ],
+      "properties": {
+        "description": "Devuelve verdadero cuando el valor duplicado es mayor que diez.",
+        "collapsed": false,
+        "locked": false,
+        "visible": true,
+        "expression": "",
+        "executionDelay": 0,
+        "enabled": true,
+        "tokens": 0,
+        "maxTokens": 1,
+        "delay": 0,
+        "condition": "",
+        "heldValue": "",
+        "operatorDirection": "right",
+        "rotation": 0,
+        "codeLanguage": "python",
+        "code": "def calcular(doble):\n    return {'es_mayor_que_diez': doble > 10}"
+      }
+    }
+  ],
+  "relationNode": [],
+  "connections": [
+    {
+      "id": "canal-entrada-duplicar",
+      "label": "CCH1 · Número",
+      "source": "entrada-numero",
+      "target": "duplicar-numero",
+      "sourceHandle": "entrada-numero-out",
+      "targetHandle": "duplicar-numero-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "integer",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    },
+    {
+      "id": "canal-duplicar-decidir",
+      "label": "CCH2 · Doble",
+      "source": "duplicar-numero",
+      "target": "decidir-mayor-diez",
+      "sourceHandle": "duplicar-numero-out",
+      "targetHandle": "decidir-mayor-diez-in",
+      "type": "hilesEdge",
+      "data": {
+        "hilesConnectionType": "CONTINUOUS",
+        "routing": "orthogonal",
+        "dataType": "integer",
+        "delay": 0,
+        "weight": 1,
+        "propagationMode": "push",
+        "waypoints": []
+      }
+    }
+  ]
+}

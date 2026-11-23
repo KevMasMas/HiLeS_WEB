@@ -1,11 +1,21 @@
-import React, { useEffect, useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
-import { MQTT_TOPICS } from '../../services/mqtt/config';
+import {
+  buildMqttWebSocketUrl,
+  etiquetaModoConexionMqtt,
+  getActiveMqttProfile,
+  resetActiveMqttProfile,
+  setActiveMqttProfile,
+  subscribeMqttProfile,
+  validarPerfilConexionMqtt,
+  type MqttConnectionMode,
+  type MqttConnectionProfile,
+  type MqttWsProtocol,
+} from '../../services/mqtt/config';
 import { mqttClient } from '../../services/mqtt/MqttClient';
-import { mqttHilesBridge } from '../../services/mqtt/setupMqttHilesBridge';
-import type { AccionLed } from '../../services/mqtt/messages';
-import { useSimulationStore } from '../../stores/useSimulationStore';
+import { useDistributedExecutionStore } from '../../stores/useDistributedExecutionStore';
 import { getMqttPanelPortalTarget, subscribeMqttPanelPortal } from '../editor/panelPortal';
+import { HelpHint } from '../onboarding/HelpHint';
 import './mqtt.css';
 
 type MessageEntry = {
@@ -29,13 +39,13 @@ type ConnectionFeedback = {
 const getStatusColor = (status: string): string => {
   switch (status) {
     case 'CONNECTED':
-      return '#22c55e';
+      return '#16a34a';
     case 'CONNECTING':
-      return '#f59e0b';
+      return '#d97706';
     case 'ERROR':
-      return '#ef4444';
+      return '#dc2626';
     default:
-      return '#94a3b8';
+      return '#64748b';
   }
 };
 
@@ -58,8 +68,21 @@ export const MqttPanel: React.FC = () => {
   const [messages, setMessages] = useState<MessageEntry[]>([]);
   const [notices, setNotices] = useState<IntegrationNotice[]>([]);
   const [connectionFeedback, setConnectionFeedback] = useState<ConnectionFeedback | null>(null);
+
+  const activeProfile = useSyncExternalStore(
+    subscribeMqttProfile,
+    getActiveMqttProfile,
+    getActiveMqttProfile,
+  );
+  const distribuidoConectado = useDistributedExecutionStore((state) => state.conectado);
+  const [draft, setDraft] = useState<MqttConnectionProfile>(() => ({ ...activeProfile }));
+
   const dockTarget = useSyncExternalStore(subscribeMqttPanelPortal, getMqttPanelPortalTarget, () => null);
-  const modoEjecucion = useSimulationStore((state) => state.modoEjecucion);
+
+  useEffect(
+    () => subscribeMqttProfile(() => setDraft({ ...getActiveMqttProfile() })),
+    [],
+  );
 
   useEffect(() => {
     const addNotice = (level: IntegrationNotice['level'], message: string) => {
@@ -77,9 +100,10 @@ export const MqttPanel: React.FC = () => {
       } else if (nextStatus === 'CONNECTED') {
         setConnectionFeedback({ level: 'success', message: 'Conexión MQTT establecida correctamente.' });
       } else if (nextStatus === 'ERROR') {
-        setConnectionFeedback({ level: 'error', message: 'No fue posible conectar con MQTT. Verifica el broker, el puerto, el usuario y la contraseña.' });
+        setConnectionFeedback({ level: 'error', message: 'No fue posible conectar con el broker. Verifica protocolo, host, puerto y credenciales.' });
       }
     });
+
     const unsubscribeMessage = mqttClient.onMessage((topic, payload) => {
       const entry: MessageEntry = {
         id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
@@ -91,77 +115,261 @@ export const MqttPanel: React.FC = () => {
           second: '2-digit',
         }),
       };
-
       setMessages((previous) => [entry, ...previous].slice(0, 8));
     });
-    const unsubscribeValidation = mqttClient.onValidationError(({ error }) => addNotice('error', error));
-    const unsubscribeBridge = mqttHilesBridge.onEvent(({ nivel, mensaje }) => addNotice(nivel, mensaje));
 
-    mqttClient.subscribe(MQTT_TOPICS.LED_ESTADO);
-    mqttClient.subscribe(MQTT_TOPICS.ESTADO_CONEXION);
-    mqttClient.subscribe(MQTT_TOPICS.TELEMETRIA);
-    mqttClient.subscribe(MQTT_TOPICS.ERROR);
+    const unsubscribeValidation = mqttClient.onValidationError(({ error }) => addNotice('error', error));
 
     return () => {
       unsubscribeStatus();
       unsubscribeMessage();
       unsubscribeValidation();
-      unsubscribeBridge();
-      mqttHilesBridge.stop();
-      mqttClient.unsubscribe(MQTT_TOPICS.LED_ESTADO);
-      mqttClient.unsubscribe(MQTT_TOPICS.ESTADO_CONEXION);
-      mqttClient.unsubscribe(MQTT_TOPICS.TELEMETRIA);
-      mqttClient.unsubscribe(MQTT_TOPICS.ERROR);
     };
   }, []);
 
-  useEffect(() => {
-    if (modoEjecucion === 'local') mqttHilesBridge.start();
-    else mqttHilesBridge.stop();
-    return () => mqttHilesBridge.stop();
-  }, [modoEjecucion]);
+  const validacion = useMemo(() => validarPerfilConexionMqtt(draft), [draft]);
 
-  const handleConnect = () => {
-    setConnectionFeedback({ level: 'pending', message: 'Intentando conectar con el broker MQTT…' });
-    mqttClient.connect();
+  const urlVistaPrevia = useMemo(() => {
+    if (validacion.errores.length > 0) return null;
+    try {
+      return buildMqttWebSocketUrl(draft.host.trim(), Number(draft.port), draft.path.trim(), draft.protocol);
+    } catch {
+      return null;
+    }
+  }, [draft, validacion.errores.length]);
+
+  const cambiarModo = (mode: MqttConnectionMode) => {
+    setDraft((actual) => {
+      if (mode === actual.mode) return actual;
+      if (mode === 'remote') {
+        return {
+          ...actual,
+          mode: 'remote',
+          protocol: 'wss',
+          port: actual.port === 9001 ? 8884 : actual.port,
+        };
+      }
+      const httpsActivo = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      return {
+        ...actual,
+        mode: 'lan',
+        protocol: httpsActivo ? 'wss' : 'ws',
+        port: actual.port === 8884 || actual.port === 443 ? 9001 : actual.port,
+      };
+    });
   };
 
-  const handleDisconnect = () => {
+  const aplicarYReconectar = (evento: React.FormEvent) => {
+    evento.preventDefault();
+    if (validacion.errores.length > 0) return;
+    try {
+      const perfil = setActiveMqttProfile(draft);
+      setConnectionFeedback({
+        level: 'pending',
+        message: `Reconectando en modo ${etiquetaModoConexionMqtt(perfil)}…`,
+      });
+      mqttClient.reconnect();
+      useDistributedExecutionStore.getState().reconectarBroker();
+    } catch (error) {
+      setConnectionFeedback({
+        level: 'error',
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  const restaurarEntorno = () => {
+    const restaurado = resetActiveMqttProfile();
+    setDraft({ ...restaurado });
+    setConnectionFeedback({
+      level: 'pending',
+      message: 'Perfil restaurado a los valores iniciales del entorno; reconectando…',
+    });
+    mqttClient.reconnect();
+    useDistributedExecutionStore.getState().reconectarBroker();
+  };
+
+  const desconectarTodo = () => {
     mqttClient.disconnect();
-    setConnectionFeedback({ level: 'neutral', message: 'Conexión MQTT cerrada.' });
-  };
-
-  const handleLedCommand = (accion: AccionLed) => {
-    mqttClient.sendLedCommand(accion);
+    useDistributedExecutionStore.getState().desconectarBroker();
+    setConnectionFeedback({ level: 'neutral', message: 'Conexiones MQTT cerradas en esta pestaña.' });
   };
 
   const content = (
-    <section className={dockTarget ? 'mqtt-panel is-embedded' : 'mqtt-panel'} style={styles.panel} aria-label="Panel MQTT del broker local">
-      {!dockTarget && <button type="button" style={styles.header} onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
-        <span style={styles.headerText}>
-          <span style={{ ...styles.dot, background: getStatusColor(status) }} />
-          MQTT local
-        </span>
-        <strong>{expanded ? '−' : '+'}</strong>
-      </button>}
+    <section
+      className={dockTarget ? 'mqtt-panel is-embedded' : 'mqtt-panel'}
+      data-tour="panel-conexion"
+      aria-label="Modo de conexión del proyecto"
+    >
+      {!dockTarget && (
+        <button type="button" className="mqtt-panel__header" onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
+          <span>
+            <i className="mqtt-panel__dot" style={{ background: getStatusColor(status) }} />
+            Conexión {etiquetaModoConexionMqtt(activeProfile)}
+          </span>
+          <strong>{expanded ? '−' : '+'}</strong>
+        </button>
+      )}
 
       {(expanded || dockTarget) && (
-        <div style={styles.body}>
-          <div style={styles.row}>
-            <span style={styles.label}>Estado</span>
-            <span style={{ ...styles.badge, color: getStatusColor(status), borderColor: getStatusColor(status) }}>
-              {getStatusLabel(status)}
-            </span>
+        <div className="mqtt-panel__body">
+          <div className="mqtt-panel__summary">
+            <div className="mqtt-panel__status-row">
+              <span>Colaboración</span>
+              <span className="mqtt-panel__badge" style={{ color: getStatusColor(status), borderColor: getStatusColor(status) }}>
+                {getStatusLabel(status)}
+              </span>
+            </div>
+            <div className="mqtt-panel__status-row">
+              <span>Plano de ejecutores</span>
+              <span
+                className="mqtt-panel__badge"
+                style={{
+                  color: distribuidoConectado ? '#16a34a' : '#64748b',
+                  borderColor: distribuidoConectado ? '#16a34a' : '#cbd5e1',
+                }}
+              >
+                {distribuidoConectado ? 'Conectado' : 'Desconectado'}
+              </span>
+            </div>
+            <p className="mqtt-panel__lead">
+              Define cómo este navegador alcanza el broker del proyecto. <strong>No decide dónde se ejecuta cada bloque</strong> (eso se elige por bloque en «Ejecutores»).
+            </p>
           </div>
 
-          <div style={styles.actions}>
-            <button type="button" style={styles.primaryButton} onClick={handleConnect} disabled={status === 'CONNECTED' || status === 'CONNECTING'}>
-              Conectar
-            </button>
-            <button type="button" style={styles.secondaryButton} onClick={handleDisconnect} disabled={status === 'DISCONNECTED'}>
-              Desconectar
-            </button>
-          </div>
+          <form className="mqtt-profile-form" onSubmit={aplicarYReconectar}>
+            <div className="mqtt-profile-form__mode-header">
+              <span>Modo de conexión</span>
+              <HelpHint
+                titulo="Local/LAN frente a Remoto"
+                texto="Local/LAN conecta a un broker Mosquitto en el mismo equipo o red local. Remoto usa WebSockets seguros (wss://) y credenciales para conectar colaboradores y ejecutores a través de Internet."
+              />
+            </div>
+
+            <div className="mqtt-mode-switch" role="group" aria-label="Modo de conexión del proyecto">
+              <button
+                type="button"
+                className={draft.mode === 'lan' ? 'is-active' : ''}
+                aria-pressed={draft.mode === 'lan'}
+                onClick={() => cambiarModo('lan')}
+              >
+                Local / LAN
+              </button>
+              <button
+                type="button"
+                className={draft.mode === 'remote' ? 'is-active' : ''}
+                aria-pressed={draft.mode === 'remote'}
+                onClick={() => cambiarModo('remote')}
+              >
+                Remoto (Internet)
+              </button>
+            </div>
+
+            <div className="mqtt-profile-form__grid">
+              <label>
+                <span>Protocolo</span>
+                <select
+                  value={draft.protocol}
+                  onChange={(event) => setDraft((actual) => ({ ...actual, protocol: event.target.value as MqttWsProtocol }))}
+                >
+                  <option value="ws">ws:// (LAN)</option>
+                  <option value="wss">wss:// (TLS seguro)</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Puerto WS</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={draft.port}
+                  onChange={(event) => setDraft((actual) => ({ ...actual, port: Number(event.target.value) }))}
+                />
+              </label>
+
+              <label className="mqtt-profile-form__full">
+                <span>Host o IP del broker</span>
+                <input
+                  type="text"
+                  value={draft.host}
+                  placeholder={draft.mode === 'remote' ? 'mqtt.ejemplo.org' : '192.168.1.10'}
+                  autoComplete="off"
+                  onChange={(event) => setDraft((actual) => ({ ...actual, host: event.target.value }))}
+                />
+              </label>
+
+              <label className="mqtt-profile-form__full">
+                <span>Ruta WebSocket</span>
+                <input
+                  type="text"
+                  value={draft.path}
+                  placeholder="/mqtt"
+                  autoComplete="off"
+                  onChange={(event) => setDraft((actual) => ({ ...actual, path: event.target.value }))}
+                />
+              </label>
+
+              <label>
+                <span>Usuario MQTT</span>
+                <input
+                  type="text"
+                  value={draft.username}
+                  autoComplete="off"
+                  onChange={(event) => setDraft((actual) => ({ ...actual, username: event.target.value }))}
+                />
+              </label>
+
+              <label>
+                <span>Contraseña MQTT</span>
+                <input
+                  type="password"
+                  value={draft.password}
+                  autoComplete="new-password"
+                  onChange={(event) => setDraft((actual) => ({ ...actual, password: event.target.value }))}
+                />
+              </label>
+            </div>
+
+            {urlVistaPrevia && (
+              <p className="mqtt-profile-form__preview">
+                Destino: <code>{urlVistaPrevia}</code>
+              </p>
+            )}
+
+            <p className="mqtt-profile-form__privacy">
+              Las credenciales permanecen únicamente en la memoria de esta pestaña; no se guardan en el navegador, la URL ni el documento compartido.
+            </p>
+
+            {validacion.errores.length > 0 && (
+              <div className="mqtt-connection-feedback is-error" role="alert">
+                <span>{validacion.errores[0]}</span>
+              </div>
+            )}
+
+            {validacion.errores.length === 0 && validacion.advertencias.map((advertencia) => (
+              <div key={advertencia} className="mqtt-connection-feedback is-pending" role="status">
+                <span>{advertencia}</span>
+              </div>
+            ))}
+
+            <div className="mqtt-profile-form__actions">
+              <button type="submit" className="btn btn--primary" disabled={validacion.errores.length > 0}>
+                Aplicar y reconectar
+              </button>
+              <button type="button" className="btn" onClick={restaurarEntorno}>
+                Restaurar entorno
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={desconectarTodo}
+                disabled={status === 'DISCONNECTED' && !distribuidoConectado}
+              >
+                Desconectar
+              </button>
+            </div>
+          </form>
 
           {connectionFeedback && (
             <div
@@ -174,213 +382,33 @@ export const MqttPanel: React.FC = () => {
             </div>
           )}
 
-          <div style={styles.actions}>
-            <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('encender')} disabled={status !== 'CONNECTED'}>Encender</button>
-            <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('apagar')} disabled={status !== 'CONNECTED'}>Apagar</button>
-            <button type="button" style={styles.commandButton} onClick={() => handleLedCommand('titilar')} disabled={status !== 'CONNECTED'}>Titilar</button>
-          </div>
-
-          {notices.length > 0 && (
-            <div style={styles.noticeList} aria-live="polite">
-              <strong style={styles.messageTitle}>Integración HiLeS</strong>
+          {(notices.length > 0 || messages.length > 0) && (
+            <details className="mqtt-diagnostics">
+              <summary>Diagnóstico de mensajes MQTT ({notices.length + messages.length})</summary>
               {notices.map((notice) => (
                 <div
                   key={notice.id}
                   role={notice.level === 'error' ? 'alert' : 'status'}
-                  style={{
-                    ...styles.notice,
-                    ...(notice.level === 'error' ? styles.errorNotice : styles.infoNotice),
-                  }}
+                  className={`mqtt-connection-feedback ${notice.level === 'error' ? 'is-error' : 'is-neutral'}`}
                 >
                   {notice.message}
                 </div>
               ))}
-            </div>
-          )}
-
-          <div style={styles.messageList}>
-            <strong style={styles.messageTitle}>Mensajes recientes</strong>
-            {messages.length === 0 ? (
-              <p style={styles.emptyText}>Sin mensajes aún.</p>
-            ) : (
-              messages.map((message) => (
-                <div key={message.id} style={styles.messageItem}>
-                  <div style={styles.messageHeader}>
-                    <span style={styles.topic}>{message.topic}</span>
-                    <span style={styles.timestamp}>{message.receivedAt}</span>
+              {messages.map((message) => (
+                <div key={message.id} className="mqtt-message-item">
+                  <div className="mqtt-message-item__header">
+                    <span>{message.topic}</span>
+                    <time>{message.receivedAt}</time>
                   </div>
-                  <pre style={styles.payload}>{JSON.stringify(message.payload, null, 2)}</pre>
+                  <pre>{JSON.stringify(message.payload, null, 2)}</pre>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </details>
+          )}
         </div>
       )}
     </section>
   );
 
   return dockTarget ? createPortal(content, dockTarget) : content;
-};
-
-const styles = {
-  panel: {
-    borderTop: '1px solid #d8e0ea',
-    background: '#f8fafc',
-    borderBottom: '1px solid #d8e0ea',
-    width: '100%',
-  },
-  header: {
-    width: '100%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    border: 'none',
-    background: '#e2e8f0',
-    padding: '10px 12px',
-    fontSize: 12,
-    fontWeight: 700,
-    cursor: 'pointer',
-    color: '#0f172a',
-  },
-  headerText: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    display: 'inline-block',
-  },
-  body: {
-    padding: 12,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 12,
-  },
-  row: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  label: {
-    fontSize: 11,
-    color: '#64748b',
-    textTransform: 'uppercase' as const,
-    fontWeight: 700,
-  },
-  badge: {
-    fontSize: 11,
-    fontWeight: 800,
-    border: '1px solid currentColor',
-    borderRadius: 999,
-    padding: '3px 8px',
-    background: '#fff',
-  },
-  actions: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: 8,
-  },
-  primaryButton: {
-    padding: '7px 10px',
-    borderRadius: 6,
-    border: '1px solid #67e8f9',
-    background: '#e0f2fe',
-    color: '#0f172a',
-    cursor: 'pointer',
-    fontWeight: 700,
-  },
-  secondaryButton: {
-    padding: '7px 10px',
-    borderRadius: 6,
-    border: '1px solid #cbd5e1',
-    background: '#fff',
-    color: '#0f172a',
-    cursor: 'pointer',
-    fontWeight: 700,
-  },
-  commandButton: {
-    padding: '7px 10px',
-    borderRadius: 6,
-    border: '1px solid #dbeafe',
-    background: '#f8fafc',
-    color: '#1e3a8a',
-    cursor: 'pointer',
-    fontWeight: 700,
-  },
-  messageList: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 8,
-    maxHeight: 160,
-    overflowY: 'auto' as const,
-  },
-  noticeList: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 6,
-    maxHeight: 128,
-    overflowY: 'auto' as const,
-  },
-  notice: {
-    border: '1px solid',
-    borderRadius: 6,
-    padding: 8,
-    fontSize: 10,
-    lineHeight: 1.4,
-  },
-  infoNotice: {
-    borderColor: '#93c5fd',
-    background: '#eff6ff',
-    color: '#1e3a8a',
-  },
-  errorNotice: {
-    borderColor: '#fca5a5',
-    background: '#fef2f2',
-    color: '#991b1b',
-  },
-  messageTitle: {
-    fontSize: 11,
-    textTransform: 'uppercase' as const,
-    color: '#64748b',
-    margin: 0,
-  },
-  emptyText: {
-    fontSize: 11,
-    color: '#94a3b8',
-    margin: 0,
-  },
-  messageItem: {
-    border: '1px solid #e2e8f0',
-    background: '#fff',
-    borderRadius: 6,
-    padding: 8,
-  },
-  messageHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 4,
-  },
-  topic: {
-    fontSize: 10,
-    color: '#1d4ed8',
-    fontWeight: 700,
-    wordBreak: 'break-word' as const,
-  },
-  timestamp: {
-    fontSize: 9,
-    color: '#64748b',
-    whiteSpace: 'nowrap' as const,
-  },
-  payload: {
-    margin: 0,
-    fontSize: 9,
-    lineHeight: 1.4,
-    color: '#0f172a',
-    whiteSpace: 'pre-wrap' as const,
-    overflowWrap: 'anywhere' as const,
-  },
 };

@@ -1,43 +1,39 @@
-# Ficha de conexión MQTT — HiLeS
+# Ficha de conexión MQTT — plantilla
 
-## Red de demostración
+Completar esta ficha **fuera del repositorio** antes de cada sesión y compartir las credenciales por un canal privado. Este archivo versionado solo contiene marcadores.
 
-- Host del broker: `192.168.137.106`
-- Subred local: `192.168.137.0/24`
-- Broker: Eclipse Mosquitto 2.1.2
-- Acceso anónimo: deshabilitado
+> Hasta la entrega 7 esta ficha mostraba la IP de un hotspot usado en una demostración anterior. Esa dirección no es permanente y se retiró. La IP del broker debe confirmarse con `ipconfig` cada vez.
 
-La dirección pertenece a la conexión Wi-Fi actual del PC que ejecuta Mosquitto.
-Debe confirmarse con `ipconfig` antes de cada demostración porque el hotspot
-puede asignar otra dirección después de una reconexión.
+## Datos de la sesión
 
-## Pico W y clientes de terminal
+| Dato | Valor |
+|---|---|
+| IPv4 del PC con Mosquitto | `IPV4_DEL_PC` (obtener con `ipconfig`) |
+| Red Wi-Fi | 2.4 GHz, compartida por el PC y las Picos |
+| Broker | Eclipse Mosquitto 2.x, sin acceso anónimo |
+| Proyecto | `PROJECT_ID`, igual en `?project=` y en `HILES_PROJECT_ID` |
 
-- Protocolo: MQTT sobre TCP
-- Host: `192.168.137.106`
-- Puerto: `1883`
-
-Configuración MicroPython:
+## Pico (MQTT sobre TCP, puerto 1883)
 
 ```python
-MQTT_HOST = "192.168.137.106"
+MQTT_HOST = "IPV4_DEL_PC"         # nunca localhost
 MQTT_PORT = 1883
 MQTT_USERNAME = "RECIBIR_POR_PRIVADO"
 MQTT_PASSWORD = "RECIBIR_POR_PRIVADO"
-MQTT_CLIENT_ID = "pico01"
+MQTT_CLIENT_ID = "pico01w"        # único por placa
+DEVICE_ID = "pico01w"             # único por placa
+HILES_TEAM_ID = "equipo1"
+HILES_PROJECT_ID = "PROJECT_ID"   # igual que ?project=
 ```
 
-## Aplicación web
+El archivo completo se genera desde **Ejecutores** → **Configuración de placas** (ver [`../GUIA_AGREGAR_PICO_Y_EJECUTORES.md`](../GUIA_AGREGAR_PICO_Y_EJECUTORES.md)).
 
-- Protocolo: MQTT sobre WebSockets
-- URL: `ws://192.168.137.106:9001/mqtt`
-- Puerto: `9001`
-- Ruta: `/mqtt`
+## Navegador (MQTT sobre WebSocket, puerto 9001)
 
-Configuración local del frontend:
+`frontend/.env.local`, nunca versionado:
 
 ```env
-VITE_MQTT_HOST=192.168.137.106
+VITE_MQTT_HOST=IPV4_DEL_PC
 VITE_MQTT_WS_PORT=9001
 VITE_MQTT_WS_PATH=/mqtt
 VITE_MQTT_WS_PROTOCOL=ws
@@ -45,33 +41,20 @@ VITE_MQTT_USERNAME=RECIBIR_POR_PRIVADO
 VITE_MQTT_PASSWORD=RECIBIR_POR_PRIVADO
 ```
 
-El archivo real debe llamarse `frontend/.env.local` y no debe subirse a Git.
+También se puede ajustar durante la sesión con el botón **Conexión** (modo Local/LAN).
 
-## Topics
+## Tópicos
 
-Prefijo común:
+| Prefijo | Uso |
+|---|---|
+| `udfjc/hiles/v1/equipo1/<DEVICE_ID>/` | Diagnóstico de cada placa (`led/comando`, `led/estado`, `estado/conexion`, `telemetria`, `error`) |
+| `udfjc/hiles/v2/projects/<PROJECT_ID>/` | Colaboración |
+| `udfjc/hiles/v3/projects/<PROJECT_ID>/executors/#` | Presencia de ejecutores |
+| `udfjc/hiles/v3/projects/<PROJECT_ID>/deployments/#` | Manifiesto, fragmentos, ACK, canales, snapshots y comandos |
 
-```text
-udfjc/hiles/v1/equipo1/pico01/
-```
-
-Principales topics:
-
-- `led/comando`: web o terminal hacia la Pico.
-- `led/estado`: confirmación de la Pico.
-- `estado/conexion`: disponibilidad de la Pico.
-- `telemetria`: datos de diagnóstico.
-- `error`: errores de JSON o ejecución.
-
-## Entrega segura de credenciales
-
-El usuario MQTT y la contraseña deben enviarse por un canal privado y no deben
-escribirse en este documento, en el registro de cambios ni en un commit. La
-contraseña debe compartirse separadamente de esta ficha.
+Dos placas no pueden compartir `MQTT_CLIENT_ID`: el broker desconectaría una cuando entre la otra.
 
 ## Comprobación antes de demostrar
-
-En el PC del broker:
 
 ```powershell
 ipconfig
@@ -79,5 +62,4 @@ Get-Service mosquitto
 netstat -ano | Select-String ':1883|:9001'
 ```
 
-Si la IPv4 Wi-Fi ya no es `192.168.137.106`, se deben actualizar
-`config_local.py`, `frontend/.env.local` y esta ficha antes de la prueba.
+Si la IPv4 cambió, actualizar `frontend/.env.local` y el `config_local.py` de cada placa antes de la prueba.

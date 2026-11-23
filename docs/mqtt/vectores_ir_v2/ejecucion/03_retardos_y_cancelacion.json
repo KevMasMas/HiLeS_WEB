@@ -121,7 +121,7 @@
         "entrada-habilitar": { "valor": true },
         "lugar-inicio": { "tokens": 0 },
         "trans-temporizada": {
-          "habilitada": true,
+          "habilitada": false,
           "disparada": true
         },
         "lugar-fin": { "tokens": 1 }

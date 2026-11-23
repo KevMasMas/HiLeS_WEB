@@ -183,7 +183,7 @@ describe('Perfil Python restringido de IR v2 (validación y normalización de E/
 });
 
 describe('Compilador HilesModelDocument → IR v2 y migración IR v1 → IR v2', () => {
-  it('compila el demo distribuido con contadores enteros de vehículos', () => {
+  it('compila cuatro semáforos en anillo con un único token y amarillo transitorio', () => {
     const documento = cargarDocumento('demo-4-semaforos-distribuidos.json');
     const compilado = compilarModeloEditorAIrV2(documento);
     expect(compilado.ok).toBe(true);
@@ -196,43 +196,33 @@ describe('Compilador HilesModelDocument → IR v2 y migración IR v1 → IR v2',
     expect(sensores).toHaveLength(4);
     expect(sensores.every((sensor) => sensor.tipo_dato === 'integer')).toBe(true);
     expect(sensores.every((sensor) => sensor.valor_inicial === 0)).toBe(true);
-    const lucesManuales = compilado.modelo.entradas_externas.filter((entrada) =>
-      entrada.elemento_id.startsWith('luz-'),
+    expect(compilado.modelo.elementos.some((elemento) => elemento.id === 'control-trafico')).toBe(false);
+    const decisiones = compilado.modelo.elementos.filter(
+      (elemento) => elemento.tipo === 'functional_block' && elemento.id.startsWith('decision-'),
     );
-    expect(lucesManuales).toHaveLength(0);
-    const controlador = compilado.modelo.elementos.find(
-      (elemento) => elemento.id === 'control-trafico',
-    );
-    expect(controlador).toMatchObject({ tipo: 'functional_block' });
-    if (controlador?.tipo === 'functional_block') {
-      expect(controlador.entradas.map((entrada) => entrada.variable)).toEqual([
-        'vehiculos_norte',
-        'vehiculos_sur',
-        'vehiculos_este',
-        'vehiculos_oeste',
-      ]);
-      expect(controlador.salidas.map((salida) => salida.variable)).toEqual([
-        'luz_norte',
-        'luz_sur',
-        'luz_este',
-        'luz_oeste',
-        'eje',
-      ]);
-    }
-    const lamparas = compilado.modelo.elementos.filter(
-      (elemento) => elemento.tipo === 'functional_block' && elemento.id.startsWith('lamparas-'),
-    );
-    expect(lamparas).toHaveLength(4);
+    expect(decisiones).toHaveLength(4);
     expect(
-      lamparas.every(
+      decisiones.every(
         (elemento) =>
           elemento.tipo === 'functional_block' &&
-          elemento.entradas.some(
-            (entrada) =>
-              entrada.variable === 'vehiculos_esperando' && entrada.tipo_dato === 'integer',
-          ),
+          elemento.entradas.map((entrada) => entrada.variable).join(',') === 'vehiculos_locales' &&
+          elemento.salidas.map((salida) => salida.variable).join(',') ===
+            'hay_demanda,sin_demanda,ciclo_activo',
       ),
     ).toBe(true);
+    const lugares = compilado.modelo.elementos.filter((elemento) => elemento.tipo === 'place');
+    const transiciones = compilado.modelo.elementos.filter((elemento) => elemento.tipo === 'transition');
+    expect(lugares).toHaveLength(20);
+    expect(transiciones).toHaveLength(20);
+    expect(
+      lugares
+        .filter((lugar) => lugar.id.endsWith('-token'))
+        .reduce((total, lugar) => total + lugar.tokens, 0),
+    ).toBe(1);
+    expect(compilado.modelo.conexiones).toHaveLength(80);
+    expect(
+      compilado.modelo.conexiones.filter((conexion) => conexion.id.startsWith('lch-token-')),
+    ).toHaveLength(8);
   });
 
   it('compila demo-parqueadero-converters.json incluyendo Sample y Hold en IR v2', () => {

@@ -1,0 +1,695 @@
+# Plan de implementación — entrega del viernes 30 de octubre de 2026
+
+**Equipo:** cinco personas  
+**Rama base:** `mqtt-pico`  
+**Commit base:** `baadff6`  
+**Estado inicial:** runtime general, colaboración web y flujo físico con una Pico W aprobados  
+**Objetivo principal:** ejecutar distintas partes de un mismo modelo en dispositivos diferentes sin introducir lógica de dominio en el firmware.
+
+**Asignación propuesta, pendiente de confirmación del equipo:**
+
+| Responsable | Frente |
+|---|---|
+| Persona 1 | Protocolo y particionador distribuido |
+| Persona 2 | Worker MicroPython multi-Pico |
+| Persona 3 | Worker web, colaboración y UX |
+| Persona 4 | Investigación Three.js |
+| Persona 5 | Integración, automatización física y documentación |
+
+## 1. Interpretación del requerimiento
+
+La siguiente evolución debe permitir decidir dónde corre cada parte del modelo:
+
+- una Raspberry Pi Pico W;
+- otra Pico W;
+- un navegador conectado al proyecto;
+- una combinación de dispositivos y navegadores.
+
+La unidad preferida de despliegue será el `Structural Block`. Los Functional Blocks internos heredan su destino, aunque el contrato dejará prevista una sobreescritura explícita por Functional Block cuando sea necesaria.
+
+El sistema seguirá siendo colaborativo: todos los navegadores del mismo `projectId` deben ver el documento, los colaboradores, la asignación de ejecutores y el estado agregado de la ejecución.
+
+En el ejemplo de los semáforos no hay un controlador vial codificado en `main.py` ni un proceso central que decida todas las luces. Cuatro pares autónomos forman un anillo y comparten un único token. Cada nodo decide solo con su fila local: con demanda ejecuta verde 3 s → amarillo 1 s → rojo; sin demanda cede desde rojo. El lease del token y el rojo seguro ante pérdida de comunicación siguen pendientes.
+
+## 2. Resultado mínimo demostrable
+
+Al cerrar la entrega debe ser posible:
+
+1. Abrir un proyecto colaborativo desde dos o más navegadores.
+2. Ver los ejecutores disponibles y su estado: navegadores y Pico W.
+3. Asignar cada `Structural Block` a un ejecutor.
+4. Compilar el documento en fragmentos por ejecutor.
+5. Desplegar cada fragmento únicamente en su destino.
+6. Transportar valores entre bloques ubicados en ejecutores diferentes.
+7. Mostrar en todos los colaboradores el estado agregado del modelo.
+8. Desconectar un ejecutor y mostrar el diagnóstico sin congelar el resto.
+9. Reasignar o volver a desplegar un bloque de forma explícita.
+10. Ejecutar una demostración vial sin lógica central de semáforos en el firmware.
+
+La matriz ideal usa cuatro ejecutores para cuatro semáforos. Si no hay cuatro Pico W, se acepta una matriz mixta —por ejemplo dos Pico W y dos navegadores— siempre que cada semáforo sea una unidad independiente y se prueben conexiones entre tipos de ejecutor diferentes.
+
+## 3. Principios no negociables
+
+- El broker coordina mensajes, pero no ejecuta reglas del circuito.
+- El navegador que despliega publica el manifiesto; no debe calcular permanentemente el estado de todos los bloques.
+- `main.py`, `Scheduler`, `Node` y el motor no incorporan reglas de semáforos ni de otro ejemplo.
+- Cada salida tiene un único propietario durante una época de despliegue.
+- Todo mensaje distribuido incluye proyecto, despliegue, época, ejecutor, conexión, secuencia e identificador deduplicable.
+- Un mensaje atrasado o perteneciente a otra época se descarta.
+- La colaboración del documento y la ejecución distribuida son protocolos separados.
+- Ninguna credencial, SSID o IP fija entra al repositorio.
+- Three.js será un consumidor visual del estado, nunca la fuente oficial de simulación.
+- Los cambios se integran solo con pruebas y evidencia registradas.
+
+## 4. Alcance priorizado
+
+### P0 — obligatorio
+
+- [x] Contrato de ejecutores, manifiesto de despliegue y tópicos MQTT v3.
+- [x] Identidad dinámica y presencia de múltiples Pico/navegadores ejecutores.
+- [x] Propiedad de despliegue en Structural Blocks y Functional Blocks.
+- [x] Particionado determinista del modelo en fragmentos válidos.
+- [x] Ejecutor Pico capaz de cargar solamente su fragmento (aprobado en pruebas de software; placa real pendiente).
+- [x] Ejecutor navegador compatible con el mismo contrato de fragmento.
+- [x] Puentes MQTT entre conexiones cuyos extremos viven en ejecutores distintos.
+- [x] Estado agregado y diagnóstico visible para todos los colaboradores (comprobado con dos navegadores y Mosquitto real: entrada `41`, Functional Block Python y salida `42`).
+- [x] Prueba con dos ejecutores navegador reales y un enlace MQTT entre ellos; combinaciones con Pico física pendientes.
+- [x] Automatización segura preparada y validada en modo seco/filesystem simulado; ejecución sobre placas reales pendiente.
+- [x] Informe técnico y registro individual actualizados.
+
+### P1 — debe entrar si P0 está estable
+
+- [x] Selector visual de destino por Structural Block.
+- [ ] Panel de ejecutores con conexión, memoria, RSSI, modelo y última actividad.
+- [x] Mejoras de colaboración: selección remota, “seguir colaborador”, estados claros y enlace para invitar.
+- [x] Tutorial guiado, ayuda contextual y estado vacío para usuarios nuevos.
+- [x] Revisión visual general: logo, consistencia de idioma, espaciado, iconos, mensajes y accesibilidad (quedan textos en inglés en archivos de otros integrantes, listados en `docs/ux/REVISION_VISUAL_Y_ACCESIBILIDAD.md`).
+- [x] Demo distribuida de semáforos con token lógico y fases verde → amarillo → rojo (modo seguro ante caída pendiente).
+
+### P2 — investigación aislada, no bloquea P0
+
+- [ ] Prototipo Three.js con escena básica, un automóvil y un semáforo.
+- [ ] Adaptador que consuma un snapshot HiLeS o datos simulados con la misma forma.
+- [ ] Documento que explique para qué sirve: gemelo digital, visualización 3D y futura validación de modelos.
+- [ ] Decisión explícita de integrar, aplazar o descartar el prototipo después de medir costo y utilidad.
+
+## 5. Arquitectura propuesta
+
+```text
+Documento colaborativo (?project=id)
+              │
+              ▼
+Compilador y particionador de despliegue
+              │ publica manifiesto + fragmentos
+              ▼
+Mosquitto ───────────────────────────────────────────┐
+   │                  │                 │             │
+   ▼                  ▼                 ▼             ▼
+Pico A             Pico B          Browser C      Browser D
+Fragmento A        Fragmento B     Fragmento C    Fragmento D
+   │ salida            │ salida        │ salida        │ salida
+   └──────── mensajes de conexiones distribuidas ─────┘
+              │
+              ▼
+Snapshots parciales → agregación visual por proyecto
+```
+
+No existe un “motor vial central”. Existe un plano de control para publicar el despliegue y un plano de datos en el que cada ejecutor calcula únicamente los elementos que posee.
+
+### 5.1 Conceptos del protocolo
+
+- `executorId`: identifica un worker `pico:<deviceId>` o `browser:<id>`.
+- `deploymentId`: identifica una compilación distribuida completa.
+- `epoch`: número creciente que invalida mensajes de despliegues anteriores.
+- `fragmentId`: subconjunto IR dirigido a un ejecutor.
+- `ownerExecutorId`: único propietario autorizado para publicar las salidas del fragmento.
+
+El colaborador y el ejecutor son identidades diferentes: una persona puede editar sin ofrecer su navegador como worker.
+
+### 5.2 Particionado
+
+El compilador recibe el documento, las asignaciones y las capacidades disponibles. Produce:
+
+- un fragmento IR v2 por ejecutor;
+- conexiones locales incluidas en cada fragmento;
+- rutas MQTT para conexiones remotas;
+- manifiesto con hashes, tamaños y propietarios.
+
+Reglas P0:
+
+1. Todo elemento ejecutable tiene destino.
+2. Un elemento pertenece a un solo fragmento.
+3. Una conexión es local o remota, nunca ambas.
+4. Los extremos conservan tipo compatible.
+5. Places y Transitions conectados por Petri permanecen juntos durante P0.
+6. Un ciclo remoto avanza por pasos; no se resuelve mediante recursión ilimitada de mensajes.
+7. El tamaño del fragmento respeta las capacidades publicadas por el worker.
+
+### 5.3 Jerarquía MQTT propuesta
+
+Los nombres definitivos deben congelarse por Persona 1:
+
+```text
+udfjc/hiles/v3/projects/<projectId>/executors/<executorId>/status
+udfjc/hiles/v3/projects/<projectId>/deployments/manifest
+udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/fragments/<executorId>
+udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/ack/<executorId>
+udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/channels/<connectionId>
+udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/snapshot/<executorId>
+udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/error
+udfjc/hiles/v3/projects/<projectId>/deployments/<deploymentId>/command
+```
+
+Estado, manifiesto y fragmentos activos pueden ser retenidos. DCH/LCH y errores no deben retenerse. Cada receptor valida proyecto, despliegue, época, propietario, conexión, tipo, secuencia e identificador deduplicable.
+
+### 5.4 Estado agregado y recuperación
+
+Cada worker publica su snapshot parcial. Los navegadores componen la vista por `elementId`, aceptando solamente datos del propietario y época activos. Si un worker desaparece, sus elementos se marcan `offline` o `stale`; los demás continúan cuando sus dependencias lo permiten.
+
+| Fallo | Respuesta mínima |
+|---|---|
+| Worker desconectado | Marcar fragmento offline y bloquear sus nuevas salidas |
+| Mensaje duplicado | Ignorar por `messageId` y secuencia |
+| Mensaje de época anterior | Descartar |
+| Fragmento inválido | Conservar el anterior y publicar rechazo |
+| Despliegue parcial | No iniciar hasta recibir los ACK obligatorios |
+| Pérdida del broker | Conservar estado local y suspender conexiones remotas |
+| Regreso del broker | Resincronizar manifiesto y época antes de aceptar canales |
+| Navegador de control cerrado | Workers continúan con el manifiesto retenido |
+
+### 5.5 Semáforos descentralizados
+
+Cada semáforo será un Structural Block con entradas, estado local, Places/Transitions y salidas propias. La propuesta P0 usa un token lógico distribuido:
+
+- sin token no se habilita verde;
+- el token tiene un único propietario por época;
+- un token duplicado se rechaza por identidad y secuencia;
+- al iniciar todos quedan en rojo;
+- perder comunicación fuerza rojo seguro;
+- la prueba verifica que nunca existan verdes incompatibles.
+
+El token es una propuesta auditable, no una regla que deba codificarse en el firmware general.
+
+## 6. División del trabajo
+
+### Persona 1 — protocolo y compilador de ejecución distribuida
+
+**Responsabilidad:** congelar la arquitectura que consumen los demás.
+
+#### Tareas
+
+- [x] Definir `executorId`, tipos `pico`/`browser`, capacidades y estados.
+- [x] Definir `deploymentId`, `epoch`, manifiesto y reglas de propiedad.
+- [x] Definir herencia de destino desde Structural Block y sobreescritura por Functional Block.
+- [x] Diseñar tópicos de registro, manifiesto, fragmentos, canales, snapshots y errores.
+- [x] Definir mensajes de conexión distribuida, secuencia, QoS, retención y deduplicación.
+- [x] Implementar el particionador puro `modelo → fragmentos + rutas`.
+- [x] Validar conexiones locales, remotas y destinos inexistentes.
+- [x] Crear fixtures de dos, tres y cuatro ejecutores.
+- [x] Documentar las decisiones y entregarlas antes de que Personas 2 y 3 integren.
+
+#### Archivos propios previstos
+
+```text
+docs/mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md
+frontend/src/services/distributed/**
+frontend/src/services/ir/tiposIrDistribuida.ts
+frontend/src/services/ir/particionarIr.ts
+frontend/src/services/ir/*.test.ts
+```
+
+#### Criterios de cierre
+
+- [x] El mismo documento siempre produce los mismos fragmentos.
+- [x] Cada elemento ejecutable tiene un solo propietario.
+- [x] Una conexión remota tiene ruta y contrato de dato verificables.
+- [x] Un destino ausente impide desplegar y genera un error legible.
+
+#### Resultado comprobado — 28 de octubre
+
+- Contrato v3 congelado en `docs/mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md` y tipos compartidos en `frontend/src/services/ir/tiposIrDistribuida.ts`.
+- Tópicos y mensajes reutilizables publicados desde `frontend/src/services/distributed/`.
+- Resolución de herencia para Structural Blocks anidados, override de Functional Block y asignación directa de elementos raíz.
+- Particionador sin stores, reloj, red ni broker: valida IR v2, propiedad única, workers disponibles, tipos remotos, arcos Petri, capacidades, tamaños y SHA-256.
+- Fixtures exportables para dos, tres y cuatro ejecutores; 8 pruebas nuevas aprobadas.
+- Regresión completa: 18 archivos y 112 pruebas frontend aprobadas; ESLint y build de producción aprobados.
+
+---
+
+### Persona 2 — worker MicroPython multi-Pico
+
+**Dependencia:** contrato congelado por Persona 1.
+
+**Responsabilidad:** convertir cada Pico en un ejecutor direccionable y general.
+
+#### Tareas
+
+- [x] Sustituir el prefijo fijo `pico01` por identidad derivada de configuración.
+- [x] Publicar presencia, capacidades, versión, memoria y estado del worker.
+- [x] Suscribirse solamente a manifiestos y fragmentos dirigidos al dispositivo.
+- [x] Cargar y liberar fragmentos conservando el modelo anterior ante rechazo.
+- [x] Publicar salidas de conexiones remotas y consumir entradas de otros ejecutores.
+- [x] Descartar mensajes de otra época, proyecto o despliegue.
+- [x] Recuperar suscripciones y fragmento después de una reconexión.
+- [x] Mantener scheduler, Watchdog, LED y MQTT no bloqueantes.
+- [ ] Probar dos Pico W si están disponibles; si no, una Pico y un doble de protocolo.
+
+#### Archivos propios previstos
+
+```text
+firmware/pico/config_local.example.py
+firmware/pico/main.py
+firmware/pico/pubsub/topics.py
+firmware/pico/pubsub/mqtt_transport.py
+firmware/pico/hiles/distributed_worker.py
+firmware/tests/test_distributed_worker.py
+firmware/tests/test_mqtt_transport.py
+```
+
+#### Criterios de cierre
+
+- [x] Dos workers no consumen fragmentos ajenos.
+- [x] Un worker publica exactamente una vez cada salida lógica aunque MQTT repita el mensaje.
+- [x] Reiniciar un worker no cambia la propiedad de los demás.
+- [x] Perder el broker deja el runtime en un estado observable y recuperable.
+
+#### Resultado comprobado — 28 de octubre
+
+- Identidad dinámica multi-Pico (`DEVICE_ID` → `machine.unique_id()` → `MQTT_CLIENT_ID` → `"pico01"`), prefijo v1 parametrizado y `executorId` canónico `pico:<deviceId>` compuesto en `firmware/pico/main.py`.
+- Transporte MQTT cooperativo (`firmware/pico/pubsub/mqtt_transport.py`) extendido con suscripciones/publicaciones absolutas v3, modo `raw=True` para verificar `SHA-256` sin duplicar el payload en RAM, Last Will retenido en `offline`, descarte limpio de retaineds vacíos (`b""`) y reconexión limpia síncrona al cambiar `deployment_id`.
+- Puertos remotos de entrada y salida en `ChannelBus` y `HilesEngineV2` que preservan exactamente la semántica local `CCH`/`DCH`/`LCH`, `retardo_ms` y `capacidad_cola` sin acoplar `hiles/` con MQTT.
+- Tarea cooperativa `DistributedWorker` (`firmware/pico/hiles/distributed_worker.py`) con carga/liberación atómica de fragmentos, paridad bit a bit de JSON canónico y SHA-256 contra TypeScript (`docs/mqtt/vectores_v3/01_fixtures_distribucion_v3.json`), validación de los 7 pasos en canales remotos, ventana de deduplicación acotada, outbox con reintento tras reconexión y resincronización desde mensajes retenidos.
+- Regresión completa: 165 pruebas de firmware aprobadas (`test_distributed_worker.py` con 8 pruebas integrales multi-worker y `FakeBroker`, incluyendo pipeline de 3 Pico W) y 10 pruebas en `particionarIr.test.ts` aprobadas; queda pendiente únicamente la prueba física en placas reales cuando se conecten las Pico W.
+
+---
+
+### Persona 3 — worker web, colaboración y experiencia de usuario
+
+**Dependencias:** contratos de Persona 1 y estados del worker de Persona 2.
+
+**Responsabilidad:** permitir ejecución en navegador y hacer comprensible la distribución.
+
+#### Tareas de ejecución
+
+- [x] Implementar un worker de navegador con el mismo contrato que una Pico.
+- [x] Registrar cada navegador ejecutor con identidad independiente del colaborador visual.
+- [x] Cargar, ejecutar y liberar solamente el fragmento asignado.
+- [x] Publicar/consumir conexiones remotas sin eco.
+- [x] Agregar selector `Este navegador`, `Pico <id>` o `Sin asignar`.
+- [x] Mostrar estado agregado sin ejecutar fragmentos ajenos.
+
+#### Tareas de colaboración y frontend
+
+- [x] Mostrar avatar, color, estado y selección actual de cada colaborador.
+- [x] Añadir “seguir colaborador” y centrar la vista en su selección.
+- [x] Mejorar diálogo para compartir enlace y copiar `projectId`.
+- [x] Diseñar panel de ejecutores y mapa de asignaciones.
+- [x] Crear tutorial inicial: canvas, elementos, conexiones, colaboración, despliegue y ejecución.
+- [x] Añadir ayuda contextual, mensajes de error accionables y estados vacíos.
+- [x] Revisar logo, paleta, tipografía, iconos, consistencia español/inglés y accesibilidad básica (textos en inglés pendientes en archivos ajenos, listados en `docs/ux/REVISION_VISUAL_Y_ACCESIBILIDAD.md`).
+
+#### Archivos propios previstos
+
+```text
+frontend/src/services/distributed/BrowserWorker.ts
+frontend/src/stores/useDistributedExecutionStore.ts
+frontend/src/features/distributed/**
+frontend/src/features/collaboration/**
+frontend/src/features/onboarding/**
+frontend/src/features/editor/TopBar.tsx
+frontend/src/features/editor/editor.css
+frontend/src/assets/brand/**
+```
+
+#### Criterios de cierre
+
+- [x] Un bloque asignado a browser produce el mismo resultado observable que en la Pico para el fixture elegido (vector `docs/mqtt/vectores_v3/02_paridad_worker_navegador.json`, verificado en TypeScript y en Python).
+- [x] Cambiar la asignación es colaborativo y no genera operaciones duplicadas (probado con dos navegadores y Mosquitto real; ambos reflejaron los mismos destinos).
+- [ ] Un usuario nuevo puede completar el tutorial sin conocer previamente HiLeS (tutorial y ejemplo implementados y probados; falta la prueba con un usuario real).
+- [x] Los estados desconectado, listo y ejecutando se verificaron visualmente con broker real; el estado de error también apareció durante la detección del defecto Python antes de corregirlo.
+
+#### Resultado comprobado — 28 de octubre
+
+- `BrowserWorker` (`browser:<sessionId>`) cumple el contrato v3 de la Pico: estado retenido con Last Will, aceptación atómica con SHA-256 sobre los bytes recibidos, ACK, siete validaciones de canal, deduplicación, salidas sin eco, comandos, entradas propias, snapshots parciales, liberación y resincronización.
+- Paridad: el vector 02, generado con el motor MicroPython, se reproduce paso a paso en el navegador (`BrowserWorker.test.ts`) y en la Pico (`test_paridad_worker_navegador.py`).
+- Asignaciones en el documento compartido (`properties.deploymentTarget`), panel de ejecutores, mapa de asignaciones, despliegue con espera de ACK, estado agregado sobre el canvas y diagnóstico con recomendaciones.
+- Colaboración: selección remota, estado de cada persona, «seguir colaborador» y diálogo para compartir. Además, tutorial de 7 pasos con ejemplo mínimo, ayuda contextual, estado vacío, logo, paleta y accesibilidad.
+- Regresión actual: frontend con 24 archivos y 148 pruebas aprobadas; ESLint, TypeScript y build aprobados; firmware con 167 pruebas aprobadas.
+- Integración real browser↔browser: dos colaboradores y dos ejecutores independientes sobre Mosquitto; asignación sincronizada, dos ACK, recuperación desde retenidos tras recargar, canal CCH remoto y estado agregado `41 → 42` visibles en ambas sesiones.
+
+---
+
+### Persona 4 — investigación Three.js y visualización 3D
+
+**Dependencias:** ninguna para el prototipo inicial; contrato de snapshot de Persona 1 para la conexión final.
+
+**Responsabilidad:** explorar una futura vista 3D sin bloquear la entrega distribuida.
+
+#### Propósito
+
+Three.js puede convertir el estado de HiLeS en una visualización o gemelo digital. No reemplaza el canvas ni el motor: recibe snapshots y representa físicamente el resultado. El ejemplo mínimo será un carro que avanza o se detiene según el estado de un semáforo.
+
+#### Tareas
+
+- [ ] Crear un prototipo aislado con escena, cámara, luces, vía, carro y semáforo.
+- [ ] Mover el carro con animación basada en tiempo, no ligada a FPS.
+- [ ] Cambiar el semáforo mediante una interfaz `applySnapshot`.
+- [ ] Usar primero datos simulados y luego un snapshot real si el contrato queda disponible.
+- [ ] Liberar recursos Three.js al desmontar la vista.
+- [ ] Medir tamaño del bundle, FPS aproximados y efecto sobre el editor.
+- [ ] Documentar utilidad, riesgos, dependencias y recomendación.
+- [ ] Mantener el prototipo detrás de una ruta o bandera experimental.
+
+#### Archivos propios previstos
+
+```text
+frontend/src/experiments/three/**
+docs/experiments/THREE_JS_GEMELO_DIGITAL.md
+```
+
+#### Criterios de cierre
+
+- [ ] El prototipo no modifica el motor ni el estado oficial.
+- [ ] Puede funcionar con datos simulados aunque P0 aún esté en desarrollo.
+- [ ] El build principal sigue aprobando y la vista no deja listeners o animaciones activas al cerrarse.
+- [ ] Existe una recomendación fundada de integración o aplazamiento.
+
+---
+
+### Persona 5 — integración, automatización física, demo y documentación
+
+**Responsable:** Persona 5.
+
+**Dependencias:** entregables de Personas 1 a 4.
+
+**Responsabilidad:** integrar sin invadir módulos ajenos y producir evidencia repetible.
+
+#### Tareas de integración y pruebas
+
+- [x] Crear un runner que inventarie Pico conectadas y nunca muestre credenciales (modo seco aprobado; sin Pico conectada).
+- [x] Respaldar cada placa antes de desplegar y conservar un manifiesto de hashes (flujo validado con filesystem simulado; ejecución física pendiente).
+- [x] Desplegar fragmentos de prueba sin sobrescribir `config_local.py` (fragmentos v3 en memoria y firmware sobre doble de filesystem; placa real pendiente).
+- [x] Automatizar conexión, carga, entrada, paso, snapshot, telemetría y liberación en el arnés sin hardware.
+- [x] Registrar memoria antes/después, duración de tareas y recuperación del transporte simulado; memoria y MQTT de la Pico quedan pendientes.
+- [x] Probar desconexión de un ejecutor y rechazo de mensajes de época anterior.
+- [ ] Completar la matriz Pico↔Pico, Pico↔browser y browser↔browser: se aprobó Pico simulada→browser→browser→Pico simulada con cuatro ejecutores; falta el enlace Pico↔Pico y toda la matriz física.
+- [x] Ejecutar suites completas, lint, tipos y build.
+- [x] Preparar la guía física completa para Pico nuevas/actuales y regenerar el paquete multi-Pico verificado; ensayo sobre placas reales pendiente.
+- [x] Validar colaboración navegador↔navegador sobre Mosquitto WebSocket autenticado en la red local.
+- [x] Adaptar y verificar el frontend para celular y tablet, incluyendo controles táctiles, paneles inferiores y nombre visible del colaborador.
+
+#### Tareas documentales
+
+- [x] Mantener este plan como documento maestro técnico y de cierre.
+- [x] Recibir de cada persona objetivo, archivos, pruebas, decisiones, errores y evidencia disponible.
+- [x] Actualizar diagramas, estado, limitaciones y glosario.
+- [x] Completar el registro diario sin marcar trabajo no probado.
+- [x] Preparar una sección por integrante y una cronología de entregas.
+- [x] Dejar espacios claramente marcados para resultados físicos posteriores.
+
+#### Archivos propios previstos
+
+```text
+scripts/test-distributed-physical.ps1
+scripts/test-distributed-mqtt.mjs
+entregas/entrega-7-30-octubre/REGISTRO_CAMBIOS.md
+entregas/entrega-7-30-octubre/PLAN_IMPLEMENTACION_ENTREGA_30.md
+```
+
+#### Criterios de cierre
+
+- [x] La prueba automatizada puede repetirse sin editar código ni revelar secretos.
+- [x] Cada fallo indica dispositivo, fragmento, conexión y etapa.
+- [x] El informe permite entender qué hizo cada integrante y cómo reproducirlo.
+- [ ] La demo de software ya sigue pasos explícitos; falta repetirla desde un checkout limpio después del commit de cierre.
+
+## 7. Dependencias y trabajo paralelo
+
+```text
+Persona 1: contrato + particionador
+      ├──────────────► Persona 2: worker Pico
+      ├──────────────► Persona 3: worker browser + UX
+      └──────────────► Persona 4: conexión opcional del prototipo 3D
+Personas 1–4 ────────► Persona 5: integración, pruebas y documentación
+```
+
+Durante el primer día Personas 2 y 3 pueden trabajar con fixtures provisionales versionados por Persona 1. Persona 4 puede avanzar completamente con snapshots simulados. Persona 5 prepara el arnés físico y el informe desde el inicio, pero solo integra contratos congelados.
+
+## 8. Cronograma
+
+### Domingo 25 — definición
+
+- [x] Cerrar documentalmente la entrega anterior.
+- [x] Registrar la interpretación inicial y la arquitectura propuesta.
+- [ ] Confirmar hardware disponible y responsables definitivos.
+- [ ] Congelar alcance P0 y aplazamientos.
+
+### Lunes 26 — contratos y esqueletos
+
+- [x] Persona 1 congela protocolo, manifiesto y fixtures.
+- [x] Persona 2 prepara registro dinámico y worker Pico.
+- [x] Persona 3 prepara store/panel y worker navegador.
+- [ ] Persona 4 entrega escena Three.js con datos simulados.
+- [x] Persona 5 prepara runner, plantilla de evidencia e informe.
+
+### Martes 27 — ejecución por fragmentos
+
+- [x] Particionador y validadores aprobados.
+- [x] Fragmento local ejecuta en Pico (pruebas de escritorio; validación física pendiente).
+- [x] Fragmento local ejecuta en navegador (pruebas de escritorio con broker simulado).
+- [x] Primera conexión remota atraviesa MQTT (browser↔browser sobre Mosquitto real, `41 → 42`).
+- [x] UI muestra ejecutores y asignación.
+
+### Miércoles 28 — integración distribuida
+
+- [x] Estado agregado visible en dos colaboradores reales (`41 → 42`).
+- [x] Reconexión, deduplicación y cambio de época probados con cuatro ejecutores simulados.
+- [x] Matriz de cuatro ejecutores aprobada en memoria y de dos navegadores sobre Mosquitto real; la matriz física permanece abierta.
+- [x] Tutorial y colaboración mejorada integrados.
+- [x] Colaboración real por LAN, identificación por nombre y responsive móvil/tablet verificados por Persona 5.
+- [ ] Three.js consume el adapter acordado o queda documentado como aislado.
+
+### Jueves 29 — hardware, regresión y documentación
+
+- [ ] Ejecutar automatización física completa.
+- [ ] Ejecutar demo vial distribuida.
+- [x] Corregir solamente defectos P0 (dos conversiones de tipo en una prueba; sin cambios de producción).
+- [x] Ejecutar todas las suites y build.
+- [x] Completar informe, registro y guía para el alcance sin hardware.
+
+### Viernes 30 — congelación y entrega
+
+- [ ] Ensayo completo desde checkout limpio.
+- [ ] Registrar métricas, versiones, commit y checksum.
+- [x] Demostrar pérdida y recuperación de un ejecutor en el arnés simulado.
+- [ ] Congelar código y documentos.
+- [x] Presentar límites reales y trabajo futuro.
+
+## 9. Matriz de aceptación
+
+| Área | Prueba | Criterio |
+|---|---|---|
+| Particionado | mismo modelo compilado dos veces | fragmentos y rutas idénticos |
+| Propiedad | inspeccionar manifiesto | cada elemento ejecutable tiene un propietario |
+| Pico | cargar fragmento dirigido | solo la Pico destino lo acepta |
+| Browser | ejecutar fixture equivalente | salida coincide con el vector esperado |
+| Canal remoto | A publica y B consume | tipo, secuencia y valor correctos, sin duplicado |
+| Colaboración | cambiar destino en navegador A | navegador B muestra la misma asignación |
+| Reconexión | reiniciar un worker | recupera sesión o exige redespliegue explícito, sin estado fantasma |
+| Seguridad vial | cuatro pares y token | nunca hay verdes incompatibles; pérdida implica rojo seguro |
+| Física | runner sobre hardware disponible | reporte reproducible sin secretos |
+| UX | usuario nuevo sigue tutorial | crea, conecta, asigna y ejecuta un ejemplo mínimo |
+| Three.js | abrir/cerrar prototipo | representa el snapshot y libera recursos |
+| Calidad | suites, lint, tipos y build | todo aprobado |
+| Documentación | revisar informe y registro | decisiones, autores, archivos, pruebas y límites trazables |
+
+### 9.1 Guion de demostración
+
+#### A. Colaboración y asignación
+
+1. Abrir el mismo `?project=<id>` en dos navegadores.
+2. Mostrar presencia, cursores y selección remota.
+3. Abrir el panel de ejecutores.
+4. Asignar Structural Blocks a destinos diferentes.
+5. Confirmar que la asignación aparece en todos los colaboradores.
+
+#### B. Despliegue distribuido mínimo
+
+1. Crear dos Structural Blocks conectados.
+2. Asignar uno a una Pico y otro a un navegador.
+3. Mostrar manifiesto y dos fragmentos.
+4. Esperar ACK de ambos workers.
+5. Inyectar un valor y observarlo cruzar MQTT.
+6. Mostrar el estado agregado sin doble ejecución.
+
+#### C. Varios dispositivos y recuperación
+
+1. Incluir Pico↔Pico si hay dos placas y Pico↔browser obligatoriamente.
+2. Reiniciar un worker.
+3. Mostrar diagnóstico y recuperación o redespliegue.
+4. Publicar un mensaje de época anterior y demostrar su descarte.
+
+#### D. Semáforos distribuidos
+
+1. Mostrar cuatro Structural Blocks independientes.
+2. Iniciar todos en rojo.
+3. Circular el token y observar el cambio local.
+4. Confirmar ausencia de verdes incompatibles.
+5. Desconectar un ejecutor y mostrar rojo seguro.
+
+#### E. Experiencia de usuario
+
+1. Completar el tutorial desde un proyecto vacío.
+2. Crear, conectar, asignar y ejecutar un ejemplo mínimo.
+3. Compartir el enlace y seguir a un colaborador.
+4. Provocar un error de destino y seguir la recomendación visual.
+
+#### F. Three.js experimental
+
+1. Abrir la vista experimental.
+2. Aplicar un snapshot simulado o real.
+3. Mostrar que el carro responde al semáforo.
+4. Cerrar la vista y comprobar que libera la animación.
+
+### 9.2 Evidencia requerida
+
+| Evidencia | Responsable | Estado inicial |
+|---|---|---|
+| Protocolo y particionado | Persona 1 | Hecho: contrato v3, particionador, fixtures y 10 pruebas aprobadas |
+| Worker Pico | Persona 2 | Hecho en software: `DistributedWorker`, canales remotos, paridad SHA-256 y 165 pruebas aprobadas (pendiente corrida en placas físicas) |
+| Worker browser, colaboración y UX | Persona 3 | Hecho y probado con Mosquitto real en dos navegadores: asignación colaborativa, fragmentos, ACK, recuperación retenida, canal remoto, Python en Pyodide y estado agregado; pendiente ensayo con usuario nuevo |
+| Prototipo Three.js | Persona 4 | Pendiente |
+| Automatización física | Persona 5 | Runner seguro implementado: modo seco sin hardware y respaldo/despliegue verificados con filesystem simulado; placa real pendiente |
+| Pico↔Pico | Personas 2 y 5 | Pendiente según hardware |
+| Pico↔browser | Personas 2, 3 y 5 | Aprobado con ejecutor Pico simulado y browser; ensayo físico pendiente |
+| Semáforos distribuidos seguros | Personas 1, 2, 3 y 5 | Demo software hecha: cuatro pares, un token, cuatro fragmentos y ocho cesiones remotas; verde 3 s → amarillo 1 s → rojo probado; lease, fail-safe físico y ensayo con placas pendientes |
+| Suites, lint, tipos y build | Persona 5 | Hecho: frontend 148/148, firmware 167/167, lint y build aprobados |
+| Responsive y colaboración LAN | Persona 5 | Hecho: nombre solicitado antes de sincronizar; paleta táctil, paneles móviles, seguimiento y presencia verificados en 390×844 y 820×1180; HTTP LAN 200 y MQTT WebSocket autenticado |
+| Informe acumulado en este plan y registro | Persona 5 | Actualizado con alcance, comandos, evidencia y límites actuales |
+
+### 9.3 Ensayo repetible disponible sin hardware — Persona 5
+
+Desde la raíz del repositorio, el flujo de integración se reproduce sin editar archivos ni configurar credenciales:
+
+```powershell
+node scripts/test-distributed-mqtt.mjs --mode=memory --timeout=5000
+powershell -ExecutionPolicy Bypass -File scripts/test-distributed-physical.ps1 -Mode DryRun -AllowNoDevice
+```
+
+El primer comando levanta un broker en memoria y cuatro ejecutores de protocolo (`pico:a`, `browser:b`, `browser:c`, `pico:d`). Verifica registro, manifiesto, hashes, cuatro ACK, entrada, cuatro pasos, veinte snapshots, tres enlaces remotos, rechazo de época anterior y duplicado, desconexión/recuperación y liberación. La entrada `5` debe llegar como `6` al último ejecutor por el Functional Block intermedio.
+
+El segundo comando inventaría hardware sin fallar cuando no hay Pico, no imprime valores de configuración y deja la limitación en JSON. Para comprobar respaldo y despliegue de forma segura se puede pasar un directorio temporal mediante `-DevicePath`; el runner respalda antes de copiar, excluye `config_local.py` y verifica que su hash no cambie.
+
+Cuando Mosquitto esté activo en el listener WebSocket configurado en `frontend/.env.local`, el mismo escenario se ejecuta sobre red real:
+
+```powershell
+node scripts/test-distributed-mqtt.mjs --mode=mqtt --timeout=8000
+```
+
+El intento inicial de red produjo `ECONNREFUSED 127.0.0.1:9001`. Posteriormente se instaló Mosquitto 2.1.2, se configuró un listener WebSocket autenticado en la LAN y se comprobaron tanto la colaboración entre navegadores como las seis etapas del runner en modo `mqtt`. La ejecución real obtuvo cuatro ACK, entrada `5`, salida final `6`, veinte snapshots, dos mensajes antiguos/duplicados descartados y recuperación de una desconexión. El frontend respondió HTTP 200 desde la LAN. La configuración y `frontend/.env.local` son locales, están ignorados por Git y no constituyen evidencia física de Pico.
+
+Durante esta ejecución se corrigieron dos defectos del arnés, no del runtime distribuido: la liberación esperaba a un worker que el propio escenario había dejado desconectado y MQTT.js conservaba handles WebSocket durante el cierre. La liberación ahora se verifica sobre los workers conectados, registra explícitamente el worker pendiente de resincronización retained y acota/destruye los recursos de cierre, por lo que el comando termina con código `0`.
+
+Regresión utilizada para el cierre de software:
+
+```powershell
+cd frontend
+npm run test:run -- --maxWorkers=1 --isolate=false
+npm run lint
+npm run build
+cd ..
+python -m unittest discover -s firmware/tests -t .
+```
+
+En el entorno Codex se usó el Python incluido por la aplicación porque el alias `WindowsApps/python.exe` no tenía permisos. La primera ejecución paralela de Vitest perdió artefactos temporales del sandbox; la repetición no aislada aprobó todo. La regresión posterior, que incluye el ejemplo vial distribuido y su color runtime visible, elevó el total a 148 pruebas frontend y 167 de firmware.
+
+## 10. Exclusiones de esta entrega
+
+- Broker público de producción.
+- Autenticación de usuarios, roles empresariales o permisos persistentes.
+- Ejecución distribuida tolerante a particiones de red complejas.
+- Migración automática de estado interno de un bloque entre dispositivos activos.
+- Elección automática óptima de ejecutor.
+- CRDT completo para edición offline prolongada.
+- Integración definitiva de Three.js en el producto.
+- Soporte para tipos de elemento nuevos fuera del perfil IR v2 actual.
+
+## 11. Riesgos principales
+
+- **Alcance excesivo:** P0 tiene prioridad; Three.js y pulido avanzado no bloquean la demo distribuida.
+- **Mensajes atrasados:** usar `deploymentId`, `epoch`, secuencia y deduplicación.
+- **Doble ejecución:** propiedad única y rechazo si el fragmento no corresponde al ejecutor.
+- **Pérdida de nodo vial:** estado seguro en rojo y token con expiración controlada.
+- **Memoria Pico:** fragmentos pequeños, liberación explícita, telemetría y límites antes de aceptar.
+- **Confusión colaboración/ejecución:** stores, tópicos y estados visuales separados.
+- **Dependencia del navegador que despliega:** manifiesto retenido y workers autónomos durante la ejecución.
+- **Cambios cruzados entre integrantes:** propiedad de archivos y handoff obligatorio.
+
+## 12. Documento técnico acumulativo
+
+Este mismo plan funciona como documento maestro de la entrega. Persona 5 debe mantenerlo y agregar resultados comprobados sin convertirlo en una transcripción diaria.
+
+### Historia consolidada del proyecto
+
+- **Entregas iniciales:** presentación visual, editor React Flow, modelo documental y operaciones de archivo.
+- **Motor frontend:** propagación de datos, Functional Blocks, Sample/Hold, Petri, conflictos y pruebas TypeScript.
+- **MQTT y Pico:** Mosquitto, cliente web, topics, LED remoto, reconexión y configuración local.
+- **Runtime MicroPython:** Task, Scheduler, pub/sub, transporte, IR, motor y snapshots oficiales.
+- **Entrega del 20 de octubre:** IR v2, Python remoto, canales, retardos, Watchdog, colaboración, presencia, cursores y frontend reorganizado.
+- **Cierre físico del 25 de octubre:** flujo navegador → broker → Pico → navegadores confirmado; 153 pruebas firmware y 104 frontend aprobadas en `baadff6`.
+- **Entrega del 30 de octubre, software:** Personas 1–3 entregaron protocolo/particionado, worker Pico y worker navegador/UX. Persona 5 añadió runners repetibles, integración simulada de cuatro ejecutores, prueba real sobre Mosquitto, regresión completa y documentación; las Pico físicas quedan pendientes.
+
+### Cronología de la entrega del 30 de octubre
+
+1. **25 de octubre:** creación del plan y cierre de la línea base generalizada.
+2. **28 de octubre, Persona 1:** protocolo v3, manifiesto, particionador y fixtures.
+3. **28 de octubre, Persona 2:** worker MicroPython multi-Pico y paridad de fragmentos.
+4. **28 de octubre, Persona 3:** worker navegador, asignaciones, colaboración, tutorial y UX.
+5. **29 de octubre, Persona 5:** arnés MQTT en memoria/red, runner físico seguro, matriz simulada, regresión y cierre documental sin hardware.
+6. **29 de octubre, Persona 5:** broker Mosquitto LAN autenticado, colaboración navegador↔navegador real, identificación por nombre y frontend responsive validado en celular y tablet.
+7. **30 de octubre, Persona 1:** pull de los commits compartidos, resolución de tres conflictos, regresión completa y corrección del cierre del runner MQTT real.
+8. **30 de octubre, Persona 1:** demo de cuatro semáforos en anillo, cuatro fragmentos y ocho rutas remotas; token único y verde → amarillo → rojo probados en navegador y firmware.
+9. **Pendiente:** Persona 4 (Three.js), lease/fail-safe del token, placas físicas, matriz Pico↔Pico/Pico↔browser y ensayo final con hardware.
+
+### Aportes históricos y responsabilidad actual
+
+| Persona | Aporte confirmado anterior | Responsabilidad del 30 de octubre |
+|---|---|---|
+| Persona 1 | PythonExecutor, validación, runtime values y Watchdog | Protocolo, manifiesto y particionador |
+| Persona 2 | IR v2, compilador, canales y protocolo colaborativo | Worker MicroPython multi-Pico |
+| Persona 3 | Motor MicroPython v2, Sample/Hold, retardos y demo general | Worker navegador, colaboración y UX |
+| Persona 4 | Topbar, paneles y aprovechamiento del canvas | Prototipo Three.js |
+| Persona 5 | Integración, colaboración, cuatro navegadores, empaquetado y guías | Automatización física, integración y documentación |
+
+### Sección que se actualiza por cada persona
+
+Al cerrar un handoff, Persona 5 agregará o actualizará aquí:
+
+1. qué construyó;
+2. cómo funciona;
+3. archivos y commit;
+4. decisiones y motivo;
+5. pruebas exactas;
+6. evidencia física o visual;
+7. errores encontrados;
+8. limitaciones y trabajo posterior.
+
+### Glosario mínimo
+
+- **Worker/ejecutor:** proceso Pico o navegador que ejecuta un fragmento.
+- **Fragmento:** subconjunto IR propiedad de un ejecutor.
+- **Manifiesto:** despliegue con fragmentos, rutas, propietarios y hashes.
+- **Época:** versión monotónica que invalida mensajes anteriores.
+- **Snapshot parcial:** estado observable de un solo fragmento.
+- **Gemelo digital:** representación 3D consumidora del estado del sistema.
+
+## 13. Decisiones pendientes antes de implementar
+
+- [ ] Confirmar cuántas Pico W y computadores estarán disponibles.
+- [ ] Confirmar responsables propuestos.
+- [ ] Aprobar Structural Block como unidad principal y la sobreescritura por Functional Block.
+- [ ] Aprobar token lógico o elegir otro protocolo vial distribuido.
+- [ ] Decidir si el worker navegador corre en Web Worker desde P0.
+- [ ] Congelar semántica de paso global y barreras entre fragmentos.
+- [ ] Definir comportamiento de CCH/DCH durante una reconexión.
+- [ ] Confirmar si la demostración será solo LAN o también entre redes distintas.

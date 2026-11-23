@@ -484,6 +484,21 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
 - **Paquete vigente:** `output/hiles-pico-w-deploy.zip`, **31 archivos**, SHA-256 `209AEF16AB85DCAA7D0966D7F2DE00EC748BBC952A2DAA1CD38ABA3AFB82A57D`. Se verificó el listado del ZIP y no contiene `traffic_controller.py`, `vehicle_sensor_task.py` ni `traffic_io.py`. La guía incluida indica cómo retirar esos tres archivos obsoletos de una Pico que conserve la versión anterior.
 - **Alcance posterior:** cuando se conecte un sensor real, deberá alimentar un Service mediante un adaptador genérico. No se modificará `main.py`, el scheduler ni el motor para agregar lógica de semáforos.
 
+### [2026-10-25] — Cierre físico posterior y revalidación del commit `baadff6`
+
+- **Estado:** [x] Flujo físico aprobado por confirmación directa del usuario.
+- **Alcance confirmado:** navegador → Mosquitto → Pico W → ejecución MicroPython → snapshot oficial → navegadores; carga de modelo, Functional Blocks Python, Services manuales, Sample/Hold, CCH/DCH/LCH-Petri, retardos cooperativos, rechazo seguro y demo manual general.
+- **Naturaleza de la evidencia:** la ejecución física fue realizada y confirmada por el usuario. Este registro no inventa direcciones IP, memoria libre, tiempos ni capturas que no fueron entregados.
+- **Revalidación local sobre `baadff6`:**
+  - Firmware: **153 pruebas aprobadas**.
+  - Frontend: **17 archivos y 104 pruebas aprobadas**.
+  - ESLint: aprobado.
+  - TypeScript y build Vite: aprobados; permanecen las advertencias conocidas de módulos de Node externalizados por Pyodide y chunk principal mayor de 500 kB.
+  - Paquete: **31 archivos**, sin `traffic_controller.py`, `vehicle_sensor_task.py` ni `traffic_io.py`.
+  - SHA-256 vigente: `665EF55C65431FC7C296A3E892B805A85D17659B1C8F6ADE0338CF725E149273`.
+- **Conclusión de arquitectura:** `main.py` continúa siendo general y no contiene reglas de semáforos, sensores o GPIO de un dominio. Los ejemplos se expresan como modelos creados con los elementos soportados por IR v2.
+- **Pendiente trasladado a la próxima entrega:** conservar métricas cuantitativas repetibles de memoria, duración máxima y tamaño límite en hardware, y definir el siguiente incremento sin reintroducir lógica particular en el runtime.
+
 ## Confirmación de responsables
 
 - [x] Persona 1 — Nombre: Kevin Rincón
@@ -494,12 +509,12 @@ Este archivo registra únicamente trabajo comprobable de la entrega. Crear una i
 
 ## Control de integración
 
-- [x] Persona 1 registra contrato y runtime autónomo; integración IR v2 y prueba física continúan pendientes.
+- [x] Persona 1 registra contrato, runtime autónomo, integración IR v2 y cierre físico posterior.
 - [x] Persona 2 registra protocolo web y URL.
 - [x] Persona 3 registra motor v2 y demo manual; el runtime general no contiene sensores ni lógica vial.
 - [x] Persona 4 registra UI/UX y la comprobación visual a 1366×768 y 1920×1080.
 - [x] Persona 5 registra colaboración e integración.
 - [x] Todos los integrantes registraron sus cambios y pruebas de escritorio disponibles.
-- [x] La entrada de cierre coincide con los resultados reales y declara la Pico física como pendiente.
-- [x] No hay casillas cerradas sin prueba o evidencia; las casillas dependientes de hardware permanecen abiertas.
+- [x] La entrada de cierre distingue las suites ejecutadas por Codex de la prueba física confirmada por el usuario.
+- [x] No se inventaron métricas ni capturas; las mediciones cuantitativas no entregadas permanecen abiertas para la siguiente entrega.
 

@@ -5,10 +5,22 @@ import { Canvas } from './Canvas';
 import { Palette } from './Palette';
 import { PanelDock } from './PanelDock';
 import { TopBar } from './TopBar';
-import { getNextDockPanel, type DockPanel } from './panelState';
+import {
+  applyWorkspacePanelAction,
+  sameWorkspacePanelsState,
+  type DockPanel,
+  type WorkspacePanelAction,
+} from './panelState';
 import { Participants } from '../collaboration/Participants';
-import { useProjectStore } from '../../stores/useProjectStore';
+import { DisplayNameDialog } from '../collaboration/DisplayNameDialog';
+import { getStoredDisplayName, saveDisplayName, useProjectStore } from '../../stores/useProjectStore';
 import './editor.css';
+
+const esVistaMovil = (): boolean => (
+  typeof window !== 'undefined'
+  && typeof window.matchMedia === 'function'
+  && window.matchMedia('(max-width: 760px)').matches
+);
 
 export const Editor: React.FC = () => {
   const {
@@ -22,15 +34,18 @@ export const Editor: React.FC = () => {
     canRedo,
     clearModel,
     nodes,
-    edges,
     paletteOpen,
     setPaletteOpen,
   } = useEditorStore();
   const importInput = useRef<HTMLInputElement>(null);
-  const [activePanel, setActivePanel] = useState<DockPanel>(null);
+  const [paneles, setPaneles] = useState<{ activePanel: DockPanel; distributedOpen: boolean }>({
+    activePanel: null,
+    distributedOpen: false,
+  });
   const [projectId, setProjectId] = useState(() => asegurarProjectIdEnUrl());
   const [projectDraft, setProjectDraft] = useState(projectId);
-  const [fileName, setFileName] = useState('Untitled model');
+  const [fileName, setFileName] = useState('Modelo sin título');
+  const [displayName, setDisplayName] = useState<string | null>(() => getStoredDisplayName());
   const projectReady = useProjectStore((state) => state.ready);
 
   useEffect(() => {
@@ -38,7 +53,10 @@ export const Editor: React.FC = () => {
     setPaletteOpen(false);
   }, [loadAutosave, setPaletteOpen]);
 
-  useEffect(() => useProjectStore.getState().start(projectId), [projectId]);
+  useEffect(() => {
+    if (!displayName) return;
+    return useProjectStore.getState().start(projectId, displayName);
+  }, [projectId, displayName]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -65,33 +83,55 @@ export const Editor: React.FC = () => {
   };
 
   const downloadJson = () => {
-    const blob = new Blob([exportModel()], { type: 'application/json' });
+    const data = exportModel();
+    const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${projectId}.json`;
-    link.click();
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileName.endsWith('.json') ? fileName : `${fileName}.json`}`;
+    a.click();
     URL.revokeObjectURL(url);
-    setFileName(`${projectId}.json`);
   };
 
-  const uploadJson = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      importModel(await file.text());
-      setFileName(file.name);
-    }
-    event.target.value = '';
+  const uploadJson = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) importModel(content);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
   };
 
   const newProject = () => {
-    if ((nodes.length || edges.length) && !window.confirm('Clear this project? This cannot be undone.')) return;
+    if (nodes.length > 0 && !window.confirm('¿Desea crear un nuevo modelo? Se perderán los cambios no guardados.')) return;
     clearModel();
-    setFileName('Untitled model');
+    setFileName('Modelo sin título');
   };
 
-  const togglePanel = (requested: Exclude<DockPanel, null>) => {
-    setActivePanel((current) => getNextDockPanel(current, requested));
+  const aplicarAccionPanel = (accion: WorkspacePanelAction) => {
+    const actual = {
+      activePanel: paneles.activePanel,
+      distributedOpen: paneles.distributedOpen,
+      paletteOpen: useEditorStore.getState().paletteOpen,
+    };
+    const siguiente = applyWorkspacePanelAction(actual, accion, esVistaMovil());
+    if (sameWorkspacePanelsState(actual, siguiente)) return;
+    if (
+      siguiente.activePanel !== actual.activePanel
+      || siguiente.distributedOpen !== actual.distributedOpen
+    ) {
+      setPaneles({
+        activePanel: siguiente.activePanel,
+        distributedOpen: siguiente.distributedOpen,
+      });
+    }
+    if (siguiente.paletteOpen !== actual.paletteOpen) {
+      setPaletteOpen(siguiente.paletteOpen);
+    }
   };
 
   return (
@@ -104,7 +144,9 @@ export const Editor: React.FC = () => {
         canUndo={canUndo}
         canRedo={canRedo}
         paletteOpen={paletteOpen}
-        activePanel={activePanel}
+        activePanel={paneles.activePanel}
+        distributedOpen={paneles.distributedOpen}
+        tutorialEnabled={Boolean(displayName)}
         onProjectDraftChange={setProjectDraft}
         onProjectCommit={commitProjectId}
         onNewProject={newProject}
@@ -112,17 +154,42 @@ export const Editor: React.FC = () => {
         onExport={downloadJson}
         onUndo={undo}
         onRedo={redo}
-        onTogglePalette={() => setPaletteOpen(!paletteOpen)}
-        onTogglePanel={togglePanel}
+        onTogglePalette={() => aplicarAccionPanel({ type: 'toggle-palette' })}
+        onTogglePanel={(panel) => aplicarAccionPanel({ type: 'toggle-dock', panel })}
+        onSelectPanel={(panel) => aplicarAccionPanel({ type: 'set-dock', panel })}
+        onToggleDistributed={() => aplicarAccionPanel({ type: 'toggle-distributed' })}
+        onOpenDistributed={() => aplicarAccionPanel({ type: 'open-distributed' })}
+        onCloseDistributed={() => aplicarAccionPanel({ type: 'close-distributed' })}
       />
       <Participants />
+      {!displayName && <DisplayNameDialog onConfirm={(name) => setDisplayName(saveDisplayName(name))} />}
       <input ref={importInput} type="file" accept="application/json,.json" onChange={uploadJson} hidden />
 
       <main className="editor-workspace">
         <Canvas />
         <Palette />
-        <PanelDock activePanel={activePanel} onPanelChange={setActivePanel} />
-        {!projectReady && <div className="project-sync-loading" role="status">Connecting to project and loading its retained snapshot…</div>}
+        <PanelDock
+          activePanel={paneles.activePanel}
+          onPanelChange={(panel) => aplicarAccionPanel({ type: 'set-dock', panel })}
+          onOpenDistributed={() => aplicarAccionPanel({ type: 'open-distributed' })}
+        />
+        {displayName && !projectReady && (
+          <div className="project-sync-loading" role="status" aria-live="polite">
+            <div className="project-sync-loading__card">
+              <span className="project-sync-loading__spinner" aria-hidden="true" />
+              <p className="project-sync-loading__text">
+                Conectando al proyecto y sincronizando estado…
+              </p>
+              <button
+                type="button"
+                className="btn btn--secondary project-sync-loading__btn"
+                onClick={() => useProjectStore.setState({ ready: true })}
+              >
+                Continuar sin conexión
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

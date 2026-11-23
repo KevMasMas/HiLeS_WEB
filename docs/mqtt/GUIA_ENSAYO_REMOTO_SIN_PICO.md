@@ -1,68 +1,50 @@
-# Ensayo remoto sin Pico física
+# Ensayo de ejecución distribuida sin Pico física
 
-Esta guía permite comprobar el broker, cuatro navegadores, la sesión compartida
-y la actualización del canvas. El motor MicroPython se valida aparte mediante
-las pruebas automatizadas del firmware.
+**Vigente para:** rama `multi-pico` (entrega 8).
+**Objetivo:** comprobar broker, colaboración, despliegue, canales remotos y controles usando solo navegadores. Sirve como regresión sin hardware y como plan B de la demostración.
 
-## Preparación
+> Hasta la entrega 7 esta guía describía el modo **Pico / MQTT** con publicación manual de instantáneas `v1`. Ese modo se retiró en la entrega 8. Hoy toda ejecución usa el panel **Ejecutores** y el protocolo v3.
 
-1. Confirmar que Mosquitto escucha MQTT en `1883` y WebSockets en `9001`.
-2. Iniciar el frontend y abrir cuatro ventanas o navegadores.
-3. Importar en **cada navegador** `output/demo-4-semaforos-inteligentes.json`.
-   El enlace de sesión comparte `modelo_id` y `version`, pero no contiene el
-   diagrama visual.
-4. En el primer navegador seleccionar `Pico / MQTT`, usar `cruce-01`, versión
-   `1` y copiar el enlace a los otros tres. Seleccionar `Pico / MQTT` ya activa
-   la sesión; el botón cambia a **Reintentar conexión** y puede usarse si el
-   broker se inició después o la primera conexión falló.
-5. En los otros navegadores abrir el enlace y pulsar **Pico / MQTT / Unirse**.
+## 1. Requisitos
 
-Después de unirse deben verse `Sesión: ACTIVA` y `MQTT: CONNECTED`. El canvas
-no cambia todavía: unirse solo establece la sesión y la suscripción. El primer
-cambio visual ocurre al recibir una publicación válida de
-`simulacion/estado`, como las de la sección siguiente.
+- Mosquitto activo en `1883` y `9001` (ver [`../GUIA_REPLICACION_COMPLETA_WINDOWS.md`](../GUIA_REPLICACION_COMPLETA_WINDOWS.md) §5).
+- `frontend/.env.local` con la IPv4 del PC y las credenciales del laboratorio.
+- Frontend iniciado con `npm run dev -- --host 0.0.0.0`.
+- Dos navegadores, perfiles o equipos (A y B).
 
-## Publicación manual de una instantánea oficial
+## 2. Comprobación automática previa
 
-Definir localmente las credenciales sin escribirlas en el repositorio:
+Desde la raíz del repositorio:
 
 ```powershell
-$usuario = "USUARIO_MQTT"
-$clave = "CONTRASENA_MQTT"
+node .\scripts\test-mqtt-four-clients.mjs
+node .\scripts\test-project-collaboration.mjs
+node .\scripts\test-distributed-mqtt.mjs --mode=memory
+node .\scripts\test-distributed-mqtt.mjs --mode=mqtt --timeout=8000
 ```
 
-Publicar el estado inicial retenido:
+El modo `memory` no necesita broker. El modo `mqtt` usa Mosquitto real; en él los ejecutores `pico:*` son dobles en Node.js y **no** cuentan como placas.
 
-```powershell
-$estado = '{"modelo_id":"cruce-01","version":1,"secuencia":0,"estado":"lista","elementos":{"norte-rojo":{"tokens":1},"norte-amarillo":{"tokens":0},"norte-verde":{"tokens":0},"sur-rojo":{"tokens":1},"sur-amarillo":{"tokens":0},"sur-verde":{"tokens":0},"este-rojo":{"tokens":1},"este-amarillo":{"tokens":0},"este-verde":{"tokens":0},"oeste-rojo":{"tokens":1},"oeste-amarillo":{"tokens":0},"oeste-verde":{"tokens":0}}}'
-$estado | & "C:\Program Files\mosquitto\mosquitto_pub.exe" -h localhost -p 1883 -u $usuario -P $clave -q 1 -r -t "udfjc/hiles/v1/equipo1/pico01/simulacion/estado" -s
-```
+## 3. Ensayo manual navegador ↔ navegador
 
-Después publicar la fase Norte–Sur verde con una secuencia mayor:
+1. En A, abrir `http://IP_DEL_PC:5173/?project=ensayo-sin-pico` y escribir un nombre.
+2. Con el lienzo vacío, pulsar **Cargar ejemplo multi-Pico**.
+3. **Compartir** → copiar el enlace y abrirlo en B. Ambos deben verse como colaboradores.
+4. En A y en B, abrir **Ejecutores** y activar «Ejecutar aquí los bloques asignados a «Este navegador»».
+5. En A, en **Destino por bloque**:
+   - SB 1 → el navegador B;
+   - SB 2 → «Este navegador»;
+   - SB 3 → «Este navegador».
+6. Pulsar **Desplegar** y esperar un ACK por fragmento.
+7. En **Entradas**, enviar `6` a «Número de entrada» y pulsar **Paso** varias veces.
+8. En el estado agregado deben verse `doble = 12` y `alerta = true`. Con `4`: `8` y `false`.
+9. Probar **Iniciar**, **Detener** y **Reiniciar** de la barra superior; B debe ver el mismo estado.
+10. Cerrar B: los elementos de SB 1 deben verse «Obsoleto» y la asignación se conserva. Reabrir B, activar «Ejecutar aquí» y, si hace falta, **Volver a desplegar**.
 
-```powershell
-$estado = '{"modelo_id":"cruce-01","version":1,"secuencia":1,"estado":"pausada","elementos":{"norte-rojo":{"tokens":0},"norte-amarillo":{"tokens":0},"norte-verde":{"tokens":1},"sur-rojo":{"tokens":0},"sur-amarillo":{"tokens":0},"sur-verde":{"tokens":1},"este-rojo":{"tokens":1},"este-amarillo":{"tokens":0},"este-verde":{"tokens":0},"oeste-rojo":{"tokens":1},"oeste-amarillo":{"tokens":0},"oeste-verde":{"tokens":0}}}'
-$estado | & "C:\Program Files\mosquitto\mosquitto_pub.exe" -h localhost -p 1883 -u $usuario -P $clave -q 1 -r -t "udfjc/hiles/v1/equipo1/pico01/simulacion/estado" -s
-```
+## 4. Qué no demuestra este ensayo
 
-Se usa `-s` para que `mosquitto_pub` lea el JSON desde la entrada estándar.
-En PowerShell, pasarlo mediante `-m $estado` puede eliminar las comillas dobles
-al invocar un ejecutable nativo y dejar retenido un contenido que no es JSON.
+- Wi-Fi, memoria y temporización de una Pico real.
+- Que el firmware de las placas sea el paquete canónico.
+- Las matrices Pico ↔ Pico y Pico ↔ navegador.
 
-Los cuatro navegadores deben mostrar `PAUSADA`, secuencia `1`, Norte y Sur en
-verde, y Este y Oeste en rojo. Recargar una ventana debe recuperar el mismo
-estado retenido.
-
-## Cobertura automatizada complementaria
-
-```powershell
-python -m unittest discover -s firmware/tests -t . -v
-cd frontend
-npm run test:run
-npm run lint
-npm run build
-```
-
-Las pruebas del firmware recorren `MqttTransport → Node → EngineTask → Node →
-MqttTransport`; las del frontend verifican compilación, filtro de secuencia,
-recepción remota y exclusión mutua del cruce.
+Esos puntos se prueban con [`GUIA_PRUEBA_PICO_W.md`](GUIA_PRUEBA_PICO_W.md).

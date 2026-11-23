@@ -2,8 +2,12 @@ import React from 'react';
 import { Handle, NodeResizer, Position, type Node, type NodeProps } from '@xyflow/react';
 import { HilesElementType, type HilesNodeData, type HilesPort } from '../../types/hiles';
 import { HilesGlyph } from './HilesGlyph';
+import { PlaceTokenView, StaleRuntimeBadge } from './PlaceTokenView';
+import { esRuntimeObsoleto } from './nodeRuntimeView';
 import { TRIANGLE_VIEWBOX, triangleVertices } from './triangleGeometry';
 import { useEditorStore } from '../../stores/useEditorStore';
+import { claseColorRuntime } from './runtimeColor';
+import { ExecutionTargetBadge } from './ExecutionTargetBadge';
 
 const positionFor = (side: HilesPort['side']) => ({ left: Position.Left, right: Position.Right, top: Position.Top, bottom: Position.Bottom })[side];
 
@@ -174,6 +178,7 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
   const allEdges = useEditorStore((state) => state.edges);
   const disabled = !properties.enabled;
   const locked = properties.locked;
+  const stale = esRuntimeObsoleto(data.runtime);
   const displayedTokens = data.runtime?.tokens ?? properties.tokens;
 
   const rotationStyle = properties.rotation ? { transform: `rotate(${properties.rotation}deg)` } : undefined;
@@ -183,6 +188,7 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
         <div aria-hidden="true" className="hiles-structural__shape" style={rotationStyle} />
         <NodeResizer isVisible={selected && !locked} minWidth={200} minHeight={130} lineClassName="hiles-resizer-line" handleClassName="hiles-resizer-handle" onResizeStart={beginHistoryTransaction} onResizeEnd={endHistoryTransaction} />
         <PortHandles ports={ports} />
+        <ExecutionTargetBadge nodeId={id} />
         {summaryMode ? (
           <div className="hiles-structural__summary">
             <strong>{name}</strong>
@@ -191,7 +197,7 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
         ) : <>
           <div className="hiles-structural__header">
             <strong>{name}</strong>
-            <span>{properties.collapsed ? '▸ Collapsed' : locked ? '🔒 Locked' : 'Structural Block'}</span>
+            <span>{properties.collapsed ? '▸ Colapsado' : locked ? 'Bloqueado' : 'Structural Block'}</span>
           </div>
           {properties.description && <div className="hiles-structural__description">{properties.description}</div>}
         </>}
@@ -219,7 +225,9 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
     ? sideTowardNode(currentNode, allNodes.find((node) => node.id === outputConnection?.target), allNodes, oppositeSide(inputSide))
     : 'right';
   return (
-    <div className={`hiles-node ${isPetri ? 'hiles-node--petri' : ''} ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''}`}>
+    <div className={`hiles-node ${isPetri ? 'hiles-node--petri' : ''} ${selected ? 'is-selected' : ''} ${disabled ? 'is-disabled' : ''} ${locked ? 'is-locked' : ''} ${stale ? 'is-stale' : ''}`}>
+      {(isFunctional || currentNode?.parentId) && <ExecutionTargetBadge nodeId={id} />}
+      {stale && <StaleRuntimeBadge />}
       {isFunctional && data.runtime?.error && (
         <span className="hiles-node__error-badge" title={data.runtime.error}>⚠</span>
       )}
@@ -244,11 +252,11 @@ export const HilesNode: React.FC<NodeProps<Node<HilesNodeData>>> = ({ id, data, 
         />}
         <HilesGlyph type={hilesType} width={glyphWidth} height={glyphHeight} direction={properties.operatorDirection} style={hilesType === HilesElementType.TRANSITION ? rotationStyle : undefined} />
         {isFunctional && (properties.code || properties.expression) && <span className="hiles-node__expression" style={{ transform: `rotate(${-properties.rotation}deg)`, transformOrigin: 'center' }}>{String(properties.code || properties.expression).slice(0, 30)}</span>}
-        {hilesType === HilesElementType.PLACE && displayedTokens > 0 && <span className="hiles-place-token" aria-label={`${displayedTokens} token`} />}
+        {hilesType === HilesElementType.PLACE && <PlaceTokenView tokens={displayedTokens} stale={stale} />}
       </div>
       <div className="hiles-node__name" style={{ transform: isPetri ? 'translateX(-50%)' : undefined }}>{name}</div>
       {hilesType === HilesElementType.TRANSITION && properties.condition && <div className="hiles-node__caption">{properties.condition}</div>}
-      {data.runtime?.value !== undefined && <div className={`hiles-node__runtime ${data.runtime.value === true ? 'is-on' : ''}`}>{typeof data.runtime.value === 'boolean' ? (data.runtime.value ? 'ON · 1' : 'OFF · 0') : String(data.runtime.value)}</div>}
+      {data.runtime?.value !== undefined && <div className={`hiles-node__runtime ${data.runtime.value === true ? 'is-on' : ''} ${claseColorRuntime(data.runtime.value)} ${stale ? 'is-stale' : ''}`.trim()}>{typeof data.runtime.value === 'boolean' ? (data.runtime.value ? 'ON · 1' : 'OFF · 0') : String(data.runtime.value)}</div>}
     </div>
   );
 };

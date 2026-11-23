@@ -30,6 +30,7 @@ describe('elementos HiLeS', () => {
     transicion.recibirEntrada('transition-condition-in', true);
     expect(transicion.estaHabilitada()).toBe(true);
     transicion.marcarDisparo();
+    expect(transicion.estaHabilitada()).toBe(false);
     expect(transicion.evaluar().get('transition-action-out')).toBe(true);
     expect(transicion.evaluar().size).toBe(0);
   });

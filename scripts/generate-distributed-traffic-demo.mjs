@@ -1,19 +1,22 @@
-// Genera output/demo-4-semaforos-distribuidos.json (Persona 3, entrega del 20 de octubre).
+// Genera output/demo-4-semaforos-distribuidos.json.
 //
-// Demo automático construido únicamente con elementos generales de HiLeS.
-// El usuario inyecta solo los cuatro conteos de vehículos; un Functional Block
-// central decide qué eje recibe verde y mantiene el otro en rojo.
+// Cuatro semáforos autónomos comparten un único token lógico en el orden
+// Norte → Este → Sur → Oeste. Cada nodo decide con un Functional Block si usa
+// el turno según su fila local. Un turno siempre recorre verde → amarillo →
+// rojo antes de enviar el token; un acceso sin carros lo cede desde rojo.
 //
 // Uso desde la raíz del repositorio:
 //   node scripts/generate-distributed-traffic-demo.mjs
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+const GREEN_MS = 3000;
+const YELLOW_MS = 1000;
 const directions = [
-  { id: 'norte', name: 'Norte', axis: 'norte-sur', x: 80, y: 80 },
-  { id: 'sur', name: 'Sur', axis: 'norte-sur', x: 820, y: 80 },
-  { id: 'este', name: 'Este', axis: 'este-oeste', x: 80, y: 520 },
-  { id: 'oeste', name: 'Oeste', axis: 'este-oeste', x: 820, y: 520 },
+  { id: 'norte', name: 'Norte', next: 'este', x: 60, y: 60 },
+  { id: 'este', name: 'Este', next: 'sur', x: 900, y: 60 },
+  { id: 'sur', name: 'Sur', next: 'oeste', x: 900, y: 660 },
+  { id: 'oeste', name: 'Oeste', next: 'norte', x: 60, y: 660 },
 ];
 
 const baseProperties = (overrides = {}) => ({
@@ -23,164 +26,173 @@ const baseProperties = (overrides = {}) => ({
   operatorDirection: 'right', rotation: 0, ...overrides,
 });
 
-const port = (id, name, direction, dataType, side, offset = 0.5) => ({
-  id, name, direction, dataType, nature: 'continuous', side, offset,
+const port = (id, name, direction, dataType, side, offset = 0.5, nature = 'continuous') => ({
+  id, name, direction, dataType, nature, side, offset,
 });
 
-const lampCode = [
-  'def calcular(**inputs):',
-  "    luz = inputs.get('luz')",
-  "    vehiculos_esperando = inputs.get('vehiculos_esperando')",
-  '    if vehiculos_esperando is None:',
-  '        vehiculos_esperando = 0',
-  "    if luz != 'verde' and luz != 'amarillo':",
-  "        luz = 'rojo'",
-  '    return {',
-  "        'rojo': luz == 'rojo',",
-  "        'amarillo': luz == 'amarillo',",
-  "        'verde': luz == 'verde',",
-  "        'vehiculos': vehiculos_esperando,",
-  '    }',
-].join('\n');
+const transitionPorts = (id) => [
+  port(`${id}-cond`, 'condicion', 'input', 'boolean', 'top', 0.5, 'control'),
+  port(`${id}-action`, 'accion', 'output', 'boolean', 'bottom', 0.5, 'control'),
+];
 
-const trafficControlCode = [
-  'def calcular(**inputs):',
-  ...directions.flatMap((direction) => [
-    `    ${direction.id} = inputs.get('vehiculos_${direction.id}')`,
-    `    if ${direction.id} is None:`,
-    `        ${direction.id} = 0`,
-  ]),
-  '    total_norte_sur = norte + sur',
-  '    total_este_oeste = este + oeste',
-  "    luz_norte = 'rojo'",
-  "    luz_sur = 'rojo'",
-  "    luz_este = 'rojo'",
-  "    luz_oeste = 'rojo'",
-  "    eje = 'todo-rojo'",
-  '    if total_norte_sur > total_este_oeste:',
-  "        luz_norte = 'verde'",
-  "        luz_sur = 'verde'",
-  "        eje = 'norte-sur'",
-  '    elif total_este_oeste > total_norte_sur:',
-  "        luz_este = 'verde'",
-  "        luz_oeste = 'verde'",
-  "        eje = 'este-oeste'",
+const dataEdge = (type = 'CONTINUOUS', dataType = 'boolean', delay = 0) => ({
+  hilesConnectionType: type, routing: 'orthogonal', dataType,
+  delay, weight: 1, propagationMode: 'push', waypoints: [],
+});
+
+const petriEdge = () => ({
+  hilesConnectionType: 'PETRI', routing: 'orthogonal', dataType: 'boolean',
+  delay: 0, weight: 1, propagationMode: 'push', waypoints: [],
+});
+
+const decisionCode = [
+  'def calcular(vehiculos_locales):',
   '    return {',
-  "        'luz_norte': luz_norte,",
-  "        'luz_sur': luz_sur,",
-  "        'luz_este': luz_este,",
-  "        'luz_oeste': luz_oeste,",
-  "        'eje': eje,",
+  "        'hay_demanda': vehiculos_locales > 0,",
+  "        'sin_demanda': vehiculos_locales <= 0,",
+  "        'ciclo_activo': True,",
   '    }',
 ].join('\n');
 
 const elements = [];
 const connections = [];
-const edgeData = (dataType) => ({
-  hilesConnectionType: 'CONTINUOUS', routing: 'orthogonal', dataType,
-  delay: 0, weight: 1, propagationMode: 'push', waypoints: [],
-});
+
+const addData = (id, source, sourceHandle, target, targetHandle, label, type = 'CONTINUOUS', dataType = 'boolean', delay = 0) => {
+  connections.push({ id, source, sourceHandle, target, targetHandle, label, type: 'hilesEdge', data: dataEdge(type, dataType, delay) });
+};
+
+const addArc = (id, source, target) => {
+  connections.push({
+    id, source, sourceHandle: 'petri-out', target, targetHandle: 'petri-in',
+    type: 'hilesEdge', data: petriEdge(),
+  });
+};
 
 for (const direction of directions) {
-  const block = `${direction.id}-block`;
+  const d = direction.id;
+  const block = `${d}-block`;
+  const fb = `decision-${d}`;
+  const serviceCars = `sensor-${d}`;
+  const red = `${d}-rojo`;
+  const green = `${d}-verde`;
+  const yellow = `${d}-amarillo`;
+  const token = `${d}-token`;
+  const ready = `${d}-listo`;
+  const start = `${d}-iniciar-verde`;
+  const skip = `${d}-ceder-sin-demanda`;
+  const toYellow = `${d}-verde-a-amarillo`;
+  const release = `${d}-amarillo-a-rojo`;
+  const receive = `${d}-recibir-token`;
+
   elements.push({
     id: block, type: 'STRUCTURAL_BLOCK', name: `Semáforo ${direction.name}`,
-    layout: { x: direction.x, y: direction.y, width: 640, height: 340 }, ports: [],
+    layout: { x: direction.x, y: direction.y, width: 780, height: 520 }, ports: [],
     properties: baseProperties({
-      description: `Recibe el número de vehículos del sentido ${direction.name} y muestra el color decidido automáticamente.`,
+      description: `Nodo autónomo ${direction.name}: usa o cede el token y lo entrega a ${direction.next}.`,
     }),
   });
   elements.push({
-    id: `sensor-${direction.id}`, type: 'SERVICE', name: `🚗 Sensor ${direction.name}`, parentId: block,
-    layout: { x: 40, y: 60 },
-    ports: [port(`sensor-${direction.id}-out`, 'vehiculos_esperando', 'output', 'integer', 'right')],
-    properties: baseProperties({
-      description: `Cantidad de vehículos detenidos esperando paso en el sentido ${direction.name}.`,
-      heldValue: '0',
-    }),
+    id: serviceCars, type: 'SERVICE', name: `Carros esperando · ${direction.name}`, parentId: block,
+    layout: { x: 35, y: 65 },
+    ports: [port(`${serviceCars}-out`, 'vehiculos_locales', 'output', 'integer', 'right')],
+    properties: baseProperties({ description: 'Entrada manual de demanda local.', heldValue: '0' }),
   });
   elements.push({
-    id: `lamparas-${direction.id}`, type: 'FUNCTIONAL_BLOCK', name: `Lámparas ${direction.name}`, parentId: block,
-    layout: { x: 330, y: 110 },
+    id: fb, type: 'FUNCTIONAL_BLOCK', name: `Decisión local · ${direction.name}`, parentId: block,
+    layout: { x: 225, y: 65 },
     ports: [
-      port(`lamparas-${direction.id}-luz`, 'luz', 'input', 'string', 'left', 0.3),
-      port(`lamparas-${direction.id}-vehiculos`, 'vehiculos_esperando', 'input', 'integer', 'left', 0.7),
-      port(`lamparas-${direction.id}-rojo`, 'rojo', 'output', 'boolean', 'right', 0.2),
-      port(`lamparas-${direction.id}-amarillo`, 'amarillo', 'output', 'boolean', 'right', 0.4),
-      port(`lamparas-${direction.id}-verde`, 'verde', 'output', 'boolean', 'right', 0.6),
-      port(`lamparas-${direction.id}-vehiculos-out`, 'vehiculos', 'output', 'integer', 'right', 0.8),
+      port(`${fb}-cars`, 'vehiculos_locales', 'input', 'integer', 'left'),
+      port(`${fb}-demand`, 'hay_demanda', 'output', 'boolean', 'right', 0.35, 'control'),
+      port(`${fb}-skip`, 'sin_demanda', 'output', 'boolean', 'right', 0.7, 'control'),
+      port(`${fb}-cycle`, 'ciclo_activo', 'output', 'boolean', 'bottom', 0.5, 'control'),
     ],
     properties: baseProperties({
-      description: 'Convierte la decisión automática en las señales rojo, amarillo y verde.',
-      codeLanguage: 'python',
-      code: lampCode,
+      description: 'Toma el token si hay carros; de lo contrario lo cede conservando rojo.',
+      codeLanguage: 'python', code: decisionCode,
     }),
   });
-  connections.push({
-    id: `cch-sensor-${direction.id}`, source: `sensor-${direction.id}`, sourceHandle: `sensor-${direction.id}-out`,
-    target: `lamparas-${direction.id}`, targetHandle: `lamparas-${direction.id}-vehiculos`,
-    label: 'CCH · vehículos esperando', type: 'hilesEdge', data: edgeData('integer'),
-  });
+
+  for (const [id, name, x, tokens] of [
+    [red, '🔴 Rojo', 90, 1],
+    [green, '🟢 Verde', 330, 0],
+    [yellow, '🟡 Amarillo', 570, 0],
+    [token, '● Token local', 210, direction.id === 'norte' ? 1 : 0],
+    [ready, 'Listo para recibir', 570, 1],
+  ]) {
+    elements.push({
+      id, type: 'PLACE', name, parentId: block, layout: { x, y: id === token || id === ready ? 410 : 270 }, ports: [],
+      properties: baseProperties({ tokens, maxTokens: 1, description: id === token ? 'Permiso exclusivo para iniciar un turno.' : '' }),
+    });
+  }
+
+  for (const [id, name, x, y, delay] of [
+    [start, 'Token + demanda → verde', 210, 265, 0],
+    [toYellow, `Verde ${GREEN_MS / 1000}s → amarillo`, 450, 265, GREEN_MS],
+    [release, `Amarillo ${YELLOW_MS / 1000}s → rojo y ceder`, 690, 265, YELLOW_MS],
+    [skip, 'Sin carros → ceder token', 380, 405, 0],
+    [receive, 'Recibir token del anterior', 690, 405, 0],
+  ]) {
+    elements.push({
+      id, type: 'TRANSITION', name, parentId: block, layout: { x, y }, ports: transitionPorts(id),
+      properties: baseProperties({ enabled: true, executionDelay: delay, description: name }),
+    });
+  }
+
+  addData(`cch-${d}-cars`, serviceCars, `${serviceCars}-out`, fb, `${fb}-cars`, 'CCH · carros locales', 'CONTINUOUS', 'integer');
+  addData(`lch-${d}-demand`, fb, `${fb}-demand`, start, `${start}-cond`, 'LCH · hay demanda', 'PETRI');
+  addData(`lch-${d}-skip`, fb, `${fb}-skip`, skip, `${skip}-cond`, 'LCH · sin demanda', 'PETRI');
+  addData(`lch-${d}-green-clock`, fb, `${fb}-cycle`, toYellow, `${toYellow}-cond`, 'LCH · temporizar verde', 'PETRI');
+  addData(`lch-${d}-yellow-clock`, fb, `${fb}-cycle`, release, `${release}-cond`, 'LCH · temporizar amarillo', 'PETRI');
+
+  addArc(`arc-${d}-red-start`, red, start);
+  addArc(`arc-${d}-token-start`, token, start);
+  addArc(`arc-${d}-start-green`, start, green);
+  addArc(`arc-${d}-green-yellow`, green, toYellow);
+  addArc(`arc-${d}-to-yellow`, toYellow, yellow);
+  addArc(`arc-${d}-yellow-release`, yellow, release);
+  addArc(`arc-${d}-release-red`, release, red);
+  addArc(`arc-${d}-red-skip`, red, skip);
+  addArc(`arc-${d}-token-skip`, token, skip);
+  addArc(`arc-${d}-skip-red`, skip, red);
+  addArc(`arc-${d}-ready-receive`, ready, receive);
+  addArc(`arc-${d}-receive-ready`, receive, ready);
+  addArc(`arc-${d}-receive-token`, receive, token);
 }
 
-elements.push({
-  id: 'control-block', type: 'STRUCTURAL_BLOCK', name: 'Control automático de tráfico',
-  layout: { x: 400, y: 960, width: 760, height: 300 }, ports: [],
-  properties: baseProperties({
-    description: 'Suma los carros de cada eje y concede verde al eje con mayor congestión. En empate deja todo rojo.',
-  }),
-});
-elements.push({
-  id: 'control-trafico', type: 'FUNCTIONAL_BLOCK', name: 'Decidir eje con prioridad', parentId: 'control-block',
-  layout: { x: 260, y: 90 },
-  ports: [
-    ...directions.map((direction, index) =>
-      port(`control-vehiculos-${direction.id}`, `vehiculos_${direction.id}`, 'input', 'integer', 'left', 0.15 + index * 0.2)),
-    ...directions.map((direction, index) =>
-      port(`control-luz-${direction.id}`, `luz_${direction.id}`, 'output', 'string', 'right', 0.15 + index * 0.17)),
-    port('control-eje', 'eje', 'output', 'string', 'bottom', 0.5),
-  ],
-  properties: baseProperties({
-    description: 'Compara Norte+Sur contra Este+Oeste y produce automáticamente los cuatro colores.',
-    codeLanguage: 'python',
-    code: trafficControlCode,
-  }),
-});
+// Dos posibles cesiones por nodo llegan a la misma transición del siguiente:
+// fin normal amarillo→rojo o salto inmediato por ausencia de carros.
 for (const direction of directions) {
-  connections.push({
-    id: `cch-control-sensor-${direction.id}`, source: `sensor-${direction.id}`, sourceHandle: `sensor-${direction.id}-out`,
-    target: 'control-trafico', targetHandle: `control-vehiculos-${direction.id}`,
-    label: `CCH · carros ${direction.name}`, type: 'hilesEdge', data: edgeData('integer'),
-  });
-  connections.push({
-    id: `cch-control-luz-${direction.id}`, source: 'control-trafico', sourceHandle: `control-luz-${direction.id}`,
-    target: `lamparas-${direction.id}`, targetHandle: `lamparas-${direction.id}-luz`,
-    label: `CCH · decisión ${direction.name}`, type: 'hilesEdge', data: edgeData('string'),
-  });
+  for (const source of [`${direction.id}-amarillo-a-rojo`, `${direction.id}-ceder-sin-demanda`]) {
+    addData(
+      `lch-token-${source}-a-${direction.next}`,
+      source,
+      `${source}-action`,
+      `${direction.next}-recibir-token`,
+      `${direction.next}-recibir-token-cond`,
+      `TOKEN · ${direction.name} → ${direction.next}`,
+      'PETRI',
+    );
+  }
 }
 
 const document = {
   schemaVersion: 2,
   metadata: {
-    savedAt: '2026-10-18T22:00:00-05:00',
-    description: 'Semáforo inteligente: el usuario inyecta solo cantidades y el controlador asigna verde al eje con más vehículos.',
+    savedAt: '2026-10-30T10:00:00-05:00',
+    description: 'Cuatro semáforos autónomos comparten un token; cada turno pasa verde, amarillo y rojo antes de cederlo.',
   },
   network: {
-    topology: null,
-    protocol: null,
-    nodes: [...directions.map((direction) => `${direction.id}-block`), 'control-block'],
+    topology: 'token-ring', protocol: 'hiles-distributed-v3',
+    nodes: directions.map((direction) => `${direction.id}-block`),
   },
   allElements: elements,
-  relationNode: [
-    ...directions.map((direction) => ({
-      nodeId: `${direction.id}-block`,
-      elementIds: [`sensor-${direction.id}`, `lamparas-${direction.id}`],
-    })),
-    { nodeId: 'control-block', elementIds: ['control-trafico'] },
-  ],
+  relationNode: directions.map((direction) => ({
+    nodeId: `${direction.id}-block`,
+    elementIds: elements.filter((element) => element.parentId === `${direction.id}-block`).map((element) => element.id),
+  })),
   connections,
 };
 
 const destination = resolve('output/demo-4-semaforos-distribuidos.json');
 writeFileSync(destination, `${JSON.stringify(document, null, 2)}\n`, 'utf8');
-console.log(`Generado ${destination}: ${elements.length} elementos visuales y ${connections.length} conexiones.`);
+console.log(`Generado ${destination}: 4 pares, 1 token, ${GREEN_MS} ms verde, ${YELLOW_MS} ms amarillo y 8 rutas remotas.`);

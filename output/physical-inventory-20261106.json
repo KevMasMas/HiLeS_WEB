@@ -1,0 +1,54 @@
+{
+  "run_id": "fleet-20261106T215117Z",
+  "mode": "inventory",
+  "devices": [
+    {
+      "port": "COM5",
+      "ok": true,
+      "board_model": "Raspberry Pi Pico W with RP2040",
+      "micropython_version": [
+        1,
+        28,
+        0,
+        ""
+      ],
+      "file_count_before": 52,
+      "comparison_before": {
+        "missing": [],
+        "different": [
+          "hiles/distributed_worker.py",
+          "main.py",
+          "platform/hardware.py",
+          "pubsub/mqtt_transport.py"
+        ],
+        "obsolete": [],
+        "matches": false
+      }
+    },
+    {
+      "port": "COM8",
+      "ok": true,
+      "board_model": "Raspberry Pi Pico 2 W with RP2350",
+      "micropython_version": [
+        1,
+        29,
+        0,
+        ""
+      ],
+      "file_count_before": 34,
+      "comparison_before": {
+        "missing": [],
+        "different": [
+          "hiles/distributed_worker.py",
+          "main.py",
+          "platform/hardware.py",
+          "pubsub/mqtt_transport.py"
+        ],
+        "obsolete": [],
+        "matches": false
+      }
+    }
+  ],
+  "secrets_redacted": true,
+  "ok": true
+}

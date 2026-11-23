@@ -25,9 +25,25 @@ platform → APIs de MicroPython
 
 El núcleo no debe importar los adaptadores de plataforma. Para ejecutar pruebas en un computador se sustituyen reloj, GPIO y transporte por dobles controlables.
 
-## Ejecución remota
+## Ejecución remota y distribuida
 
-Los navegadores editan, compilan y representan el circuito. En modo remoto envían modelo, entradas y comandos, pero no calculan el siguiente estado. La Pico publica la instantánea oficial y cada navegador la aplica solamente si coinciden la sesión, el modelo y la versión, y si su secuencia es posterior a la última recibida.
+El firmware conserva el motor y los tópicos `v1` (una Pico con un modelo
+completo) por compatibilidad y diagnóstico, pero la interfaz ya no ofrece ese
+modo desde la entrega 8. En el protocolo v3, el navegador compila el documento, publica un manifiesto y entrega a cada
+Pico únicamente el fragmento que le pertenece. `DistributedWorker` valida
+proyecto, despliegue, época, propietario, tamaño, hash e IR antes de activar el
+fragmento. Los canales que cruzan ejecutores viajan por MQTT y cada Pico publica
+solo su snapshot parcial; el frontend compone el estado agregado.
+
+Cada placa se identifica como `pico:<DEVICE_ID>`. `DEVICE_ID` y
+`MQTT_CLIENT_ID` son únicos, mientras `HILES_PROJECT_ID` es común al modelo y
+coincide con `?project=`. La desaparición de un ejecutor vuelve obsoleto su
+estado; al reconectar debe resincronizar manifiesto y época antes de procesar
+canales.
+
+El firmware no contiene reglas de semáforos ni mapas GPIO de la demo. Los
+Services se inyectan desde el editor y cualquier adaptación física futura debe
+ser genérica y permanecer separada del motor.
 
 ## Multitarea
 
@@ -45,4 +61,9 @@ Toda tarea concreta implementa `update()` y debe retornar rápidamente. Las espe
 
 El presupuesto concreto se define por tarea después de medir el hardware. Como regla inicial, una actualización debe ocupar solo una fracción de su periodo y nunca debe usar una espera para alcanzar ese periodo.
 
-El plan y los criterios comprobables de la entrega actual están en [`PLAN_IMPLEMENTACION_PICO_HILES.md`](../../entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md).
+## Documentos relacionados
+
+- Arquitectura general vigente (frontend, broker, ejecutores y recuperación): [`ARQUITECTURA_SISTEMA.md`](ARQUITECTURA_SISTEMA.md).
+- Contrato distribuido: [`../mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md`](../mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md).
+- Agregar placas y elegir ejecutores: [`../GUIA_AGREGAR_PICO_Y_EJECUTORES.md`](../GUIA_AGREGAR_PICO_Y_EJECUTORES.md).
+- Origen histórico de esta arquitectura (entrega 5): [`PLAN_IMPLEMENTACION_PICO_HILES.md`](../../entregas/entrega-5-13-octubre/PLAN_IMPLEMENTACION_PICO_HILES.md).

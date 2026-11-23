@@ -4,10 +4,12 @@ $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $sourceRoot = Join-Path $repoRoot 'firmware\pico'
 $guidePath = Join-Path $repoRoot 'docs\mqtt\GUIA_PRUEBA_PICO_W.md'
 $outputPath = Join-Path $repoRoot 'output\hiles-pico-w-deploy.zip'
+$expandedPath = Join-Path $repoRoot 'output\hiles-pico-w-deploy'
 $checksumPath = Join-Path $repoRoot 'output\hiles-pico-w-deploy.sha256'
 
 $requiredDirectories = @('core', 'devices', 'hiles', 'platform', 'pubsub')
 $requiredFiles = @('main.py', 'config_local.example.py')
+$manifestEntryName = 'MANIFEST.sha256.json'
 
 foreach ($relativePath in $requiredFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $sourceRoot $relativePath) -PathType Leaf)) {
@@ -31,9 +33,56 @@ $files = @(
             Where-Object { $_.FullName -notmatch '[\\/]__pycache__[\\/]' }
     }
 )
+$manifestFiles = @(
+    foreach ($file in $files) {
+        $sourcePrefix = $sourceRoot.TrimEnd('\') + '\'
+        [pscustomobject]@{
+            path = $file.FullName.Substring($sourcePrefix.Length).Replace('\', '/')
+            sha256 = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+    }
+    [pscustomobject]@{
+        path = 'LEEME_PRIMERO.md'
+        sha256 = (Get-FileHash -LiteralPath $guidePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
+)
+$manifestJson = [ordered]@{
+    manifest_version = 1
+    firmware_version = '3.0.0'
+    runtime_file_count = $files.Count
+    excluded = @('config_local.py', 'umqtt/', 'lib/umqtt/', 'examples/', '__pycache__/')
+    files = $manifestFiles
+} | ConvertTo-Json -Depth 6
 
 $outputDirectory = Split-Path -Parent $outputPath
 [System.IO.Directory]::CreateDirectory($outputDirectory) | Out-Null
+
+# La carpeta expandida es un artefacto limpio, no un lugar para guardar
+# credenciales. Detenerse antes de borrar si alguien dejó allí su configuración.
+[System.IO.Directory]::CreateDirectory($expandedPath) | Out-Null
+$expandedConfig = Join-Path $expandedPath 'config_local.py'
+if (Test-Path -LiteralPath $expandedConfig -PathType Leaf) {
+    throw 'Mueva output/hiles-pico-w-deploy/config_local.py fuera de la carpeta de despliegue antes de regenerar el paquete.'
+}
+foreach ($directory in $requiredDirectories) {
+    $targetDirectory = Join-Path $expandedPath $directory
+    if (Test-Path -LiteralPath $targetDirectory -PathType Container) {
+        Remove-Item -LiteralPath $targetDirectory -Recurse -Force
+    }
+}
+foreach ($file in $files) {
+    $sourcePrefix = $sourceRoot.TrimEnd('\') + '\'
+    $relativePath = $file.FullName.Substring($sourcePrefix.Length)
+    $targetPath = Join-Path $expandedPath $relativePath
+    [System.IO.Directory]::CreateDirectory((Split-Path -Parent $targetPath)) | Out-Null
+    Copy-Item -LiteralPath $file.FullName -Destination $targetPath -Force
+}
+Copy-Item -LiteralPath $guidePath -Destination (Join-Path $expandedPath 'LEEME_PRIMERO.md') -Force
+[System.IO.File]::WriteAllText(
+    (Join-Path $expandedPath $manifestEntryName),
+    ($manifestJson + [Environment]::NewLine),
+    [System.Text.UTF8Encoding]::new($false)
+)
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
@@ -66,6 +115,15 @@ try {
             'LEEME_PRIMERO.md',
             [System.IO.Compression.CompressionLevel]::Optimal
         ) | Out-Null
+        $manifestEntry = $archive.CreateEntry($manifestEntryName, [System.IO.Compression.CompressionLevel]::Optimal)
+        $manifestStream = $manifestEntry.Open()
+        try {
+            $manifestBytes = [System.Text.UTF8Encoding]::new($false).GetBytes($manifestJson)
+            $manifestStream.Write($manifestBytes, 0, $manifestBytes.Length)
+        }
+        finally {
+            $manifestStream.Dispose()
+        }
     }
     finally {
         $archive.Dispose()
@@ -83,10 +141,18 @@ try {
         'config_local.example.py',
         'core/__init__.py',
         'devices/__init__.py',
+        'devices/watchdog_task.py',
         'hiles/__init__.py',
+        'hiles/distributed_worker.py',
+        'hiles/engine_task_v2.py',
+        'hiles/engine_v2.py',
+        'hiles/python_executor.py',
         'platform/__init__.py',
         'pubsub/__init__.py',
-        'LEEME_PRIMERO.md'
+        'pubsub/mqtt_transport.py',
+        'pubsub/topics.py',
+        'LEEME_PRIMERO.md',
+        $manifestEntryName
     )) {
         if ($required -notin $entryNames) {
             throw "El ZIP no contiene $required"
@@ -94,6 +160,27 @@ try {
     }
     if ($entryNames | Where-Object { $_ -match '(__pycache__|\.pyc$|^examples/|^config_local\.py$)' }) {
         throw 'El ZIP contiene archivos locales o generados que no deben subirse.'
+    }
+    if ($entryNames.Count -ne ($manifestFiles.Count + 1)) {
+        throw 'El ZIP contiene archivos fuera del manifiesto canónico.'
+    }
+    foreach ($file in $manifestFiles) {
+        $entry = $zip.GetEntry($file.path)
+        if ($null -eq $entry) {
+            throw "El manifiesto referencia un archivo ausente: $($file.path)"
+        }
+        $entryStream = $entry.Open()
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $archiveHash = ([System.BitConverter]::ToString($sha256.ComputeHash($entryStream))).Replace('-', '').ToLowerInvariant()
+        }
+        finally {
+            $entryStream.Dispose()
+            $sha256.Dispose()
+        }
+        if ($archiveHash -ne $file.sha256) {
+            throw "El checksum del paquete no coincide con la fuente: $($file.path)"
+        }
     }
 }
 finally {

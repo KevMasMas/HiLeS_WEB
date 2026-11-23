@@ -1,0 +1,74 @@
+{
+  "run_id": "fleet-20261106T215135Z",
+  "mode": "deploy",
+  "devices": [
+    {
+      "port": "COM5",
+      "ok": true,
+      "board_model": "Raspberry Pi Pico W with RP2040",
+      "micropython_version": [
+        1,
+        28,
+        0,
+        ""
+      ],
+      "file_count_before": 52,
+      "comparison_before": {
+        "missing": [],
+        "different": [
+          "hiles/distributed_worker.py",
+          "main.py",
+          "platform/hardware.py",
+          "pubsub/mqtt_transport.py"
+        ],
+        "obsolete": [],
+        "matches": false
+      },
+      "backup_path": "D:\\usuarios\\Monitores\\AppData\\Local\\Temp\\hiles-pico-backups-entrega8\\fleet-20261106T215135Z\\COM5",
+      "file_count_after": 52,
+      "comparison_after": {
+        "missing": [],
+        "different": [],
+        "obsolete": [],
+        "matches": true
+      },
+      "config_local_preserved": true,
+      "umqtt_preserved": true
+    },
+    {
+      "port": "COM8",
+      "ok": true,
+      "board_model": "Raspberry Pi Pico 2 W with RP2350",
+      "micropython_version": [
+        1,
+        29,
+        0,
+        ""
+      ],
+      "file_count_before": 34,
+      "comparison_before": {
+        "missing": [],
+        "different": [
+          "hiles/distributed_worker.py",
+          "main.py",
+          "platform/hardware.py",
+          "pubsub/mqtt_transport.py"
+        ],
+        "obsolete": [],
+        "matches": false
+      },
+      "backup_path": "D:\\usuarios\\Monitores\\AppData\\Local\\Temp\\hiles-pico-backups-entrega8\\fleet-20261106T215135Z\\COM8",
+      "file_count_after": 34,
+      "comparison_after": {
+        "missing": [],
+        "different": [],
+        "obsolete": [],
+        "matches": true
+      },
+      "config_local_preserved": true,
+      "umqtt_preserved": true
+    }
+  ],
+  "secrets_redacted": true,
+  "ok": true
+}

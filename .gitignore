@@ -2,3 +2,12 @@
 __pycache__/
 *.py[cod]
 
+# Entorno y secretos locales (nunca subir a Git)
+.env
+.env.*
+!.env.example
+
+# Restos obsoletos y artefactos de compilación / dependencias
+backend/
+node_modules/
+*.tsbuildinfo

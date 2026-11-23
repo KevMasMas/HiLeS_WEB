@@ -1,13 +1,20 @@
 # Guía completa para replicar y probar HiLeS en otro PC
 
-Esta guía reproduce la entrega del 20 de octubre en Windows 10/11 y valida:
+Esta guía reproduce el estado vigente de la rama `multi-pico` (entrega 8, commit
+`d15d5a0`) en Windows 10/11 y valida:
 
 - React/Vite accesible en la red local;
 - Mosquitto por TCP para la Pico y WebSockets para los navegadores;
 - proyecto compartido por `?project=<id>`, snapshot, edición, presencia y cursores;
-- ejecución local en Pyodide y ejecución remota de Functional Blocks Python en MicroPython;
+- ejecución distribuida v3: cada Structural Block asignado a una Pico o a un navegador;
+- Functional Blocks Python en Pyodide (navegador) y en MicroPython (Pico);
 - scheduler, CCH, DCH, `Sample`, `Hold`, Petri/LCH, retardos y watchdog;
-- un demo manual de cuatro semáforos construido con Services y Functional Blocks generales.
+- un demo de cuatro semáforos construido con Services y Functional Blocks generales.
+
+La arquitectura completa está en
+[`architecture/ARQUITECTURA_SISTEMA.md`](architecture/ARQUITECTURA_SISTEMA.md); para
+sumar placas y elegir ejecutores, ver
+[`GUIA_AGREGAR_PICO_Y_EJECUTORES.md`](GUIA_AGREGAR_PICO_Y_EJECUTORES.md).
 
 ```text
 Navegadores ── MQTT/WebSocket :9001 ──┐
@@ -17,9 +24,9 @@ Pico W ────── MQTT/TCP :1883 ─────────┘
 Vite en el PC ── HTTP :5173 ── navegadores de la LAN
 ```
 
-> Vite, React, lo visual, Pyodide local y el broker corren en el PC. En modo
-> **Pico / MQTT**, el código de los Functional Blocks se ejecuta en la Pico W.
-> La Pico no aloja la interfaz web.
+> Vite, React, lo visual, Pyodide local y el broker corren en el PC. El código de
+> un Functional Block se ejecuta en el ejecutor asignado a su bloque en el panel
+> **Ejecutores**: una Pico W o un navegador. La Pico no aloja la interfaz web.
 
 > Esta configuración es para una LAN de confianza. No publicar 1883, 9001 o
 > 5173 en Internet sin TLS, ACL y una configuración de producción.
@@ -35,7 +42,7 @@ PC servidor:
 Hardware:
 
 - Raspberry Pi **Pico W**, cable USB de datos y red Wi-Fi común;
-- opcional: cuatro sensores digitales, doce LED, resistencias y protoboard.
+- una o más Pico W; la demo actual usa el LED integrado y valores manuales.
 
 Definir antes de empezar:
 
@@ -44,16 +51,16 @@ Definir antes de empezar:
 | SSID | `LAB_HILES` | Misma red para PC y Pico |
 | IPv4 del PC | `192.168.1.50` | Obtener con `ipconfig` |
 | Usuario MQTT | `hiles_demo` | Cuenta exclusiva del laboratorio |
-| ID de Pico | `pico01` | Mantenerlo en esta entrega |
-| Proyecto | `entrega20-equipo1` | 3–64 caracteres `[a-z0-9_-]` |
-| Modelo | `entrega20-equipo1` | Puede coincidir con el proyecto |
+| IDs de Pico | `pico-norte`, `pico-este` | Uno diferente por placa |
+| IDs MQTT | `hiles-pico-norte`, `hiles-pico-este` | Uno diferente por cliente |
+| Proyecto | `semaforos-fisico` | Igual en Pico y `?project=` |
 
 `localhost` identifica el equipo donde se usa. La Pico y otros PCs deben usar
 la IPv4 real del PC servidor. `0.0.0.0` solo sirve para escuchar.
 
-Los sensores deben ser compatibles con 3,3 V. No aplicar 5 V a un GPIO. Para
-cargas reales se requieren drivers; los GPIO son para prototipos de bajo
-consumo.
+Los semáforos externos y sensores GPIO todavía no forman parte del runtime
+general. Si se agregan después, deben ser compatibles con 3,3 V; no aplicar
+5 V a un GPIO y usar drivers para cargas reales.
 
 ## 2. Instalar herramientas
 
@@ -79,12 +86,12 @@ python --version
 git clone https://github.com/KevMasMas/HiLeS_WEB.git
 Set-Location .\HiLeS_WEB
 git fetch --all --prune
-git switch mqtt-pico
+git switch multi-pico
 git pull --ff-only
 git status
 ```
 
-La entrega está en `mqtt-pico` mientras no se fusione a la rama principal. En
+La versión vigente está en `multi-pico` mientras no se fusione a la rama principal. En
 una instalación nueva, `git status` debe estar limpio. Nunca versionar
 `.env.local`, `config_local.py`, `passwords.txt` ni contraseñas.
 
@@ -107,9 +114,20 @@ Firmware con dobles de hardware:
 python -m unittest discover -s firmware/tests -p 'test_*.py'
 ```
 
-Referencia de la revisión: 103 pruebas frontend y 174 de firmware, además de
-lint y build aprobados. Un número mayor es válido; ninguna prueba puede fallar.
-Estas suites no sustituyen la medición física de Wi-Fi, GPIO y memoria.
+Referencia en `d15d5a0` (7 de noviembre de 2026): 187 pruebas frontend y 169 de
+firmware, además de lint, TypeScript y build aprobados. Un número mayor es
+válido. La prueba `PanelDock.test.tsx` puede fallar de forma intermitente por
+timeout en equipos lentos; si falla, repetir `npx vitest run
+src/features/editor/PanelDock.test.tsx` y registrar el resultado. Estas suites
+no sustituyen la medición física de Wi-Fi, GPIO y memoria.
+
+Paquete y aprovisionamiento sin hardware:
+
+```powershell
+& .\scripts\test-pico-provisioning.ps1
+```
+
+Debe imprimir `Pruebas de aprovisionamiento Pico: PASS`.
 
 ## 5. Preparar la red y Mosquitto
 
@@ -264,7 +282,7 @@ Los scripts no imprimen la contraseña.
 
 Prueba visual:
 
-1. Abrir `http://IP_DEL_PC:5173/?project=entrega20-equipo1`.
+1. Abrir `http://IP_DEL_PC:5173/?project=semaforos-fisico`.
 2. En el primer navegador importar
    `output/demo-4-semaforos-distribuidos.json`.
 3. Esperar el autoguardado y abrir la misma URL en otros tres navegadores,
@@ -308,8 +326,13 @@ Get-FileHash .\output\hiles-pico-w-deploy.zip -Algorithm SHA256
 Get-Content .\output\hiles-pico-w-deploy.sha256
 ```
 
-Los hashes deben coincidir. Extraer el ZIP, copiar
-`config_local.example.py` como `config_local.py` y editar solo la copia:
+Los hashes deben coincidir. Para crear `config_local.py` hay dos caminos:
+
+- **Desde la aplicación (recomendado):** **Ejecutores** → **Configuración de
+  placas** → **Preparar otra Raspberry Pi Pico** → **Descargar config_local.py**.
+  Ver [`GUIA_AGREGAR_PICO_Y_EJECUTORES.md`](GUIA_AGREGAR_PICO_Y_EJECUTORES.md) §3.
+- **A mano:** extraer el ZIP, copiar `config_local.example.py` como
+  `config_local.py` fuera del repositorio y editar solo la copia:
 
 ```python
 WIFI_SSID = "LAB_HILES"
@@ -318,8 +341,15 @@ MQTT_HOST = "192.168.1.50"
 MQTT_PORT = 1883
 MQTT_USERNAME = "hiles_demo"
 MQTT_PASSWORD = "CONTRASENA_MQTT"
-MQTT_CLIENT_ID = "pico01"
+MQTT_CLIENT_ID = "hiles-pico-norte"
 MQTT_CONNECT_TIMEOUT_SECONDS = 2
+
+DEVICE_ID = "pico-norte"
+HILES_TEAM_ID = "equipo1"
+HILES_PROJECT_ID = "semaforos-fisico"
+WORKER_MAX_FRAGMENT_BYTES = 30000
+WORKER_MAX_ELEMENTS = 64
+WORKER_STATUS_PERIOD_MS = 5000
 
 ENGINE_PERIOD_MS = 20
 ENGINE_STEP_INTERVAL_MS = 1000
@@ -327,8 +357,9 @@ ENGINE_QUEUE_SIZE = 32
 WATCHDOG_PERIOD_MS = 5000
 ```
 
-`MQTT_HOST` nunca debe ser `localhost`. Los topics físicos de esta entrega
-conservan `pico01`, así que mantener ese `MQTT_CLIENT_ID`.
+`MQTT_HOST` nunca debe ser `localhost`. Cada placa necesita `DEVICE_ID` y
+`MQTT_CLIENT_ID` únicos; todas las placas del ensayo usan el mismo
+`HILES_PROJECT_ID`, que coincide con `?project=` en la URL.
 
 No agregar configuración del dominio al firmware. En esta versión todas las
 entradas se envían manualmente a Services desde el editor. La conexión futura
@@ -349,7 +380,7 @@ La raíz de la Pico debe quedar así:
 ├── config_local.py
 ├── core/{__init__.py,clock.py,scheduler.py,task.py}
 ├── devices/{__init__.py,led_task.py,watchdog_task.py}
-├── hiles/{__init__.py,channels.py,elements.py,elements_v2.py,engine.py,
+├── hiles/{__init__.py,channels.py,distributed_worker.py,elements.py,elements_v2.py,engine.py,
 │          engine_task.py,engine_task_v2.py,engine_v2.py,expressions.py,
 │          model.py,model_v2.py,python_executor.py,runtime_values.py}
 ├── platform/{__init__.py,hardware.py,mqtt_client.py,wifi.py}
@@ -372,7 +403,7 @@ $usuario = Read-Host "Usuario MQTT"
 $clave = Read-Host "Contraseña MQTT" -MaskInput
 & "C:\Program Files\mosquitto\mosquitto_sub.exe" `
   -h localhost -p 1883 -u $usuario -P $clave `
-  -t "udfjc/hiles/v1/equipo1/pico01/#" -v
+  -t "udfjc/hiles/v3/projects/semaforos-fisico/executors/#" -v
 ```
 
 Pulsar `Ctrl+D` en Thonny. Se espera:
@@ -384,8 +415,8 @@ Pulsar `Ctrl+D` en Thonny. Se espera:
 [MQTT] Conectado a 192.168.1.50:1883
 ```
 
-El monitor debe recibir `estado/conexion` con `"conectado":true` y luego
-telemetría del watchdog.
+El monitor debe recibir el estado de `pico:pico-norte`. Las tareas impresas
+deben incluir `mqtt`, `led`, `motor`, `watchdog` y `worker_v3`.
 
 Probar LED y scheduler:
 
@@ -393,7 +424,7 @@ Probar LED y scheduler:
 $mensaje = '{"accion":"titilar","id_mensaje":"prueba-led-1"}'
 $mensaje | & "C:\Program Files\mosquitto\mosquitto_pub.exe" `
   -h localhost -p 1883 -u $usuario -P $clave -q 1 `
-  -t "udfjc/hiles/v1/equipo1/pico01/led/comando" -s
+  -t "udfjc/hiles/v1/equipo1/pico-norte/led/comando" -s
 ```
 
 El LED debe alternar sin detener MQTT o telemetría. Repetir el mismo mensaje
@@ -401,24 +432,24 @@ permite comprobar deduplicación/idempotencia de QoS 1.
 
 ## 12. Ejecutar un modelo desde la interfaz
 
-`project` identifica el documento colaborativo; `modelo` y `version`
-identifican la sesión de la Pico. Pueden usar el mismo texto, pero no son el
-mismo concepto.
-
-1. Abrir cuatro veces
-   `http://IP_DEL_PC:5173/?project=entrega20-equipo1`.
+1. Abrir `http://IP_DEL_PC:5173/?project=semaforos-fisico`.
 2. Importar el JSON solo en el primer navegador y esperar su sincronización.
-3. Abrir **Simulation** y seleccionar **Pico / MQTT**.
-4. Usar modelo `entrega20-equipo1`, versión `1` y pulsar **Unirse**.
-5. Esperar `MQTT CONNECTED`.
-6. En un navegador pulsar **Compilar y cargar circuito en la Pico**.
-7. Esperar `Modelo: Aceptado`, secuencia `0` y estado `LISTA`.
-8. Seleccionar un Service, enviar una entrada y pulsar **Step/Paso**.
-9. Confirmar la misma instantánea oficial en los cuatro navegadores.
-10. Probar **Run**, **Stop** y **Reset**.
+3. Abrir **Ejecutores** y confirmar las Pico `pico:<DEVICE_ID>` disponibles. Si
+   una aparece pero no se puede elegir, el panel indica la causa (otro proyecto,
+   obsoleta, offline, degradada o incompatible).
+4. Activar **Ejecutar aquí** solamente en los navegadores que también deban
+   ejecutar un fragmento.
+5. En **Destino por bloque**, asignar cada Structural Block a una Pico o
+   navegador.
+6. Pulsar **Desplegar** y esperar un ACK por fragmento.
+7. Introducir valores desde **Entradas** (barra superior).
+8. Operar con **Iniciar**, **Paso**, **Detener** y **Reiniciar** de la barra
+   superior; es el único juego de controles.
+9. Confirmar el estado agregado y el propietario de cada elemento.
 
-El enlace copiado puede contener `project`, `modelo` y `version`, pero nunca
-credenciales.
+El enlace compartido contiene `project`, pero nunca credenciales. El antiguo
+selector **Local / Pico** y el modo **Pico / MQTT** se retiraron en la entrega 8:
+toda ejecución pasa por **Ejecutores** con el protocolo v3.
 
 ## 13. Matriz obligatoria del motor físico
 
@@ -435,7 +466,8 @@ credenciales.
 | Retardos | Usar delay | No bloquea LED, MQTT ni watchdog |
 | Reinicio | Pulsar Reset | Limpia colas, eventos, timers, tokens y errores |
 | Watchdog | Observar telemetría | Métricas y memoria periódicas |
-| 4 clientes | Ejecutar desde uno | Misma secuencia oficial en todos |
+| Multi-Pico | Cuatro fragmentos y rutas remotas | Cada fragmento corre solo en su propietario |
+| Reconexión | Desconectar y conectar una Pico | Resincroniza manifiesto/época antes de ejecutar |
 
 El Python remoto es deliberadamente **acotado**: admite funciones de cálculo
 deterministas y tipos soportados; rechaza imports, acceso al sistema, recursión
@@ -447,15 +479,18 @@ programa Python irrestricto.
 Prueba visual/lógica:
 
 1. Importar `output/demo-4-semaforos-distribuidos.json`.
-2. Cargarlo en la Pico como cualquier otro modelo.
-3. Inyectar manualmente cantidades enteras en los cuatro Services `Sensor`.
-4. Ejecutar un paso y observar las solicitudes calculadas en la Pico; todas las
-   luces comienzan en `rojo` sin otra entrada manual.
-5. Opcionalmente inyectar `amarillo` o `verde` en los Services `Luz` y observar
-   las lámparas.
-6. Introducir dos verdes conflictivos y comprobar `seguro = false`.
+2. Abrir cuatro navegadores o combinar navegadores y Pico desde Ejecutores.
+3. Asignar un Structural Block diferente a cada ejecutor y desplegar; deben
+   aparecer cuatro fragmentos aceptados.
+4. Inyectar Norte `0`, Este `5`, Sur `0` y Oeste `0`.
+5. Ejecutar pasos hasta que Norte ceda el token y Este pase de rojo a verde.
+6. Avanzar 3000 ms y comprobar el Place amarillo de Este; avanzar 1000 ms y
+   comprobar rojo y un único token recibido por Sur.
+7. Continuar para observar el recorrido Sur → Oeste → Norte.
 
-Este ensayo no usa GPIO ni una FSM vial oculta en el firmware.
+Este ensayo no usa GPIO, un controlador central ni una FSM vial oculta en el
+firmware. El token, amarillo y tiempos están modelados explícitamente; el lease,
+heartbeat y fail-safe físico siguen pendientes.
 
 ## 15. Diagnóstico rápido
 
@@ -468,10 +503,12 @@ Este ensayo no usa GPIO ni una FSM vial oculta en el firmware.
 - **Wi-Fi sí, MQTT no:** usar IP del PC y puerto 1883; revisar usuario,
   contraseña, firewall y subred.
 - **Falta `umqtt`:** instalar `umqtt.simple` en la placa y reiniciar.
-- **La Pico no recibe el modelo:** observar
-  `udfjc/hiles/v1/equipo1/pico01/#`, verificar modo Pico y sesión activa.
-- **Modelo rechazado:** revisar `modelo/confirmacion` y `error`: tamaño, tipos,
-  puertos, firma `calcular`, conexiones y Python prohibido. El modelo válido
+- **La Pico no aparece como ejecutor:** observar
+  `udfjc/hiles/v3/projects/semaforos-fisico/executors/#`, comparar
+  `HILES_PROJECT_ID` con la URL y confirmar `worker_v3`.
+- **Una Pico desconecta a otra:** corregir el `MQTT_CLIENT_ID` duplicado.
+- **Fragmento rechazado:** revisar el ACK y diagnóstico v3: tamaño, memoria,
+  propietario, época, hash, conexiones y perfil Python. El fragmento válido
   anterior debe conservarse.
 - **Reinicio o poca memoria:** reducir el modelo, registrar `gc.mem_free()`,
   verificar que todo el runtime V2 fue copiado y observar el watchdog.
@@ -525,9 +562,10 @@ Demo manual:
 
 ## 18. Documentos relacionados
 
-- `entregas/entrega-6-20-octubre/GUIA_DEMO.md`: presentación corta.
-- `entregas/entrega-6-20-octubre/PLAN_IMPLEMENTACION_ENTREGA_20.md`: alcance.
-- `entregas/entrega-6-20-octubre/REGISTRO_CAMBIOS.md`: resultados registrados.
+- `entregas/entrega-8-6-noviembre/GUION_DEMOSTRACION.md`: demostración vigente.
+- `entregas/entrega-8-6-noviembre/INFORME_FINAL_ENTREGA_8.md`: estado y evidencia.
+- `docs/architecture/ARQUITECTURA_SISTEMA.md`: arquitectura y recuperación.
+- `docs/GUIA_AGREGAR_PICO_Y_EJECUTORES.md`: sumar placas y elegir ejecutores.
 - `docs/mqtt/GUIA_PRUEBA_PICO_W.md`: despliegue resumido incluido como
   `LEEME_PRIMERO.md` en el ZIP.
 - `docs/mqtt/CONTRATO_MENSAJES_MQTT.md`: contrato de mensajes.

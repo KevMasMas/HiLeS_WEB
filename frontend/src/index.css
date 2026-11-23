@@ -1,12 +1,18 @@
-body, html {
+html,
+body {
   margin: 0;
   padding: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  height: 100dvh;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 #root {
   width: 100%;
+  max-width: 100%;
   height: 100%;
+  overflow: hidden;
 }

@@ -1,0 +1,142 @@
+{
+  "manifest_version": 1,
+  "firmware_version": "3.0.0",
+  "runtime_file_count": 31,
+  "excluded": [
+    "config_local.py",
+    "umqtt/",
+    "lib/umqtt/",
+    "examples/",
+    "__pycache__/"
+  ],
+  "files": [
+    {
+      "path": "main.py",
+      "sha256": "406138e0daa1983c4d35b5cea01b6681d9741caed54db4b543b8319ba3f14681"
+    },
+    {
+      "path": "config_local.example.py",
+      "sha256": "b125d6b32a560e062fb1bb29b95a4e5fe3e73cccc8a9edebb0988146e51bf4a0"
+    },
+    {
+      "path": "core/__init__.py",
+      "sha256": "435fbf630f8d6ef51f30b5b4de3863c0958fb368e048422ba27627384f6e95fa"
+    },
+    {
+      "path": "core/clock.py",
+      "sha256": "9bbc3a4fc748b599982df9b7b1cd13c77c2b1869bd2bb18a6fcb5cd131b37413"
+    },
+    {
+      "path": "core/scheduler.py",
+      "sha256": "1c3376da45e7df17536f7be1250cb2270deda4c39c547f1fc414e89518b006d3"
+    },
+    {
+      "path": "core/task.py",
+      "sha256": "7bc19d57352b3bd603e9cbfd0dddbad771b0ad2521c83bc2dbced432f7ab83cc"
+    },
+    {
+      "path": "devices/__init__.py",
+      "sha256": "5666053e12857e6f619ef2f3f2b73618bbbb9405133dc214202806b78e999d14"
+    },
+    {
+      "path": "devices/led_task.py",
+      "sha256": "8985f95e1d975835e1b2915b2d97935bb67564286441f8b7ddcc62910ad8dbd6"
+    },
+    {
+      "path": "devices/watchdog_task.py",
+      "sha256": "bd2195a25443b3f9c3f8b5a401a66019bd9a27993057d666ede68385c5262a90"
+    },
+    {
+      "path": "hiles/__init__.py",
+      "sha256": "049698ec1a402a7d7b1f1318a90d91096c0e9a8384c24aeb8c4f879de89be8ee"
+    },
+    {
+      "path": "hiles/channels.py",
+      "sha256": "5717ca50d7d40c79f767a651ec775165ff989fb44025285374a40bdf1b05efe3"
+    },
+    {
+      "path": "hiles/distributed_worker.py",
+      "sha256": "0e9239aa72eb438a72cffb2d125ce056b01bcf27b684262ce1579623ff5ae543"
+    },
+    {
+      "path": "hiles/elements_v2.py",
+      "sha256": "9d96161aef298f6e13c592436298fa3e1149d45bdcb93ae0a458f60432f00953"
+    },
+    {
+      "path": "hiles/elements.py",
+      "sha256": "4318bf083310f38fc45ef16ff8bab724e40194b6746da9363a3c6b4c57c92ef2"
+    },
+    {
+      "path": "hiles/engine_task_v2.py",
+      "sha256": "4ecad7b6bfa961d5b196faad53cb1633a3d13b71f6eb85ee0c3c9e1ddb551ee8"
+    },
+    {
+      "path": "hiles/engine_task.py",
+      "sha256": "410eb3cf008d43319d1b35b0b12b4566814c1ae8976b6a984ea9b390389898b2"
+    },
+    {
+      "path": "hiles/engine_v2.py",
+      "sha256": "9db30ab0daa2b88c0a9f9f8ef5892ffeb472902b63c8328495f92c627427af98"
+    },
+    {
+      "path": "hiles/engine.py",
+      "sha256": "dbbebd7909ca54f6b6453572976737e86a6af8d44ef1141d626c704d59677123"
+    },
+    {
+      "path": "hiles/expressions.py",
+      "sha256": "6d4621566216c7910222247b5a367d3d3146bed36e9c896f439db44eeec5bbaf"
+    },
+    {
+      "path": "hiles/model_v2.py",
+      "sha256": "31d761f55c4d3583baed638aeb28fd15dfa87d3c0aafc42ca4f5b77e5eb7c10f"
+    },
+    {
+      "path": "hiles/model.py",
+      "sha256": "cd9f9f0df70828082744d3ec55cae99c445790ecb34479231375594d6ae3129d"
+    },
+    {
+      "path": "hiles/python_executor.py",
+      "sha256": "4fe4eb7cc3b86014f812d5076b352a13bba98f382791530f3ad807dafc7e46fe"
+    },
+    {
+      "path": "hiles/runtime_values.py",
+      "sha256": "0b595d667356f3ea5435861708720169ece9a442afe6f074e7f0148f0a7b446e"
+    },
+    {
+      "path": "platform/__init__.py",
+      "sha256": "697f2a4d7f41b0b174a9f899b30a5708787a5d63aa4e6172a276fd873faa1ef9"
+    },
+    {
+      "path": "platform/hardware.py",
+      "sha256": "9f9b9eec7f8833d16fc0ebd6cd2e2f57c140c651d0be527712d3926ff50ee832"
+    },
+    {
+      "path": "platform/mqtt_client.py",
+      "sha256": "e9c3f8bf356eef4073ee2dbb9b858711dc63638bdd11b35219607e64f28e4c77"
+    },
+    {
+      "path": "platform/wifi.py",
+      "sha256": "ecd83bd166d1b7f78088d9449304a2f0716df7f5f204e9634553eb367179742b"
+    },
+    {
+      "path": "pubsub/__init__.py",
+      "sha256": "347d64f890a48346e9fc45edf6e99709929450fee765a306cfc8a5de0dc4be46"
+    },
+    {
+      "path": "pubsub/mqtt_transport.py",
+      "sha256": "f11729d23b25ad94ea4988447a2315974205de3d6d23d711940b17037354bda6"
+    },
+    {
+      "path": "pubsub/node.py",
+      "sha256": "90fb44a6af031f567aa72a570aaef54a26a0d1fb07954e00000179bf3a370990"
+    },
+    {
+      "path": "pubsub/topics.py",
+      "sha256": "d3913d4bad1581f8476dbef36a8ebb61eb300663e6983aea92c6b9fbf1a3c510"
+    },
+    {
+      "path": "LEEME_PRIMERO.md",
+      "sha256": "835eb20dd3c81fae4873ddb381c1c002511e1898cfe930605fd01ebc4fe37026"
+    }
+  ]
+}

@@ -2,6 +2,8 @@ import ast
 import unittest
 from pathlib import Path
 
+from firmware.pico.platform.hardware import resolve_board_model
+
 
 CORE_DIRECTORY = Path(__file__).resolve().parents[1] / "pico" / "core"
 PUBSUB_DIRECTORY = Path(__file__).resolve().parents[1] / "pico" / "pubsub"
@@ -32,6 +34,19 @@ def _collect_import_violations(directory, forbidden_roots):
 
 
 class ArchitectureTests(unittest.TestCase):
+    def test_board_model_uses_micropython_uname_and_has_a_host_fallback(self):
+        for board in (
+            "Raspberry Pi Pico W with RP2040",
+            "Raspberry Pi Pico 2 W with RP2350",
+        ):
+            class FakeOs:
+                @staticmethod
+                def uname():
+                    return type("Uname", (), {"machine": board})()
+
+            self.assertEqual(resolve_board_model(os_module=FakeOs), board)
+        self.assertEqual(resolve_board_model(os_module=object(), sys_module=object()), "unknown")
+
     def test_core_does_not_depend_on_outer_modules(self):
         violations = _collect_import_violations(CORE_DIRECTORY, FORBIDDEN_CORE_ROOTS)
         self.assertEqual(violations, [])

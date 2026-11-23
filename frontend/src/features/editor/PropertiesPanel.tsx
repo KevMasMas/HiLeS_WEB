@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../stores/useEditorStore';
-import { useSimulationStore } from '../../stores/useSimulationStore';
+import { useDistributedExecutionStore } from '../../stores/useDistributedExecutionStore';
 import { ejecutarJS, ejecutarPython } from '../../engine/EjecutorCodigo';
 import { HilesElementTranslations } from '../../types/translations';
 import { HilesElementType, type CCHPropagationMode, type ConnectionRouting, type HilesPort, type PortDataType, type PortNature } from '../../types/hiles';
@@ -50,7 +50,7 @@ const PortEditor: React.FC<{ nodeId: string; ports: HilesPort[] }> = ({ nodeId, 
 export const PropertiesPanel: React.FC = () => {
   const store = useEditorStore();
   const [resultadoPrueba, setResultadoPrueba] = useState<{ nodeId: string; mensaje: string } | null>(null);
-  
+
   const selectedNode = store.nodes.find((node) => node.id === store.selectedElementId);
   const selectedEdge = store.edges.find((edge) => edge.id === store.selectedConnectionId);
 
@@ -114,14 +114,14 @@ export const PropertiesPanel: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={styles.label}>Code</span>
             <div style={{ display: 'flex', gap: '4px' }}>
-              <button 
-                style={properties.codeLanguage === 'javascript' || !properties.codeLanguage ? styles.activeLang : styles.inactiveLang} 
+              <button
+                style={properties.codeLanguage === 'javascript' || !properties.codeLanguage ? styles.activeLang : styles.inactiveLang}
                 onClick={() => update(selectedNode.id, { codeLanguage: 'javascript' })}
               >
                 JS
               </button>
-              <button 
-                style={properties.codeLanguage === 'python' ? styles.activeLang : styles.inactiveLang} 
+              <button
+                style={properties.codeLanguage === 'python' ? styles.activeLang : styles.inactiveLang}
                 onClick={() => update(selectedNode.id, { codeLanguage: 'python' })}
               >
                 Py
@@ -130,35 +130,41 @@ export const PropertiesPanel: React.FC = () => {
           </div>
           <React.Suspense fallback={<div style={{ padding: 12, fontSize: 11 }}>Cargando editor…</div>}>
             <CodeEditor
-            key={selectedNode.id}
-            codigo={String(properties.code ?? properties.expression ?? '')}
-            lenguaje={(properties.codeLanguage as 'javascript' | 'python') ?? 'javascript'}
-            onChange={(code) => update(selectedNode.id, { code })}
-            variablesDisponibles={ports.filter(p => p.direction === 'input').map(p => p.name)}
-            onProbar={async () => {
-              setResultadoPrueba({ nodeId: selectedNode.id, mensaje: 'Ejecutando...' });
-              try {
-                const edges = store.edges.filter(e => e.target === selectedNode.id);
-                const simState = useSimulationStore.getState();
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const entradas: Record<string, any> = {};
-                ports.filter(p => p.direction === 'input').forEach(port => {
-                  const edge = edges.find(e => e.targetHandle === port.id);
-                  const valorRuntime = edge ? simState.valoresRuntime[edge.source] : undefined;
-                  const valorPrueba = valorRuntime
-                    ?? (port.dataType === 'boolean' ? false : port.dataType === 'string' ? '' : 0);
-                  entradas[port.name] = valorPrueba;
-                  entradas[nombreVariable(port.name)] = valorPrueba;
-                });
-                const code = String(properties.code ?? properties.expression ?? '');
-                const res = properties.codeLanguage === 'python'
-                  ? await ejecutarPython(code, entradas)
-                  : await ejecutarJS(code, entradas);
-                setResultadoPrueba({ nodeId: selectedNode.id, mensaje: `Resultado: ${String(res)}` });
-              } catch (e: unknown) {
-                setResultadoPrueba({ nodeId: selectedNode.id, mensaje: `Error: ${e instanceof Error ? e.message : String(e)}` });
-              }
-            }}
+              key={selectedNode.id}
+              codigo={String(properties.code ?? properties.expression ?? '')}
+              lenguaje={(properties.codeLanguage as 'javascript' | 'python') ?? 'javascript'}
+              onChange={(code) => update(selectedNode.id, { code })}
+              variablesDisponibles={ports.filter(p => p.direction === 'input').map(p => p.name)}
+              onProbar={async () => {
+                setResultadoPrueba({ nodeId: selectedNode.id, mensaje: 'Ejecutando...' });
+                try {
+                  const edges = store.edges.filter(e => e.target === selectedNode.id);
+                  const { manifest, snapshots } = useDistributedExecutionStore.getState();
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const entradas: Record<string, any> = {};
+                  ports.filter(p => p.direction === 'input').forEach(port => {
+                    const edge = edges.find(e => e.targetHandle === port.id);
+                    const propietario = edge && manifest ? manifest.owners[edge.source] : undefined;
+                    const estadoFuente = edge && propietario
+                      ? (snapshots[propietario]?.elements[edge.source] as Record<string, unknown> | undefined)
+                      : undefined;
+                    const valorRuntime = estadoFuente
+                      ? (estadoFuente.valor ?? estadoFuente.salida ?? estadoFuente.valor_retenido)
+                      : undefined;
+                    const valorPrueba = valorRuntime
+                      ?? (port.dataType === 'boolean' ? false : port.dataType === 'string' ? '' : 0);
+                    entradas[port.name] = valorPrueba;
+                    entradas[nombreVariable(port.name)] = valorPrueba;
+                  });
+                  const code = String(properties.code ?? properties.expression ?? '');
+                  const res = properties.codeLanguage === 'python'
+                    ? await ejecutarPython(code, entradas)
+                    : await ejecutarJS(code, entradas);
+                  setResultadoPrueba({ nodeId: selectedNode.id, mensaje: `Resultado: ${String(res)}` });
+                } catch (e: unknown) {
+                  setResultadoPrueba({ nodeId: selectedNode.id, mensaje: `Error: ${e instanceof Error ? e.message : String(e)}` });
+                }
+              }}
               resultadoPrueba={resultadoPrueba?.nodeId === selectedNode.id ? resultadoPrueba.mensaje : null}
             />
           </React.Suspense>

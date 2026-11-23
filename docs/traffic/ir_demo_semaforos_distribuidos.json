@@ -1,18 +1,17 @@
 {
   "ir_version": 2,
-  "modelo_id": "semaforos-distribuidos",
+  "modelo_id": "modelo-hiles",
   "version": 1,
   "nombre": "Modelo HiLeS",
   "metadata": {
     "documento_schema_version": 2,
-    "compilado_en": "2026-10-18T22:00:00.000Z",
+    "compilado_en": "2026-10-30T14:10:24.205Z",
     "bloque_raiz_id": null,
     "structural_blocks_aplanados": [
       "norte-block",
-      "sur-block",
       "este-block",
-      "oeste-block",
-      "control-block"
+      "sur-block",
+      "oeste-block"
     ],
     "normalizaciones_legadas": [
       "structural_block_aplanado"
@@ -21,66 +20,38 @@
   "entradas_externas": [
     {
       "elemento_id": "sensor-norte",
-      "nombre": "🚗 Sensor Norte",
+      "nombre": "Carros esperando · Norte",
       "puerto_salida": "sensor-norte-out",
       "tipo_dato": "integer",
       "valor_inicial": 0
     },
     {
-      "elemento_id": "luz-norte",
-      "nombre": "🚦 Luz Norte",
-      "puerto_salida": "luz-norte-out",
-      "tipo_dato": "string",
-      "valor_inicial": "rojo"
-    },
-    {
-      "elemento_id": "sensor-sur",
-      "nombre": "🚗 Sensor Sur",
-      "puerto_salida": "sensor-sur-out",
-      "tipo_dato": "integer",
-      "valor_inicial": 0
-    },
-    {
-      "elemento_id": "luz-sur",
-      "nombre": "🚦 Luz Sur",
-      "puerto_salida": "luz-sur-out",
-      "tipo_dato": "string",
-      "valor_inicial": "rojo"
-    },
-    {
       "elemento_id": "sensor-este",
-      "nombre": "🚗 Sensor Este",
+      "nombre": "Carros esperando · Este",
       "puerto_salida": "sensor-este-out",
       "tipo_dato": "integer",
       "valor_inicial": 0
     },
     {
-      "elemento_id": "luz-este",
-      "nombre": "🚦 Luz Este",
-      "puerto_salida": "luz-este-out",
-      "tipo_dato": "string",
-      "valor_inicial": "rojo"
-    },
-    {
-      "elemento_id": "sensor-oeste",
-      "nombre": "🚗 Sensor Oeste",
-      "puerto_salida": "sensor-oeste-out",
+      "elemento_id": "sensor-sur",
+      "nombre": "Carros esperando · Sur",
+      "puerto_salida": "sensor-sur-out",
       "tipo_dato": "integer",
       "valor_inicial": 0
     },
     {
-      "elemento_id": "luz-oeste",
-      "nombre": "🚦 Luz Oeste",
-      "puerto_salida": "luz-oeste-out",
-      "tipo_dato": "string",
-      "valor_inicial": "rojo"
+      "elemento_id": "sensor-oeste",
+      "nombre": "Carros esperando · Oeste",
+      "puerto_salida": "sensor-oeste-out",
+      "tipo_dato": "integer",
+      "valor_inicial": 0
     }
   ],
   "elementos": [
     {
       "id": "sensor-norte",
       "tipo": "service",
-      "nombre": "🚗 Sensor Norte",
+      "nombre": "Carros esperando · Norte",
       "tipo_dato": "integer",
       "salidas": [
         "sensor-norte-out"
@@ -89,126 +60,118 @@
       "valor_inicial": 0
     },
     {
-      "id": "luz-norte",
-      "tipo": "service",
-      "nombre": "🚦 Luz Norte",
-      "tipo_dato": "string",
-      "salidas": [
-        "luz-norte-out"
-      ],
-      "entradas": [],
-      "valor_inicial": "rojo"
-    },
-    {
-      "id": "lamparas-norte",
+      "id": "decision-norte",
       "tipo": "functional_block",
-      "nombre": "Lámparas Norte",
+      "nombre": "Decisión local · Norte",
       "habilitado": true,
       "lenguaje": "python",
-      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }",
+      "codigo": "def calcular(vehiculos_locales):\n    return {\n        'hay_demanda': vehiculos_locales > 0,\n        'sin_demanda': vehiculos_locales <= 0,\n        'ciclo_activo': True,\n    }",
       "entradas": [
         {
-          "puerto": "lamparas-norte-luz",
-          "variable": "luz",
-          "tipo_dato": "string"
-        },
-        {
-          "puerto": "lamparas-norte-vehiculos",
-          "variable": "vehiculos_esperando",
+          "puerto": "decision-norte-cars",
+          "variable": "vehiculos_locales",
           "tipo_dato": "integer"
         }
       ],
       "salidas": [
         {
-          "puerto": "lamparas-norte-rojo",
-          "variable": "rojo",
+          "puerto": "decision-norte-demand",
+          "variable": "hay_demanda",
           "tipo_dato": "boolean"
         },
         {
-          "puerto": "lamparas-norte-amarillo",
-          "variable": "amarillo",
+          "puerto": "decision-norte-skip",
+          "variable": "sin_demanda",
           "tipo_dato": "boolean"
         },
         {
-          "puerto": "lamparas-norte-verde",
-          "variable": "verde",
-          "tipo_dato": "boolean"
-        },
-        {
-          "puerto": "lamparas-norte-solicitud",
-          "variable": "solicitud",
+          "puerto": "decision-norte-cycle",
+          "variable": "ciclo_activo",
           "tipo_dato": "boolean"
         }
       ]
     },
     {
-      "id": "sensor-sur",
-      "tipo": "service",
-      "nombre": "🚗 Sensor Sur",
-      "tipo_dato": "integer",
-      "salidas": [
-        "sensor-sur-out"
-      ],
-      "entradas": [],
-      "valor_inicial": 0
+      "id": "norte-rojo",
+      "tipo": "place",
+      "nombre": "🔴 Rojo",
+      "tokens": 1,
+      "capacidad": 1
     },
     {
-      "id": "luz-sur",
-      "tipo": "service",
-      "nombre": "🚦 Luz Sur",
-      "tipo_dato": "string",
-      "salidas": [
-        "luz-sur-out"
-      ],
-      "entradas": [],
-      "valor_inicial": "rojo"
+      "id": "norte-verde",
+      "tipo": "place",
+      "nombre": "🟢 Verde",
+      "tokens": 0,
+      "capacidad": 1
     },
     {
-      "id": "lamparas-sur",
-      "tipo": "functional_block",
-      "nombre": "Lámparas Sur",
-      "habilitado": true,
-      "lenguaje": "python",
-      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }",
-      "entradas": [
-        {
-          "puerto": "lamparas-sur-luz",
-          "variable": "luz",
-          "tipo_dato": "string"
-        },
-        {
-          "puerto": "lamparas-sur-vehiculos",
-          "variable": "vehiculos_esperando",
-          "tipo_dato": "integer"
-        }
-      ],
-      "salidas": [
-        {
-          "puerto": "lamparas-sur-rojo",
-          "variable": "rojo",
-          "tipo_dato": "boolean"
-        },
-        {
-          "puerto": "lamparas-sur-amarillo",
-          "variable": "amarillo",
-          "tipo_dato": "boolean"
-        },
-        {
-          "puerto": "lamparas-sur-verde",
-          "variable": "verde",
-          "tipo_dato": "boolean"
-        },
-        {
-          "puerto": "lamparas-sur-solicitud",
-          "variable": "solicitud",
-          "tipo_dato": "boolean"
-        }
-      ]
+      "id": "norte-amarillo",
+      "tipo": "place",
+      "nombre": "🟡 Amarillo",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "norte-token",
+      "tipo": "place",
+      "nombre": "● Token local",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "norte-listo",
+      "tipo": "place",
+      "nombre": "Listo para recibir",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "norte-iniciar-verde",
+      "tipo": "transition",
+      "nombre": "Token + demanda → verde",
+      "habilitada": true,
+      "puerto_condicion": "norte-iniciar-verde-cond",
+      "puerto_accion": "norte-iniciar-verde-action"
+    },
+    {
+      "id": "norte-verde-a-amarillo",
+      "tipo": "transition",
+      "nombre": "Verde 3s → amarillo",
+      "habilitada": true,
+      "puerto_condicion": "norte-verde-a-amarillo-cond",
+      "puerto_accion": "norte-verde-a-amarillo-action",
+      "retardo_ms": 3000
+    },
+    {
+      "id": "norte-amarillo-a-rojo",
+      "tipo": "transition",
+      "nombre": "Amarillo 1s → rojo y ceder",
+      "habilitada": true,
+      "puerto_condicion": "norte-amarillo-a-rojo-cond",
+      "puerto_accion": "norte-amarillo-a-rojo-action",
+      "retardo_ms": 1000
+    },
+    {
+      "id": "norte-ceder-sin-demanda",
+      "tipo": "transition",
+      "nombre": "Sin carros → ceder token",
+      "habilitada": true,
+      "puerto_condicion": "norte-ceder-sin-demanda-cond",
+      "puerto_accion": "norte-ceder-sin-demanda-action"
+    },
+    {
+      "id": "norte-recibir-token",
+      "tipo": "transition",
+      "nombre": "Recibir token del anterior",
+      "habilitada": true,
+      "puerto_condicion": "norte-recibir-token-cond",
+      "puerto_accion": "norte-recibir-token-action"
     },
     {
       "id": "sensor-este",
       "tipo": "service",
-      "nombre": "🚗 Sensor Este",
+      "nombre": "Carros esperando · Este",
       "tipo_dato": "integer",
       "salidas": [
         "sensor-este-out"
@@ -217,62 +180,238 @@
       "valor_inicial": 0
     },
     {
-      "id": "luz-este",
-      "tipo": "service",
-      "nombre": "🚦 Luz Este",
-      "tipo_dato": "string",
-      "salidas": [
-        "luz-este-out"
-      ],
-      "entradas": [],
-      "valor_inicial": "rojo"
-    },
-    {
-      "id": "lamparas-este",
+      "id": "decision-este",
       "tipo": "functional_block",
-      "nombre": "Lámparas Este",
+      "nombre": "Decisión local · Este",
       "habilitado": true,
       "lenguaje": "python",
-      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }",
+      "codigo": "def calcular(vehiculos_locales):\n    return {\n        'hay_demanda': vehiculos_locales > 0,\n        'sin_demanda': vehiculos_locales <= 0,\n        'ciclo_activo': True,\n    }",
       "entradas": [
         {
-          "puerto": "lamparas-este-luz",
-          "variable": "luz",
-          "tipo_dato": "string"
-        },
-        {
-          "puerto": "lamparas-este-vehiculos",
-          "variable": "vehiculos_esperando",
+          "puerto": "decision-este-cars",
+          "variable": "vehiculos_locales",
           "tipo_dato": "integer"
         }
       ],
       "salidas": [
         {
-          "puerto": "lamparas-este-rojo",
-          "variable": "rojo",
+          "puerto": "decision-este-demand",
+          "variable": "hay_demanda",
           "tipo_dato": "boolean"
         },
         {
-          "puerto": "lamparas-este-amarillo",
-          "variable": "amarillo",
+          "puerto": "decision-este-skip",
+          "variable": "sin_demanda",
           "tipo_dato": "boolean"
         },
         {
-          "puerto": "lamparas-este-verde",
-          "variable": "verde",
-          "tipo_dato": "boolean"
-        },
-        {
-          "puerto": "lamparas-este-solicitud",
-          "variable": "solicitud",
+          "puerto": "decision-este-cycle",
+          "variable": "ciclo_activo",
           "tipo_dato": "boolean"
         }
       ]
     },
     {
+      "id": "este-rojo",
+      "tipo": "place",
+      "nombre": "🔴 Rojo",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "este-verde",
+      "tipo": "place",
+      "nombre": "🟢 Verde",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "este-amarillo",
+      "tipo": "place",
+      "nombre": "🟡 Amarillo",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "este-token",
+      "tipo": "place",
+      "nombre": "● Token local",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "este-listo",
+      "tipo": "place",
+      "nombre": "Listo para recibir",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "este-iniciar-verde",
+      "tipo": "transition",
+      "nombre": "Token + demanda → verde",
+      "habilitada": true,
+      "puerto_condicion": "este-iniciar-verde-cond",
+      "puerto_accion": "este-iniciar-verde-action"
+    },
+    {
+      "id": "este-verde-a-amarillo",
+      "tipo": "transition",
+      "nombre": "Verde 3s → amarillo",
+      "habilitada": true,
+      "puerto_condicion": "este-verde-a-amarillo-cond",
+      "puerto_accion": "este-verde-a-amarillo-action",
+      "retardo_ms": 3000
+    },
+    {
+      "id": "este-amarillo-a-rojo",
+      "tipo": "transition",
+      "nombre": "Amarillo 1s → rojo y ceder",
+      "habilitada": true,
+      "puerto_condicion": "este-amarillo-a-rojo-cond",
+      "puerto_accion": "este-amarillo-a-rojo-action",
+      "retardo_ms": 1000
+    },
+    {
+      "id": "este-ceder-sin-demanda",
+      "tipo": "transition",
+      "nombre": "Sin carros → ceder token",
+      "habilitada": true,
+      "puerto_condicion": "este-ceder-sin-demanda-cond",
+      "puerto_accion": "este-ceder-sin-demanda-action"
+    },
+    {
+      "id": "este-recibir-token",
+      "tipo": "transition",
+      "nombre": "Recibir token del anterior",
+      "habilitada": true,
+      "puerto_condicion": "este-recibir-token-cond",
+      "puerto_accion": "este-recibir-token-action"
+    },
+    {
+      "id": "sensor-sur",
+      "tipo": "service",
+      "nombre": "Carros esperando · Sur",
+      "tipo_dato": "integer",
+      "salidas": [
+        "sensor-sur-out"
+      ],
+      "entradas": [],
+      "valor_inicial": 0
+    },
+    {
+      "id": "decision-sur",
+      "tipo": "functional_block",
+      "nombre": "Decisión local · Sur",
+      "habilitado": true,
+      "lenguaje": "python",
+      "codigo": "def calcular(vehiculos_locales):\n    return {\n        'hay_demanda': vehiculos_locales > 0,\n        'sin_demanda': vehiculos_locales <= 0,\n        'ciclo_activo': True,\n    }",
+      "entradas": [
+        {
+          "puerto": "decision-sur-cars",
+          "variable": "vehiculos_locales",
+          "tipo_dato": "integer"
+        }
+      ],
+      "salidas": [
+        {
+          "puerto": "decision-sur-demand",
+          "variable": "hay_demanda",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "decision-sur-skip",
+          "variable": "sin_demanda",
+          "tipo_dato": "boolean"
+        },
+        {
+          "puerto": "decision-sur-cycle",
+          "variable": "ciclo_activo",
+          "tipo_dato": "boolean"
+        }
+      ]
+    },
+    {
+      "id": "sur-rojo",
+      "tipo": "place",
+      "nombre": "🔴 Rojo",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "sur-verde",
+      "tipo": "place",
+      "nombre": "🟢 Verde",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "sur-amarillo",
+      "tipo": "place",
+      "nombre": "🟡 Amarillo",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "sur-token",
+      "tipo": "place",
+      "nombre": "● Token local",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "sur-listo",
+      "tipo": "place",
+      "nombre": "Listo para recibir",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "sur-iniciar-verde",
+      "tipo": "transition",
+      "nombre": "Token + demanda → verde",
+      "habilitada": true,
+      "puerto_condicion": "sur-iniciar-verde-cond",
+      "puerto_accion": "sur-iniciar-verde-action"
+    },
+    {
+      "id": "sur-verde-a-amarillo",
+      "tipo": "transition",
+      "nombre": "Verde 3s → amarillo",
+      "habilitada": true,
+      "puerto_condicion": "sur-verde-a-amarillo-cond",
+      "puerto_accion": "sur-verde-a-amarillo-action",
+      "retardo_ms": 3000
+    },
+    {
+      "id": "sur-amarillo-a-rojo",
+      "tipo": "transition",
+      "nombre": "Amarillo 1s → rojo y ceder",
+      "habilitada": true,
+      "puerto_condicion": "sur-amarillo-a-rojo-cond",
+      "puerto_accion": "sur-amarillo-a-rojo-action",
+      "retardo_ms": 1000
+    },
+    {
+      "id": "sur-ceder-sin-demanda",
+      "tipo": "transition",
+      "nombre": "Sin carros → ceder token",
+      "habilitada": true,
+      "puerto_condicion": "sur-ceder-sin-demanda-cond",
+      "puerto_accion": "sur-ceder-sin-demanda-action"
+    },
+    {
+      "id": "sur-recibir-token",
+      "tipo": "transition",
+      "nombre": "Recibir token del anterior",
+      "habilitada": true,
+      "puerto_condicion": "sur-recibir-token-cond",
+      "puerto_accion": "sur-recibir-token-action"
+    },
+    {
       "id": "sensor-oeste",
       "tipo": "service",
-      "nombre": "🚗 Sensor Oeste",
+      "nombre": "Carros esperando · Oeste",
       "tipo_dato": "integer",
       "salidas": [
         "sensor-oeste-out"
@@ -281,197 +420,703 @@
       "valor_inicial": 0
     },
     {
-      "id": "luz-oeste",
-      "tipo": "service",
-      "nombre": "🚦 Luz Oeste",
-      "tipo_dato": "string",
-      "salidas": [
-        "luz-oeste-out"
-      ],
-      "entradas": [],
-      "valor_inicial": "rojo"
-    },
-    {
-      "id": "lamparas-oeste",
+      "id": "decision-oeste",
       "tipo": "functional_block",
-      "nombre": "Lámparas Oeste",
+      "nombre": "Decisión local · Oeste",
       "habilitado": true,
       "lenguaje": "python",
-      "codigo": "def calcular(**inputs):\n    luz = inputs.get('luz')\n    vehiculos_esperando = inputs.get('vehiculos_esperando')\n    if vehiculos_esperando is None:\n        vehiculos_esperando = 0\n    if luz != 'verde' and luz != 'amarillo':\n        luz = 'rojo'\n    return {\n        'rojo': luz == 'rojo',\n        'amarillo': luz == 'amarillo',\n        'verde': luz == 'verde',\n        'solicitud': vehiculos_esperando > 0 and luz == 'rojo',\n    }",
+      "codigo": "def calcular(vehiculos_locales):\n    return {\n        'hay_demanda': vehiculos_locales > 0,\n        'sin_demanda': vehiculos_locales <= 0,\n        'ciclo_activo': True,\n    }",
       "entradas": [
         {
-          "puerto": "lamparas-oeste-luz",
-          "variable": "luz",
-          "tipo_dato": "string"
-        },
-        {
-          "puerto": "lamparas-oeste-vehiculos",
-          "variable": "vehiculos_esperando",
+          "puerto": "decision-oeste-cars",
+          "variable": "vehiculos_locales",
           "tipo_dato": "integer"
         }
       ],
       "salidas": [
         {
-          "puerto": "lamparas-oeste-rojo",
-          "variable": "rojo",
+          "puerto": "decision-oeste-demand",
+          "variable": "hay_demanda",
           "tipo_dato": "boolean"
         },
         {
-          "puerto": "lamparas-oeste-amarillo",
-          "variable": "amarillo",
+          "puerto": "decision-oeste-skip",
+          "variable": "sin_demanda",
           "tipo_dato": "boolean"
         },
         {
-          "puerto": "lamparas-oeste-verde",
-          "variable": "verde",
-          "tipo_dato": "boolean"
-        },
-        {
-          "puerto": "lamparas-oeste-solicitud",
-          "variable": "solicitud",
+          "puerto": "decision-oeste-cycle",
+          "variable": "ciclo_activo",
           "tipo_dato": "boolean"
         }
       ]
     },
     {
-      "id": "seguridad-cruce",
-      "tipo": "functional_block",
-      "nombre": "Seguridad del cruce",
-      "habilitado": true,
-      "lenguaje": "python",
-      "codigo": "def calcular(**inputs):\n    norte = inputs.get('luz_norte') == 'verde' or inputs.get('luz_norte') == 'amarillo'\n    sur = inputs.get('luz_sur') == 'verde' or inputs.get('luz_sur') == 'amarillo'\n    este = inputs.get('luz_este') == 'verde' or inputs.get('luz_este') == 'amarillo'\n    oeste = inputs.get('luz_oeste') == 'verde' or inputs.get('luz_oeste') == 'amarillo'\n    conflicto = (norte and oeste) or (este and norte) or (este and sur) or (oeste and sur)\n    eje = 'todo-rojo'\n    if conflicto:\n        eje = 'conflicto'\n    elif norte or sur:\n        eje = 'norte-sur'\n    elif este or oeste:\n        eje = 'este-oeste'\n    return {'seguro': not conflicto, 'eje': eje}",
-      "entradas": [
-        {
-          "puerto": "seguridad-luz-norte",
-          "variable": "luz_norte",
-          "tipo_dato": "string"
-        },
-        {
-          "puerto": "seguridad-luz-sur",
-          "variable": "luz_sur",
-          "tipo_dato": "string"
-        },
-        {
-          "puerto": "seguridad-luz-este",
-          "variable": "luz_este",
-          "tipo_dato": "string"
-        },
-        {
-          "puerto": "seguridad-luz-oeste",
-          "variable": "luz_oeste",
-          "tipo_dato": "string"
-        }
-      ],
-      "salidas": [
-        {
-          "puerto": "seguridad-seguro",
-          "variable": "seguro",
-          "tipo_dato": "boolean"
-        },
-        {
-          "puerto": "seguridad-eje",
-          "variable": "eje",
-          "tipo_dato": "string"
-        }
-      ]
+      "id": "oeste-rojo",
+      "tipo": "place",
+      "nombre": "🔴 Rojo",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "oeste-verde",
+      "tipo": "place",
+      "nombre": "🟢 Verde",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "oeste-amarillo",
+      "tipo": "place",
+      "nombre": "🟡 Amarillo",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "oeste-token",
+      "tipo": "place",
+      "nombre": "● Token local",
+      "tokens": 0,
+      "capacidad": 1
+    },
+    {
+      "id": "oeste-listo",
+      "tipo": "place",
+      "nombre": "Listo para recibir",
+      "tokens": 1,
+      "capacidad": 1
+    },
+    {
+      "id": "oeste-iniciar-verde",
+      "tipo": "transition",
+      "nombre": "Token + demanda → verde",
+      "habilitada": true,
+      "puerto_condicion": "oeste-iniciar-verde-cond",
+      "puerto_accion": "oeste-iniciar-verde-action"
+    },
+    {
+      "id": "oeste-verde-a-amarillo",
+      "tipo": "transition",
+      "nombre": "Verde 3s → amarillo",
+      "habilitada": true,
+      "puerto_condicion": "oeste-verde-a-amarillo-cond",
+      "puerto_accion": "oeste-verde-a-amarillo-action",
+      "retardo_ms": 3000
+    },
+    {
+      "id": "oeste-amarillo-a-rojo",
+      "tipo": "transition",
+      "nombre": "Amarillo 1s → rojo y ceder",
+      "habilitada": true,
+      "puerto_condicion": "oeste-amarillo-a-rojo-cond",
+      "puerto_accion": "oeste-amarillo-a-rojo-action",
+      "retardo_ms": 1000
+    },
+    {
+      "id": "oeste-ceder-sin-demanda",
+      "tipo": "transition",
+      "nombre": "Sin carros → ceder token",
+      "habilitada": true,
+      "puerto_condicion": "oeste-ceder-sin-demanda-cond",
+      "puerto_accion": "oeste-ceder-sin-demanda-action"
+    },
+    {
+      "id": "oeste-recibir-token",
+      "tipo": "transition",
+      "nombre": "Recibir token del anterior",
+      "habilitada": true,
+      "puerto_condicion": "oeste-recibir-token-cond",
+      "puerto_accion": "oeste-recibir-token-action"
     }
   ],
   "conexiones": [
     {
-      "id": "cch-sensor-norte",
+      "id": "cch-norte-cars",
       "tipo": "cch",
       "origen": "sensor-norte",
       "puerto_origen": "sensor-norte-out",
-      "destino": "lamparas-norte",
-      "puerto_destino": "lamparas-norte-vehiculos"
+      "destino": "decision-norte",
+      "puerto_destino": "decision-norte-cars"
     },
     {
-      "id": "cch-luz-norte",
-      "tipo": "cch",
-      "origen": "luz-norte",
-      "puerto_origen": "luz-norte-out",
-      "destino": "lamparas-norte",
-      "puerto_destino": "lamparas-norte-luz"
+      "id": "lch-norte-demand",
+      "tipo": "lch",
+      "origen": "decision-norte",
+      "puerto_origen": "decision-norte-demand",
+      "destino": "norte-iniciar-verde",
+      "puerto_destino": "norte-iniciar-verde-cond"
     },
     {
-      "id": "cch-sensor-sur",
-      "tipo": "cch",
-      "origen": "sensor-sur",
-      "puerto_origen": "sensor-sur-out",
-      "destino": "lamparas-sur",
-      "puerto_destino": "lamparas-sur-vehiculos"
+      "id": "lch-norte-skip",
+      "tipo": "lch",
+      "origen": "decision-norte",
+      "puerto_origen": "decision-norte-skip",
+      "destino": "norte-ceder-sin-demanda",
+      "puerto_destino": "norte-ceder-sin-demanda-cond"
     },
     {
-      "id": "cch-luz-sur",
-      "tipo": "cch",
-      "origen": "luz-sur",
-      "puerto_origen": "luz-sur-out",
-      "destino": "lamparas-sur",
-      "puerto_destino": "lamparas-sur-luz"
+      "id": "lch-norte-green-clock",
+      "tipo": "lch",
+      "origen": "decision-norte",
+      "puerto_origen": "decision-norte-cycle",
+      "destino": "norte-verde-a-amarillo",
+      "puerto_destino": "norte-verde-a-amarillo-cond"
     },
     {
-      "id": "cch-sensor-este",
+      "id": "lch-norte-yellow-clock",
+      "tipo": "lch",
+      "origen": "decision-norte",
+      "puerto_origen": "decision-norte-cycle",
+      "destino": "norte-amarillo-a-rojo",
+      "puerto_destino": "norte-amarillo-a-rojo-cond"
+    },
+    {
+      "id": "arc-norte-red-start",
+      "tipo": "arco",
+      "origen": "norte-rojo",
+      "destino": "norte-iniciar-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-token-start",
+      "tipo": "arco",
+      "origen": "norte-token",
+      "destino": "norte-iniciar-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-start-green",
+      "tipo": "arco",
+      "origen": "norte-iniciar-verde",
+      "destino": "norte-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-green-yellow",
+      "tipo": "arco",
+      "origen": "norte-verde",
+      "destino": "norte-verde-a-amarillo",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-to-yellow",
+      "tipo": "arco",
+      "origen": "norte-verde-a-amarillo",
+      "destino": "norte-amarillo",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-yellow-release",
+      "tipo": "arco",
+      "origen": "norte-amarillo",
+      "destino": "norte-amarillo-a-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-release-red",
+      "tipo": "arco",
+      "origen": "norte-amarillo-a-rojo",
+      "destino": "norte-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-red-skip",
+      "tipo": "arco",
+      "origen": "norte-rojo",
+      "destino": "norte-ceder-sin-demanda",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-token-skip",
+      "tipo": "arco",
+      "origen": "norte-token",
+      "destino": "norte-ceder-sin-demanda",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-skip-red",
+      "tipo": "arco",
+      "origen": "norte-ceder-sin-demanda",
+      "destino": "norte-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-ready-receive",
+      "tipo": "arco",
+      "origen": "norte-listo",
+      "destino": "norte-recibir-token",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-receive-ready",
+      "tipo": "arco",
+      "origen": "norte-recibir-token",
+      "destino": "norte-listo",
+      "peso": 1
+    },
+    {
+      "id": "arc-norte-receive-token",
+      "tipo": "arco",
+      "origen": "norte-recibir-token",
+      "destino": "norte-token",
+      "peso": 1
+    },
+    {
+      "id": "cch-este-cars",
       "tipo": "cch",
       "origen": "sensor-este",
       "puerto_origen": "sensor-este-out",
-      "destino": "lamparas-este",
-      "puerto_destino": "lamparas-este-vehiculos"
+      "destino": "decision-este",
+      "puerto_destino": "decision-este-cars"
     },
     {
-      "id": "cch-luz-este",
+      "id": "lch-este-demand",
+      "tipo": "lch",
+      "origen": "decision-este",
+      "puerto_origen": "decision-este-demand",
+      "destino": "este-iniciar-verde",
+      "puerto_destino": "este-iniciar-verde-cond"
+    },
+    {
+      "id": "lch-este-skip",
+      "tipo": "lch",
+      "origen": "decision-este",
+      "puerto_origen": "decision-este-skip",
+      "destino": "este-ceder-sin-demanda",
+      "puerto_destino": "este-ceder-sin-demanda-cond"
+    },
+    {
+      "id": "lch-este-green-clock",
+      "tipo": "lch",
+      "origen": "decision-este",
+      "puerto_origen": "decision-este-cycle",
+      "destino": "este-verde-a-amarillo",
+      "puerto_destino": "este-verde-a-amarillo-cond"
+    },
+    {
+      "id": "lch-este-yellow-clock",
+      "tipo": "lch",
+      "origen": "decision-este",
+      "puerto_origen": "decision-este-cycle",
+      "destino": "este-amarillo-a-rojo",
+      "puerto_destino": "este-amarillo-a-rojo-cond"
+    },
+    {
+      "id": "arc-este-red-start",
+      "tipo": "arco",
+      "origen": "este-rojo",
+      "destino": "este-iniciar-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-token-start",
+      "tipo": "arco",
+      "origen": "este-token",
+      "destino": "este-iniciar-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-start-green",
+      "tipo": "arco",
+      "origen": "este-iniciar-verde",
+      "destino": "este-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-green-yellow",
+      "tipo": "arco",
+      "origen": "este-verde",
+      "destino": "este-verde-a-amarillo",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-to-yellow",
+      "tipo": "arco",
+      "origen": "este-verde-a-amarillo",
+      "destino": "este-amarillo",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-yellow-release",
+      "tipo": "arco",
+      "origen": "este-amarillo",
+      "destino": "este-amarillo-a-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-release-red",
+      "tipo": "arco",
+      "origen": "este-amarillo-a-rojo",
+      "destino": "este-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-red-skip",
+      "tipo": "arco",
+      "origen": "este-rojo",
+      "destino": "este-ceder-sin-demanda",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-token-skip",
+      "tipo": "arco",
+      "origen": "este-token",
+      "destino": "este-ceder-sin-demanda",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-skip-red",
+      "tipo": "arco",
+      "origen": "este-ceder-sin-demanda",
+      "destino": "este-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-ready-receive",
+      "tipo": "arco",
+      "origen": "este-listo",
+      "destino": "este-recibir-token",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-receive-ready",
+      "tipo": "arco",
+      "origen": "este-recibir-token",
+      "destino": "este-listo",
+      "peso": 1
+    },
+    {
+      "id": "arc-este-receive-token",
+      "tipo": "arco",
+      "origen": "este-recibir-token",
+      "destino": "este-token",
+      "peso": 1
+    },
+    {
+      "id": "cch-sur-cars",
       "tipo": "cch",
-      "origen": "luz-este",
-      "puerto_origen": "luz-este-out",
-      "destino": "lamparas-este",
-      "puerto_destino": "lamparas-este-luz"
+      "origen": "sensor-sur",
+      "puerto_origen": "sensor-sur-out",
+      "destino": "decision-sur",
+      "puerto_destino": "decision-sur-cars"
     },
     {
-      "id": "cch-sensor-oeste",
+      "id": "lch-sur-demand",
+      "tipo": "lch",
+      "origen": "decision-sur",
+      "puerto_origen": "decision-sur-demand",
+      "destino": "sur-iniciar-verde",
+      "puerto_destino": "sur-iniciar-verde-cond"
+    },
+    {
+      "id": "lch-sur-skip",
+      "tipo": "lch",
+      "origen": "decision-sur",
+      "puerto_origen": "decision-sur-skip",
+      "destino": "sur-ceder-sin-demanda",
+      "puerto_destino": "sur-ceder-sin-demanda-cond"
+    },
+    {
+      "id": "lch-sur-green-clock",
+      "tipo": "lch",
+      "origen": "decision-sur",
+      "puerto_origen": "decision-sur-cycle",
+      "destino": "sur-verde-a-amarillo",
+      "puerto_destino": "sur-verde-a-amarillo-cond"
+    },
+    {
+      "id": "lch-sur-yellow-clock",
+      "tipo": "lch",
+      "origen": "decision-sur",
+      "puerto_origen": "decision-sur-cycle",
+      "destino": "sur-amarillo-a-rojo",
+      "puerto_destino": "sur-amarillo-a-rojo-cond"
+    },
+    {
+      "id": "arc-sur-red-start",
+      "tipo": "arco",
+      "origen": "sur-rojo",
+      "destino": "sur-iniciar-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-token-start",
+      "tipo": "arco",
+      "origen": "sur-token",
+      "destino": "sur-iniciar-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-start-green",
+      "tipo": "arco",
+      "origen": "sur-iniciar-verde",
+      "destino": "sur-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-green-yellow",
+      "tipo": "arco",
+      "origen": "sur-verde",
+      "destino": "sur-verde-a-amarillo",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-to-yellow",
+      "tipo": "arco",
+      "origen": "sur-verde-a-amarillo",
+      "destino": "sur-amarillo",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-yellow-release",
+      "tipo": "arco",
+      "origen": "sur-amarillo",
+      "destino": "sur-amarillo-a-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-release-red",
+      "tipo": "arco",
+      "origen": "sur-amarillo-a-rojo",
+      "destino": "sur-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-red-skip",
+      "tipo": "arco",
+      "origen": "sur-rojo",
+      "destino": "sur-ceder-sin-demanda",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-token-skip",
+      "tipo": "arco",
+      "origen": "sur-token",
+      "destino": "sur-ceder-sin-demanda",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-skip-red",
+      "tipo": "arco",
+      "origen": "sur-ceder-sin-demanda",
+      "destino": "sur-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-ready-receive",
+      "tipo": "arco",
+      "origen": "sur-listo",
+      "destino": "sur-recibir-token",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-receive-ready",
+      "tipo": "arco",
+      "origen": "sur-recibir-token",
+      "destino": "sur-listo",
+      "peso": 1
+    },
+    {
+      "id": "arc-sur-receive-token",
+      "tipo": "arco",
+      "origen": "sur-recibir-token",
+      "destino": "sur-token",
+      "peso": 1
+    },
+    {
+      "id": "cch-oeste-cars",
       "tipo": "cch",
       "origen": "sensor-oeste",
       "puerto_origen": "sensor-oeste-out",
-      "destino": "lamparas-oeste",
-      "puerto_destino": "lamparas-oeste-vehiculos"
+      "destino": "decision-oeste",
+      "puerto_destino": "decision-oeste-cars"
     },
     {
-      "id": "cch-luz-oeste",
-      "tipo": "cch",
-      "origen": "luz-oeste",
-      "puerto_origen": "luz-oeste-out",
-      "destino": "lamparas-oeste",
-      "puerto_destino": "lamparas-oeste-luz"
+      "id": "lch-oeste-demand",
+      "tipo": "lch",
+      "origen": "decision-oeste",
+      "puerto_origen": "decision-oeste-demand",
+      "destino": "oeste-iniciar-verde",
+      "puerto_destino": "oeste-iniciar-verde-cond"
     },
     {
-      "id": "cch-seguridad-norte",
-      "tipo": "cch",
-      "origen": "luz-norte",
-      "puerto_origen": "luz-norte-out",
-      "destino": "seguridad-cruce",
-      "puerto_destino": "seguridad-luz-norte"
+      "id": "lch-oeste-skip",
+      "tipo": "lch",
+      "origen": "decision-oeste",
+      "puerto_origen": "decision-oeste-skip",
+      "destino": "oeste-ceder-sin-demanda",
+      "puerto_destino": "oeste-ceder-sin-demanda-cond"
     },
     {
-      "id": "cch-seguridad-sur",
-      "tipo": "cch",
-      "origen": "luz-sur",
-      "puerto_origen": "luz-sur-out",
-      "destino": "seguridad-cruce",
-      "puerto_destino": "seguridad-luz-sur"
+      "id": "lch-oeste-green-clock",
+      "tipo": "lch",
+      "origen": "decision-oeste",
+      "puerto_origen": "decision-oeste-cycle",
+      "destino": "oeste-verde-a-amarillo",
+      "puerto_destino": "oeste-verde-a-amarillo-cond"
     },
     {
-      "id": "cch-seguridad-este",
-      "tipo": "cch",
-      "origen": "luz-este",
-      "puerto_origen": "luz-este-out",
-      "destino": "seguridad-cruce",
-      "puerto_destino": "seguridad-luz-este"
+      "id": "lch-oeste-yellow-clock",
+      "tipo": "lch",
+      "origen": "decision-oeste",
+      "puerto_origen": "decision-oeste-cycle",
+      "destino": "oeste-amarillo-a-rojo",
+      "puerto_destino": "oeste-amarillo-a-rojo-cond"
     },
     {
-      "id": "cch-seguridad-oeste",
-      "tipo": "cch",
-      "origen": "luz-oeste",
-      "puerto_origen": "luz-oeste-out",
-      "destino": "seguridad-cruce",
-      "puerto_destino": "seguridad-luz-oeste"
+      "id": "arc-oeste-red-start",
+      "tipo": "arco",
+      "origen": "oeste-rojo",
+      "destino": "oeste-iniciar-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-token-start",
+      "tipo": "arco",
+      "origen": "oeste-token",
+      "destino": "oeste-iniciar-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-start-green",
+      "tipo": "arco",
+      "origen": "oeste-iniciar-verde",
+      "destino": "oeste-verde",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-green-yellow",
+      "tipo": "arco",
+      "origen": "oeste-verde",
+      "destino": "oeste-verde-a-amarillo",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-to-yellow",
+      "tipo": "arco",
+      "origen": "oeste-verde-a-amarillo",
+      "destino": "oeste-amarillo",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-yellow-release",
+      "tipo": "arco",
+      "origen": "oeste-amarillo",
+      "destino": "oeste-amarillo-a-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-release-red",
+      "tipo": "arco",
+      "origen": "oeste-amarillo-a-rojo",
+      "destino": "oeste-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-red-skip",
+      "tipo": "arco",
+      "origen": "oeste-rojo",
+      "destino": "oeste-ceder-sin-demanda",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-token-skip",
+      "tipo": "arco",
+      "origen": "oeste-token",
+      "destino": "oeste-ceder-sin-demanda",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-skip-red",
+      "tipo": "arco",
+      "origen": "oeste-ceder-sin-demanda",
+      "destino": "oeste-rojo",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-ready-receive",
+      "tipo": "arco",
+      "origen": "oeste-listo",
+      "destino": "oeste-recibir-token",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-receive-ready",
+      "tipo": "arco",
+      "origen": "oeste-recibir-token",
+      "destino": "oeste-listo",
+      "peso": 1
+    },
+    {
+      "id": "arc-oeste-receive-token",
+      "tipo": "arco",
+      "origen": "oeste-recibir-token",
+      "destino": "oeste-token",
+      "peso": 1
+    },
+    {
+      "id": "lch-token-norte-amarillo-a-rojo-a-este",
+      "tipo": "lch",
+      "origen": "norte-amarillo-a-rojo",
+      "puerto_origen": "norte-amarillo-a-rojo-action",
+      "destino": "este-recibir-token",
+      "puerto_destino": "este-recibir-token-cond"
+    },
+    {
+      "id": "lch-token-norte-ceder-sin-demanda-a-este",
+      "tipo": "lch",
+      "origen": "norte-ceder-sin-demanda",
+      "puerto_origen": "norte-ceder-sin-demanda-action",
+      "destino": "este-recibir-token",
+      "puerto_destino": "este-recibir-token-cond"
+    },
+    {
+      "id": "lch-token-este-amarillo-a-rojo-a-sur",
+      "tipo": "lch",
+      "origen": "este-amarillo-a-rojo",
+      "puerto_origen": "este-amarillo-a-rojo-action",
+      "destino": "sur-recibir-token",
+      "puerto_destino": "sur-recibir-token-cond"
+    },
+    {
+      "id": "lch-token-este-ceder-sin-demanda-a-sur",
+      "tipo": "lch",
+      "origen": "este-ceder-sin-demanda",
+      "puerto_origen": "este-ceder-sin-demanda-action",
+      "destino": "sur-recibir-token",
+      "puerto_destino": "sur-recibir-token-cond"
+    },
+    {
+      "id": "lch-token-sur-amarillo-a-rojo-a-oeste",
+      "tipo": "lch",
+      "origen": "sur-amarillo-a-rojo",
+      "puerto_origen": "sur-amarillo-a-rojo-action",
+      "destino": "oeste-recibir-token",
+      "puerto_destino": "oeste-recibir-token-cond"
+    },
+    {
+      "id": "lch-token-sur-ceder-sin-demanda-a-oeste",
+      "tipo": "lch",
+      "origen": "sur-ceder-sin-demanda",
+      "puerto_origen": "sur-ceder-sin-demanda-action",
+      "destino": "oeste-recibir-token",
+      "puerto_destino": "oeste-recibir-token-cond"
+    },
+    {
+      "id": "lch-token-oeste-amarillo-a-rojo-a-norte",
+      "tipo": "lch",
+      "origen": "oeste-amarillo-a-rojo",
+      "puerto_origen": "oeste-amarillo-a-rojo-action",
+      "destino": "norte-recibir-token",
+      "puerto_destino": "norte-recibir-token-cond"
+    },
+    {
+      "id": "lch-token-oeste-ceder-sin-demanda-a-norte",
+      "tipo": "lch",
+      "origen": "oeste-ceder-sin-demanda",
+      "puerto_origen": "oeste-ceder-sin-demanda-action",
+      "destino": "norte-recibir-token",
+      "puerto_destino": "norte-recibir-token-cond"
     }
   ]
 }

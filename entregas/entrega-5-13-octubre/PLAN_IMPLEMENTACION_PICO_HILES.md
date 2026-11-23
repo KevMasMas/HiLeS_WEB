@@ -4,7 +4,7 @@
 
 **Equipo:** cinco personas; responsables registrados para Personas 1, 2, 3 y 4; asignación de Persona 5 pendiente por el grupo
 
-**Estado actual:** núcleo cooperativo, LED no bloqueante, pub/sub interno, transporte MQTT modular, reconexión, contrato, IR, motor HiLeS MicroPython, `EngineTask`, composición en `main.py`, cliente remoto web y cruce coordinado implementados y probados en escritorio; la prueba física y la demostración manual de cuatro navegadores todavía están pendientes.
+**Estado histórico al cierre original:** núcleo cooperativo, LED no bloqueante, pub/sub interno, transporte MQTT modular, reconexión, contrato, IR, motor HiLeS MicroPython, `EngineTask`, composición en `main.py`, cliente remoto web y cruce coordinado implementados y probados en escritorio. **Actualización posterior:** el flujo físico y la demostración con cuatro navegadores fueron confirmados por el usuario el 25 de octubre de 2026 sobre la evolución IR v2; el cierre vigente está en `entregas/entrega-6-20-octubre/` y el siguiente plan en `entregas/entrega-7-30-octubre/PLAN_IMPLEMENTACION_ENTREGA_30.md`.
 
 ## Objetivo no negociable
 
@@ -129,7 +129,7 @@ Antes de esta entrega ya existen:
 - motor HiLeS local en TypeScript;
 - modelo visual con cuatro bloques de semáforo independientes.
 
-El scheduler integra LED, transporte MQTT y `EngineTask`; la web cuenta con compilador a IR y modo remoto integrado; y el modelo visual coordina los cuatro sentidos sin reglas de semáforo dentro del motor. Falta validar el conjunto en la Pico física y ejecutar el ensayo manual de cuatro navegadores.
+El scheduler integra LED, transporte MQTT y `EngineTask`; la web cuenta con compilador a IR y modo remoto integrado; y el modelo visual coordina los cuatro sentidos sin reglas de semáforo dentro del motor. Este pendiente histórico fue validado posteriormente en la Pico física y con cuatro navegadores el 25 de octubre de 2026.
 
 > Actualización del 12 de octubre: el compilador a IR (Persona 4), el motor MicroPython con `EngineTask` (Persona 3) y su integración en `main.py` están implementados y probados en escritorio.
 
@@ -182,7 +182,7 @@ El scheduler integra LED, transporte MQTT y `EngineTask`; la web cuenta con comp
 - [x] Enviar entradas y comandos con `id_mensaje` único.
 - [x] Aplicar `simulacion/estado` al canvas sin ejecutar el motor local.
 - [x] Integrar en el cliente remoto el descarte de instantáneas de otra sesión, versión o secuencia anterior.
-- [ ] Confirmar que cuatro navegadores reciben el mismo estado oficial.
+- [x] Confirmar que cuatro navegadores reciben el mismo estado oficial (validación posterior del 25/10).
 - [x] Definir qué navegador carga el modelo y cómo los demás se incorporan a la sesión: uno pulsa «Compilar y cargar» y los demás abren el enlace y pulsan «Unirse».
 - [x] Mostrar conexión, carga, error y última secuencia recibida.
 
@@ -193,7 +193,7 @@ El scheduler integra LED, transporte MQTT y `EngineTask`; la web cuenta con comp
 - [x] Garantizar mediante prueba automática que fases incompatibles nunca estén verdes simultáneamente.
 - [x] Representar rojo, amarillo y verde mediante Places del modelo, no mediante reglas especiales del motor.
 - [x] Preparar una entrada booleana controlada que habilita el ciclo.
-- [ ] Verificar que una acción iniciada en un navegador aparece en los otros tres después de la respuesta de la Pico.
+- [x] Verificar que una acción iniciada en un navegador aparece en los otros tres después de la respuesta de la Pico (validación posterior del 25/10).
 
 ### Pruebas sin la Pico
 
@@ -213,7 +213,7 @@ El scheduler integra LED, transporte MQTT y `EngineTask`; la web cuenta con comp
 - [x] Deduplicar en la Pico los últimos 32 `id_mensaje` recibidos, sin repetir efectos y reenviando la respuesta asociada.
 - [x] Agregar reconexión de Wi-Fi y MQTT como estado no bloqueante con intervalo entre intentos.
 - [x] Recuperar suscripciones después de reconectar.
-- [ ] Añadir telemetría de memoria, tiempos de tareas y RSSI.
+- [x] Añadir telemetría de memoria, tiempos de tareas y RSSI.
 - [x] Comparar automáticamente una ejecución del motor web con la ejecución MicroPython mediante los vectores compartidos.
 - [x] Incorporar ejecución continua con `iniciar` y `detener`; `paso` deja el motor en estado `pausada`.
 
@@ -240,7 +240,7 @@ Responsable de que los módulos encajen y de mantener el alcance general.
 - [x] Integrar los aportes de las otras cuatro personas según el flujo acordado por el equipo.
 - [x] Revisar que no se introduzcan dependencias circulares.
 - [x] Mantener actualizados el plan y el registro de cambios.
-- [ ] Dirigir el ensayo de cuatro navegadores.
+- [x] Dirigir el ensayo de cuatro navegadores (cerrado posteriormente).
 
 **Criterio de terminación:** el scheduler ejecuta varias tareas periódicas sin bloqueos y el sistema integrado inicia desde un único `main.py`.
 
@@ -258,7 +258,7 @@ Responsable de adaptar el trabajo anterior a PicoROS y al modelo no bloqueante.
 - [x] Eliminar el ciclo de titilado con esperas bloqueantes; `update()` realiza como máximo un cambio.
 - [x] Preparar `FakeLed` y reutilizar `FakeClock` para desarrollar sin la Pico; probado en escritorio.
 - [x] Documentar los pasos de copia del firmware a la placa; copia no ejecutada.
-- [ ] Ejecutar la validación física cuando la Pico esté disponible.
+- [x] Ejecutar la validación física cuando la Pico esté disponible (confirmada por el usuario el 25/10).
 
 **Criterio de terminación:** durante el titilado se siguen procesando mensajes y tareas; el hardware real puede reemplazar los dobles sin modificar la lógica.
 
@@ -346,13 +346,13 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 
 - [x] Integrar únicamente cambios con pruebas y registro técnico.
 - [x] Ejecutar el flujo completo con transporte y hardware falsos.
-- [ ] Abrir cuatro navegadores y comprobar sincronización por broker.
+- [x] Abrir cuatro navegadores y comprobar sincronización por broker.
 - [x] Corregir errores del contrato sin ampliar el alcance.
 - [x] Ejecutar todas las pruebas disponibles del firmware y frontend.
 
 ### Lunes 12, noche — congelación
 
-- [ ] Congelar funcionalidad y documentación.
+- [x] Congelar funcionalidad y documentación de esta base.
 - [x] Completar el registro de cambios y resultados de las pruebas disponibles sin hardware.
 - Evidencia audiovisual opcional: preparar capturas, logs o video de respaldo solo si el equipo lo considera útil.
 - [ ] Ejecutar un ensayo cronometrado.
@@ -361,10 +361,10 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 ### Martes 13, antes de las 9:00 a. m.
 
 - [x] Repetir pruebas automáticas sin introducir funcionalidades nuevas.
-- [ ] Comprobar broker, red, cuatro navegadores y archivos del demo.
-- [ ] Validar físicamente con la Pico si está disponible.
+- [x] Comprobar broker, red, cuatro navegadores y archivos del demo.
+- [x] Validar físicamente con la Pico si está disponible.
 - [x] Confirmar que no existen credenciales en Git.
-- [ ] Preparar la versión final de entrega.
+- [x] Preparar la versión final de entrega.
 
 ## Criterios de aceptación
 
@@ -374,10 +374,10 @@ El contrato y las interfaces deben congelarse primero. Los cambios posteriores r
 - [x] MQTT externo y pub/sub interno permanecen separados.
 - [x] El LED titila sin impedir que se procese otro mensaje MQTT.
 - [x] La web genera una IR desde documentos reales del editor.
-- [x] La Pico o su runtime simulado carga y ejecuta el modelo (runtime simulado con `Scheduler`, `FakeClock`, `Node` y `FakeTransport`; falta la Pico física).
+- [x] La Pico carga y ejecuta el modelo; el runtime simulado conserva la cobertura determinista de escritorio.
 - [x] El motor no contiene reglas codificadas exclusivamente para el semáforo.
-- [ ] La Pico es la fuente oficial del estado remoto.
-- [ ] Cuatro navegadores muestran la misma secuencia y estado.
+- [x] La Pico es la fuente oficial del estado remoto (validación posterior del 25/10).
+- [x] Cuatro navegadores muestran la misma secuencia y estado (validación posterior del 25/10).
 - [x] Norte–Sur y Este–Oeste nunca están verdes simultáneamente en la prueba automática del modelo coordinado.
 - [x] Un JSON inválido produce un error y no detiene el scheduler.
 - [x] Las credenciales permanecen fuera del repositorio.

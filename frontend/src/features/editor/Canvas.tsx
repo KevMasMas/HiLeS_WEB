@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Background, ConnectionMode, Controls, MiniMap, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import { Background, ConnectionMode, Controls, MiniMap, Panel, ReactFlow, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import type { Connection, Edge, EdgeMouseHandler, Node, NodeMouseHandler, OnNodeDrag, XYPosition } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import './editor.css';
@@ -9,6 +9,7 @@ import { HilesNode } from './CustomNodes';
 import { HilesEdge } from './HilesEdge';
 import { HilesConnectionType, HilesElementType, type HilesNodeData } from '../../types/hiles';
 import { getProjectSyncClient, useProjectStore } from '../../stores/useProjectStore';
+import { EVENTO_ENFOCAR_ELEMENTO, type DetalleEnfocarElemento } from '../collaboration/focus';
 
 const nodeTypes = { hilesNode: HilesNode };
 const edgeTypes = { hilesEdge: HilesEdge };
@@ -41,8 +42,9 @@ const CanvasInner: React.FC = () => {
     viewport: { x: number; y: number; zoom: number };
   } | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [showInternalTargets, setShowInternalTargets] = useState(false);
   const [isRightPanning, setIsRightPanning] = useState(false);
-  const { screenToFlowPosition, getViewport, setViewport } = useReactFlow();
+  const { screenToFlowPosition, getViewport, setViewport, setCenter } = useReactFlow();
   const cursors = useProjectStore((state) => state.cursors);
   const store = useEditorStore();
   const { nodes, edges, activeConnectionType } = store;
@@ -123,6 +125,30 @@ const CanvasInner: React.FC = () => {
     } else store.addNode(type, flowPosition);
   }, [nodes, nodesById, screenToFlowPosition, store]);
 
+  useEffect(() => {
+    const addElement = (event: Event) => {
+      const type = (event as CustomEvent<{ type?: HilesElementType }>).detail?.type;
+      if (!type || !Object.values(HilesElementType).includes(type) || type === HilesElementType.TOKEN || type === HilesElementType.PORT) return;
+      const wrapper = reactFlowWrapper.current;
+      if (!wrapper) return;
+      const selectedParent = useEditorStore.getState().nodes.find((node) =>
+        node.id === useEditorStore.getState().selectedElementId
+        && node.data.hilesType === HilesElementType.STRUCTURAL_BLOCK
+        && !node.data.properties.collapsed,
+      );
+      if (selectedParent) {
+        const childCount = useEditorStore.getState().nodes.filter((node) => node.parentId === selectedParent.id).length;
+        store.addNode(type, { x: 28 + (childCount % 3) * 100, y: 62 + Math.floor(childCount / 3) * 90 }, { parentId: selectedParent.id });
+        return;
+      }
+      const bounds = wrapper.getBoundingClientRect();
+      const center = screenToFlowPosition({ x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 });
+      store.addNode(type, center);
+    };
+    window.addEventListener('hiles:add-element', addElement);
+    return () => window.removeEventListener('hiles:add-element', addElement);
+  }, [screenToFlowPosition, store]);
+
   const onNodeClick: NodeMouseHandler = useCallback((_, node) => store.setSelectedElement(node.id), [store]);
   const onEdgeClick: EdgeMouseHandler = useCallback((_, edge) => store.setSelectedConnection(edge.id), [store]);
   const onPaneClick = useCallback(() => { store.setSelectedElement(null); store.clearConnectionError(); }, [store]);
@@ -173,6 +199,20 @@ const CanvasInner: React.FC = () => {
     window.addEventListener('keydown', removeSelection);
     return () => window.removeEventListener('keydown', removeSelection);
   }, [store]);
+  // Centra la vista cuando se sigue a un colaborador o se pulsa «Ir a…» (Persona 3, entrega 7).
+  useEffect(() => {
+    const enfocar = (event: Event) => {
+      const { id } = (event as CustomEvent<DetalleEnfocarElemento>).detail;
+      const node = useEditorStore.getState().nodes.find((item) => item.id === id);
+      if (!node) return;
+      const byId = new Map<string, Node>(useEditorStore.getState().nodes.map((item) => [item.id, item]));
+      const origin = absolutePosition(node, byId);
+      const size = nodeSize(node);
+      void setCenter(origin.x + size.width / 2, origin.y + size.height / 2, { zoom: Math.max(getViewport().zoom, 0.9), duration: 350 });
+    };
+    window.addEventListener(EVENTO_ENFOCAR_ELEMENTO, enfocar);
+    return () => window.removeEventListener(EVENTO_ENFOCAR_ELEMENTO, enfocar);
+  }, [getViewport, setCenter]);
   useEffect(() => {
     const element = reactFlowWrapper.current;
     if (!element) return;
@@ -190,6 +230,7 @@ const CanvasInner: React.FC = () => {
 
   return (
     <div
+      className={showInternalTargets ? 'canvas-targets-visible' : 'canvas-targets-hidden'}
       style={{ flex: 1, position: 'relative', cursor: isRightPanning ? 'grabbing' : undefined }}
       ref={reactFlowWrapper}
       onPointerDownCapture={onRightPanStart}
@@ -206,11 +247,22 @@ const CanvasInner: React.FC = () => {
         onNodeDragStart={onNodeDragStart} onNodeDragStop={onNodeDragStop}
         onDrop={onDrop} onDragOver={onDragOver} onViewportChange={(viewport) => setZoom(viewport.zoom)}
         nodeTypes={nodeTypes} edgeTypes={edgeTypes} connectionMode={ConnectionMode.Loose} connectOnClick minZoom={MIN_ZOOM} maxZoom={2.5} defaultViewport={{ x: 0, y: 0, zoom: 1 }} snapToGrid snapGrid={[1, 1]}
-        panOnDrag={[2]} selectionOnDrag={false}
+        panOnDrag={[0, 2]} selectionOnDrag={false}
         deleteKeyCode={null}
       >
         <Background color="#cbd5e1" gap={20} />
         <Controls />
+        <Panel position="top-right">
+          <button
+            type="button"
+            className="canvas-targets-toggle nodrag nopan"
+            aria-pressed={showInternalTargets}
+            title="Mostrar u ocultar los destinos de ejecución de los elementos internos"
+            onClick={() => setShowInternalTargets((visible) => !visible)}
+          >
+            {showInternalTargets ? 'Ocultar destinos internos' : 'Mostrar destinos internos'}
+          </button>
+        </Panel>
         <MiniMap pannable zoomable nodeColor={(node) => node.data.hilesType === HilesElementType.STRUCTURAL_BLOCK ? '#94a3b8' : '#2563eb'} />
       </ReactFlow>
       {cursors.map((cursor) => {
@@ -219,7 +271,7 @@ const CanvasInner: React.FC = () => {
           <span>➤</span><small style={{ background: cursor.color }}>{cursor.usuario}</small>
         </div>;
       })}
-      <div style={styles.zoomHint}>{zoom < DETAIL_ZOOM ? 'Summary view · Zoom in to reveal internal logic' : 'Detailed view · Internal elements are visible'}</div>
+      <div className="canvas-zoom-hint" style={styles.zoomHint}>{zoom < DETAIL_ZOOM ? 'Vista resumida · Acércate para ver la lógica interna' : 'Vista detallada · Los elementos internos están visibles'}</div>
       {store.connectionError && <button style={styles.error} onClick={store.clearConnectionError}>⚠ {store.connectionError} <strong>×</strong></button>}
     </div>
   );

@@ -343,6 +343,9 @@ class TransitionV2(ElementV2):
             lugar = lugares[lugar_id]
             lugar.tokens = lugar.tokens - self.consumo.get(lugar_id, 0) + self.produccion.get(lugar_id, 0)
         self.disparo_pendiente = True
+        # Una guarda LCH es un pulso consumible. Si permaneciera verdadera, una
+        # entrega remota podría reutilizarse y crear otro token sin mensaje nuevo.
+        self.condicion = False
 
     def evaluate(self):
         if not self.disparo_pendiente:
