@@ -105,9 +105,10 @@ La aplicación reúne cinco capacidades relacionadas, pero separables:
    recibe durante la ejecución.
 
 El soporte funcional actual incluye ejecución Browser ↔ Browser sobre un broker
-real y pruebas automatizadas del motor MicroPython. Las matrices Pico ↔ Browser
-y Pico ↔ Pico todavía requieren evidencia final con placas físicas; una prueba
-con dobles de protocolo no debe documentarse como si fuera hardware real.
+real, pruebas automatizadas del motor MicroPython y validación con dos placas
+Pico físicas. La prueba física confirmó el funcionamiento conjunto de las
+placas dentro de la red local; los dobles de protocolo se conservan para pruebas
+repetibles, pero no sustituyen esa evidencia.
 
 ### 1.3 Dos ejes independientes
 
@@ -115,7 +116,7 @@ La interfaz separa dos decisiones que anteriormente podían confundirse:
 
 | Decisión | Dónde se configura | Opciones principales | Qué controla |
 |---|---|---|---|
-| **Modo de conexión** | Panel **Conexión** | Local/LAN (`ws://`) o Remoto (`wss://`) | Cómo se comunica el navegador con el broker MQTT |
+| **Modo de conexión** | Panel **Conexión** | Local/LAN (`ws://`) | Cómo se comunica el navegador con el broker MQTT dentro de la red del laboratorio |
 | **Destino de ejecución** | Panel **Ejecutores** | Este navegador, otro navegador o una Pico | Dónde se ejecuta cada Structural Block y sus componentes internos |
 
 Cambiar el modo de conexión no mueve la ejecución de un bloque. De la misma
@@ -1193,10 +1194,12 @@ El cliente web rechaza antes de publicar un payload mayor de 32 KiB y descarta
 mensajes que no sean JSON válido. Los consumidores aplican después la validación
 específica de cada protocolo.
 
-La conexión Local/LAN normalmente usa `ws://`; un broker remoto debe usar
-`wss://`, autenticación y control de acceso. Las credenciales permanecen en la
-memoria de la pestaña o en archivos locales excluidos. Nunca forman parte del
-documento, la URL ni un mensaje retained.
+El alcance actual usa exclusivamente conexión Local/LAN mediante `ws://`.
+Navegadores, broker y placas deben estar en la misma red de confianza. El acceso
+desde Internet queda fuera del alcance de esta versión y no constituye una
+prueba pendiente. Las credenciales permanecen en la memoria de la pestaña o en
+archivos locales excluidos; nunca forman parte del documento, la URL ni un
+mensaje retained.
 
 ### 6.2 Identidad y proyectos
 
@@ -1449,9 +1452,11 @@ Resultados esperados:
 
 La prueba visual mínima Browser ↔ Browser debe usar nombres distintos, el mismo
 enlace `?project=...`, un cambio de componente, un movimiento y una recarga. La
-prueba física solo se registra como aprobada cuando se identifican las placas,
-firmware, configuración, comandos, snapshots y resultado observable. Un DryRun
-o `-AllowNoDevice` comprueba el procedimiento, no la matriz física.
+línea base también fue validada con dos placas Pico físicas dentro de la LAN.
+Para cambios futuros de firmware o protocolo, la evidencia se actualiza con
+placas, firmware, configuración, comandos, snapshots y resultado observable.
+Un DryRun o `-AllowNoDevice` comprueba el procedimiento, no reemplaza esa
+validación física.
 
 ## 7. Runtime MicroPython
 
@@ -1750,8 +1755,9 @@ y `Deploy` para un filesystem accesible. En `Backup` o `Deploy`:
    borrar configuración, dependencias o rutas canónicas.
 
 Nunca se debe actualizar una placa sin respaldo ni asumir que
-`-AllowNoDevice` constituye una prueba física. Esa opción permite registrar el
-pendiente cuando no hay hardware.
+`-AllowNoDevice` constituye una prueba física. La línea base actual ya se probó
+con dos placas; esa opción solo permite comprobar el procedimiento de forma
+segura cuando se desarrolla sin hardware conectado.
 
 #### Verificación después de copiar
 
@@ -2111,7 +2117,9 @@ qué versión quedó instalada.
 
 #### Prueba física
 
-La prueba de escritorio no sustituye hardware. Cuando haya una Pico disponible:
+La línea base del proyecto ya fue validada con dos placas Pico físicas en red
+local. La prueba de escritorio no sustituye ese resultado. Cuando un cambio
+afecte firmware, protocolo, empaquetado o capacidades, se repite el recorrido:
 
 1. respaldar su filesystem y verificar hashes;
 2. desplegar el paquete conservando `config_local.py` y `umqtt`;
@@ -2121,9 +2129,9 @@ La prueba de escritorio no sustituye hardware. Cuando haya una Pico disponible:
 6. observar memoria y estabilidad durante varios ciclos;
 7. registrar placa, versión, comandos, resultado y limitaciones.
 
-Si no hay hardware, el cambio puede quedar validado en escritorio, pero se
-documenta explícitamente que la prueba física está pendiente. No se declara
-compatibilidad física basándose únicamente en mocks.
+Si durante un cambio futuro no hay hardware, se registra que ese cambio solo se
+validó en escritorio. Esto no invalida la evidencia física de la línea base,
+pero el cambio nuevo no se declara validado físicamente basándose en mocks.
 
 ### 8.6 Lista de cierre para cualquier cambio
 
@@ -2139,7 +2147,7 @@ Antes de solicitar integración se confirma:
 - [ ] Las pruebas de las capas modificadas pasan.
 - [ ] Se verificó importación/exportación y colaboración cuando aplica.
 - [ ] Se actualizó documentación y registro de cambios.
-- [ ] Se anotó cualquier prueba física pendiente.
+- [ ] Se actualizó la evidencia física cuando el cambio afecta firmware o distribución.
 
 ## 9. Pruebas y control de calidad
 
@@ -2297,7 +2305,8 @@ incluye:
 4. resultado: cantidad de tests, `OK`, build completado o error observado;
 5. escenario manual y comportamiento esperado/obtenido;
 6. capturas únicamente cuando el resultado sea visual;
-7. pruebas omitidas y motivo, por ejemplo “sin Pico física”;
+7. pruebas omitidas y motivo, especialmente si un cambio de firmware no se
+   repitió sobre las placas;
 8. riesgos o limitaciones restantes.
 
 No se aceptan como evidencia “funciona” o una captura sin pasos. Tampoco se
@@ -2305,9 +2314,11 @@ pegan `.env.local`, contraseñas, `config_local.py`, tokens ni contenido de
 respaldos. Los resultados se registran en el archivo de cambios de la entrega
 siguiendo su estructura existente.
 
-Un cambio puede integrarse con una prueba física pendiente si el alcance y la
-limitación quedan explícitos y las capas simulables pasaron. No puede marcarse
-como físicamente validado.
+La línea base ya cuenta con validación de dos placas. Un cambio posterior puede
+integrarse sin repetirla únicamente si no modifica firmware, protocolo,
+empaquetado ni distribución. Cuando sí los modifica, cualquier falta de prueba
+física debe quedar explícita y no se atribuye al nuevo cambio la validación de
+la versión anterior.
 
 ## 10. Git y flujo de contribución
 
@@ -2484,11 +2495,10 @@ autenticación y firewall limitado a la LAN. `ws://` no cifra usuario,
 contraseña ni mensajes. No se deben abrir `1883`, `9001` o `5173` hacia
 Internet mediante port forwarding.
 
-Para acceso remoto se requiere un broker configurado con TLS, cuentas por rol,
-ACL por topics, certificados válidos y WebSocket seguro `wss://`. La interfaz
-permite configurar ese perfil, pero el despliegue remoto seguro no ha sido
-certificado por esta entrega. Una VPN administrada puede extender la LAN, pero
-no reemplaza autenticación ni ACL.
+El acceso remoto por Internet no forma parte del alcance actual. Por eso no se
+considera pendiente configurar ni probar `wss://`, TLS o ACL para un broker
+público. Si una entrega futura amplía el alcance fuera de la LAN, deberá diseñar
+y validar ese perfil de seguridad antes de exponer cualquier puerto.
 
 Las credenciales usadas en el frontend son visibles para quien controla ese
 navegador; por eso deben ser cuentas de aplicación con privilegios mínimos, no
@@ -2565,11 +2575,11 @@ Comprobaciones:
 
 5. revisar firewall de Windows y logs del broker;
 6. confirmar usuario/contraseña y que el listener permite esa cuenta;
-7. usar `ws://` para LAN HTTP o `wss://` cuando la página/broker sean seguros.
+7. confirmar que la URL MQTT usa `ws://`, porque el alcance actual es LAN.
 
-Un error de “mixed content” aparece si una página HTTPS intenta abrir `ws://`;
-en ese caso se necesita `wss://`. Si cambió la IPv4 del PC, actualizar
-`.env.local`, el panel y los `config_local.py` de las placas.
+Si cambió la IPv4 del PC, actualizar `.env.local`, el panel y los
+`config_local.py` de las placas. No se debe publicar el listener WebSocket en
+Internet para resolver un problema de conectividad local.
 
 ### 12.3 Dos navegadores no colaboran
 
