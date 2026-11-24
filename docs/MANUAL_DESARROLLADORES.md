@@ -24,7 +24,7 @@ cómo se relacionan y enlaza su fuente de verdad.
 | 2. Preparación del entorno | Listo para revisión | Guía de replicación y configuración actual |
 | 3. Estructura del repositorio | Listo para revisión | Código y scripts actuales |
 | 4. Frontend | Listo para revisión | Montaje, features, stores, services y estilos actuales |
-| 5. Motor y modelos | Pendiente | `engine/`, IR v2 y vectores |
+| 5. Motor y modelos | Listo para revisión | Motor, documento JSON, IR v2, particionado y vectores |
 | 6. Colaboración y MQTT | Pendiente | Protocolos v2/v3 |
 | 7. Firmware MicroPython | Pendiente | `firmware/pico/` |
 | 8. Flujos de desarrollo | Pendiente | Casos reales del proyecto |
@@ -760,35 +760,382 @@ navegador real o emulado.
 
 ### 5.1 Componentes soportados
 
-_Pendiente: Structural Block, Functional Block, Service, Sample, Hold, Place y
-Transition, conservando los nombres técnicos en inglés._
+Los nombres técnicos se conservan en inglés tanto en la interfaz como en el
+código y en este manual. Cada componente tiene una representación gráfica, una
+función en el editor y, cuando corresponde, una semántica ejecutable.
+
+| Componente | Representación gráfica | Función |
+|---|---|---|
+| **Structural Block** | Rectángulo grande de borde oscuro | Agrupa componentes, puede contener otros Structural Blocks y define una unidad de asignación. No se ejecuta: el compilador lo aplana conservando sus hijos. |
+| **Functional Block** | Elipse horizontal | Transforma entradas en salidas mediante una expresión o código. Puede tener varios Input/Output Ports tipados. |
+| **Service** | Cuadrado exterior con un segundo cuadrado azul interior | Representa la frontera con el exterior. Un Service de salida permite inyectar un valor; uno de entrada puede recibir y exponer resultados. |
+| **Sample** | Triángulo orientable, por defecto hacia la derecha | Convierte una señal continua en un evento discreto: recibe CCH y captura el valor únicamente ante un pulso LCH; emite DCH. |
+| **Hold** | Triángulo orientable, por defecto hacia la izquierda | Convierte eventos discretos en señal continua: consume DCH, conserva el último valor en CCH y emite un pulso LCH cuando lo actualiza. |
+| **Place** | Círculo con un segundo círculo interior y tokens visibles | Almacena el marcado de la red de Petri. Sus propiedades principales son cantidad inicial de tokens y capacidad. |
+| **Transition** | Barra vertical sólida | Comprueba una condición y los tokens de sus Places de entrada; si puede disparar, mueve tokens atómicamente y emite su acción lógica. |
+
+Los Ports aparecen como handles en los bordes de los componentes y se editan
+desde **Propiedades**. Tienen `id`, nombre, dirección, tipo de dato, naturaleza,
+lado y offset. No se agregan como componentes independientes desde la Palette y
+se aplanan al compilar.
+
+`TOKEN` y `TOKEN_FLOW` solo existen para importar modelos antiguos. En el
+modelo vigente los tokens se guardan como un número dentro de cada Place y los
+arcos conectan Place con Transition. No se debe crear nueva lógica que dependa
+de un nodo Token separado.
+
+#### Functional Blocks
+
+Un Functional Block puede operar de tres formas en el frontend:
+
+- una expresión configurada en `expression`;
+- código Python ejecutado de forma aislada mediante Pyodide;
+- código JavaScript ejecutado en un Worker para simulación local.
+
+La ejecución distribuida v3 usa IR v2. En esa representación solo se aceptan
+una expresión pura o el perfil Python restringido. El compilador rechaza
+JavaScript imperativo con `IR_CODIGO_NO_SOPORTADO`; que un bloque funcione en la
+simulación local no garantiza que pueda desplegarse.
+
+El perfil Python admite una expresión de una línea o una única función
+`def calcular(...)`. Permite asignaciones, `if`/`elif`/`else`, `return`,
+operadores, indexación, slicing, `inputs.get(...)` y builtins como `abs`,
+`bool`, `float`, `int`, `len`, `max`, `min`, `round`, `str` y `sum`. Se
+rechazan imports, bucles, clases, lambdas, async, excepciones, acceso a archivos,
+red, hardware, `eval`, `exec`, atributos generales y nombres `__dunder__`.
+
+Una sola salida puede devolverse directamente. Varias salidas deben devolverse
+en un diccionario cuyas claves coincidan con las variables declaradas. `None`
+significa que el bloque no publica una salida en ese paso. Este perfil reduce
+errores y acceso accidental a la placa, pero no es un sandbox criptográfico
+para código hostil.
 
 ### 5.2 Canales
 
-_Pendiente: Continuous Channel (CCH), Discrete Event Channel (DCH) y Logical /
-Petri Channel (LCH)._
+El usuario elige el tipo de canal antes de unir dos Ports compatibles. El tipo
+guardado en `hilesConnectionType` define la semántica; la línea es solo su
+representación visual.
+
+| Canal | Apariencia | Semántica |
+|---|---|---|
+| **Continuous Channel (CCH)** | Línea continua con punta cerrada/rellena | Conserva y propaga la última muestra disponible. Con delay, una nueva salida diferente reemplaza la entrega diferida pendiente de esa conexión. |
+| **Discrete Event Channel (DCH)** | Línea continua con punta abierta | Cola FIFO de eventos. Consume como máximo un evento por Input Port y por paso. Capacidad predeterminada 8 y máxima 32; el overflow produce `DCH_COLA_DESBORDADA`. |
+| **Logical Channel (LCH)** | Línea discontinua con punta tipo chevron | Pulso booleano de un solo paso. Se limpia automáticamente al cerrar el paso para no reutilizar el mismo evento lógico. |
+| **Petri arc** | En el editor comparte el conector lógico entre Place y Transition; en IR se convierte en `arco` | Mueve tokens localmente, alterna Place ↔ Transition y tiene un peso entero mayor o igual a 1. |
+
+CCH, DCH y LCH conectan Ports de salida y entrada. Un Petri arc conecta
+directamente un Place con una Transition o viceversa. El compilador reconoce
+esa pareja y genera `tipo: "arco"`; un `TOKEN_FLOW` antiguo también se normaliza
+a arco.
+
+Todos los canales de datos tienen origen y destino tipados. Los tipos IR v2 son
+`boolean`, `integer`, `real`, `string`, `vector` y `custom`. Un Port `custom`
+acepta una estructura JSON acotada; no acepta objetos de clase, funciones,
+tuplas, sets, bytes, `NaN` ni infinitos.
+
+Los delays de elementos y canales son no bloqueantes. Se expresan en
+milisegundos, admiten valores entre 0 y 600 000 y se resuelven con el reloj
+lógico. El motor no usa `sleep` para esperar una entrega.
 
 ### 5.3 Semántica de ejecución
 
-_Pendiente: reloj lógico, paso, ejecución continua, reinicio, retardos, tokens,
-pesos, capacidad y conflictos._
+`MotorSimulacion` es el motor TypeScript de referencia. Puede construirse desde
+los nodes/edges del editor o desde una IR v2 validada. Mantiene instancias de
+los elementos, bus de canales, colas DCH, valores, timers, marcado Petri,
+errores y una secuencia de eventos observables.
+
+Un paso sigue este orden determinista:
+
+1. Avanza el reloj lógico según `avanceTiempoMs`. Si no se configura un avance
+   predeterminado, un paso no altera el tiempo por sí mismo.
+2. Entrega mensajes diferidos cuyo vencimiento ya alcanzó el reloj y prepara el
+   consumo FIFO de DCH.
+3. Evalúa Service, Functional Block, Sample y Hold en orden topológico.
+4. Registra overflow, valores publicados y errores de los elementos.
+5. Calcula las Transitions habilitadas según condición, tokens, pesos y
+   capacidad de los Places de salida.
+6. Procesa timers no bloqueantes de Transitions.
+7. Si hay exactamente una Transition lista, consume y produce todos sus tokens
+   de forma atómica y emite la acción. Si hay más de una, aplica la política de
+   conflicto y no dispara ninguna.
+8. Limpia los pulsos LCH consumidos durante el paso.
+9. Compara el snapshot con el anterior y determina si el circuito cambió, se
+   estabilizó o quedó con trabajo diferido.
+
+La evaluación Petri nunca mueve tokens parcialmente. Primero calcula para cada
+Place el resultado neto de consumo y producción. Solo si todos tienen tokens
+suficientes y respetan su capacidad aplica el movimiento completo. Un peso 2,
+por ejemplo, consume o produce dos tokens en una única operación.
+
+Una Transition con delay arma su timer cuando queda habilitada. Si pierde la
+condición o deja de tener tokens antes del vencimiento, el timer se cancela. Al
+alcanzar el tiempo solo dispara si continúa habilitada.
+
+**Paso** ejecuta exactamente un ciclo. La ejecución hasta estabilización repite
+pasos hasta que no haya cambios ni trabajo pendiente, aparezca un error o se
+alcance el límite; el motor local usa 50 pasos como tope predeterminado para
+detectar una posible oscilación.
+
+**Reiniciar** restaura el estado inicial completo:
+
+- tokens y capacidad inicial de los Places;
+- valores iniciales de Service y Hold;
+- reloj lógico y contador de pasos;
+- colas DCH y pulsos LCH;
+- entregas diferidas y timers;
+- entradas, salidas, errores y eventos de ejecución.
+
+Reiniciar no modifica el documento del editor. Solo reinicia el runtime que fue
+construido a partir de él.
 
 ### 5.4 Documento JSON del editor
 
-_Pendiente: versión, metadata, nodes, edges, propiedades, padres y posiciones._
+El JSON exportado por el editor es un documento de diseño. Conserva información
+visual y editable; no es la IR que ejecuta una Pico. Su estructura raíz es:
+
+```json
+{
+  "schemaVersion": 2,
+  "metadata": { "savedAt": "2026-11-23T12:00:00.000Z" },
+  "network": {
+    "topology": null,
+    "protocol": null,
+    "nodes": ["block-sensor"]
+  },
+  "allElements": [],
+  "relationNode": [],
+  "connections": []
+}
+```
+
+Campos principales:
+
+| Campo | Contenido |
+|---|---|
+| `schemaVersion` | Versión del documento. La exportación actual genera 2; se aceptan documentos antiguos compatibles de versión 1. |
+| `metadata.savedAt` | Fecha ISO de serialización. Puede haber metadata descriptiva adicional. |
+| `network.nodes` | IDs de Structural Blocks conocidos por el documento. `topology` y `protocol` quedan disponibles como metadata. |
+| `allElements` | Componentes, jerarquía, layout, Ports y propiedades editables. |
+| `relationNode` | Índice derivado de Structural Block → hijos directos. No reemplaza `parentId`. |
+| `connections` | Aristas React Flow con extremos, handles y datos del canal. |
+
+Un elemento tiene esta forma general:
+
+```json
+{
+  "id": "sensor-humedad",
+  "type": "SERVICE",
+  "name": "Humidity sensor",
+  "parentId": "block-sensor",
+  "layout": { "x": 40, "y": 70, "width": 120, "height": 80 },
+  "ports": [
+    {
+      "id": "humidity-out",
+      "name": "humidity",
+      "direction": "output",
+      "dataType": "real",
+      "nature": "continuous",
+      "side": "right",
+      "offset": 0.5
+    }
+  ],
+  "properties": {
+    "description": "External humidity input",
+    "collapsed": false,
+    "locked": false,
+    "visible": true,
+    "enabled": true,
+    "executionDelay": 0,
+    "rotation": 0
+  }
+}
+```
+
+`parentId` es la relación de pertenencia real. Si existe, `layout.x` y
+`layout.y` son relativos al padre. El padre debe existir; al borrar un
+Structural Block se eliminan recursivamente sus descendientes y las conexiones
+afectadas.
+
+Una conexión guarda, como mínimo, `id`, `source`, `target`, `sourceHandle`,
+`targetHandle` y `data`. En `data` se conservan
+`hilesConnectionType`, `routing`, `dataType`, `delay`, `weight`,
+`propagationMode` y `waypoints`. Los waypoints pueden declarar el bloque al que
+son relativos mediante `parentBlockId`.
+
+Reglas de integridad aplicadas al importar:
+
+- IDs de elementos únicos y no vacíos;
+- nombre no vacío para cada elemento;
+- todo `parentId` debe apuntar a un elemento existente;
+- toda conexión necesita ID y extremos existentes;
+- nodos y aristas reciben propiedades predeterminadas faltantes al normalizar;
+- el runtime (`value`, tokens observados, errores, stale) no se importa ni se
+  exporta como parte del documento.
+
+Importar reemplaza el modelo editable y limpia selección e historial. Exportar
+usa el estado actual normalizado. Para compatibilidad, nunca se debe cambiar el
+significado de un campo existente sin incrementar la versión y añadir una
+migración.
 
 ### 5.5 Compilación a IR v2
 
-_Pendiente: validación, normalización, expresiones, Python y límites._
+La IR v2 es el contrato ejecutable común entre Browser y MicroPython. El flujo
+de transformación es:
+
+```text
+Documento JSON del editor
+        │ validar estructura y referencias
+        ▼
+normalizar propiedades, Ports y conexiones antiguas
+        │ aplanar Structural Blocks y Ports de frontera
+        ▼
+crear elementos y canales IR v2 tipados
+        │ validar límites, expresiones y Python
+        ▼
+IrModeloV2 válido o lista de diagnósticos
+```
+
+La raíz IR contiene `ir_version`, identidad y versión del modelo, nombre,
+metadata de compilación, entradas externas, elementos y conexiones. Los tipos
+de elementos ejecutables son `service`, `functional_block`, `sample`, `hold`,
+`place` y `transition`; las conexiones son `cch`, `dch`, `lch` y `arco`.
+
+Durante el aplanamiento:
+
+- Structural Blocks y Ports visuales no se convierten en elementos ejecutables;
+- los IDs de los elementos hoja se conservan;
+- las conexiones que atravesaban la frontera se resuelven hacia sus extremos
+  ejecutables;
+- Token/Token Flow antiguos se normalizan a tokens del Place y `arco`;
+- la metadata registra bloques aplanados y normalizaciones legadas.
+
+El compilador genera diagnósticos con código, severidad y mensaje. Si hay un
+error, no devuelve un modelo parcialmente desplegable. Entre los fallos comunes
+están una referencia inexistente, Port incompatible, ciclo CCH, expresión
+inválida, JavaScript no soportado, delay fuera de rango o perfil Python
+prohibido.
+
+Límites principales de IR v2:
+
+| Recurso | Límite |
+|---|---:|
+| Elementos | 64 |
+| Conexiones | 128 |
+| JSON IR útil | 31 744 bytes dentro del presupuesto MQTT de 32 768 |
+| Profundidad de expresión AST | 16 |
+| Delay | 600 000 ms |
+| Capacidad DCH | 32 eventos; predeterminada 8 |
+| Código Python | 2 048 bytes y 40 líneas |
+| Inputs/Outputs de Python | 16 / 16 |
+| Longitud de vector | 32 números |
+| Profundidad `custom` | 6 |
+| Elementos internos de un valor `custom` | 64 |
+| String o clave | 256 caracteres |
+| Valor serializado | 2 048 bytes |
+
+Estos límites existen para mantener equivalencia con MicroPython y el tamaño de
+payload MQTT. Aumentarlos solo en TypeScript rompe el contrato: cualquier
+cambio debe aplicarse y probarse en ambos motores.
 
 ### 5.6 Particionado distribuido v3
 
-_Pendiente: asignaciones, fragments, manifest, rutas remotas y restricciones
-de Place/Transition entre fragmentos._
+Después de compilar una IR v2 válida, el frontend resuelve el propietario de
+cada elemento ejecutable. La prioridad de asignación es:
+
+1. override explícito de un Functional Block;
+2. asignación directa del elemento;
+3. asignación heredada del Structural Block ancestro más cercano.
+
+Un elemento raíz sin asignación produce `DISTRIBUCION_DESTINO_FALTANTE`. El
+nombre de un colaborador no interviene: los destinos son `executorId` como
+`browser:<sessionId>` o `pico:<deviceId>`.
+
+El particionador es determinista y no consulta UI, reloj ni broker:
+
+1. valida proyecto, deployment, epoch, IR y ejecutores;
+2. comprueba que cada elemento tenga exactamente un propietario disponible;
+3. ordena elementos y conexiones por ID;
+4. conserva dentro de un fragment las conexiones cuyos extremos comparten
+   propietario;
+5. convierte CCH, DCH o LCH que cruza propietarios en una ruta remota tipada;
+6. crea un fragment por ejecutor con su IR local, inbound routes y outbound
+   routes;
+7. verifica lenguajes, cantidad de elementos y bytes contra las capacidades
+   anunciadas por cada worker;
+8. serializa canónicamente, calcula SHA-256 y genera el manifest.
+
+El manifest identifica proyecto, deployment, epoch, propietarios, resumen de
+fragments y rutas. Cada resumen lleva `fragmentId`, `executorId`, hash, tamaño y
+elementos. El worker rechaza un fragment si no es su propietario, no soporta la
+IR/lenguaje, excede su capacidad o no coincide el hash. El despliegue no puede
+iniciar hasta recibir ACK positivo de todos los fragments requeridos.
+
+Los Petri arcs nunca se convierten en rutas MQTT. Un Place y una Transition
+conectados deben permanecer en el mismo fragment; separarlos produce
+`DISTRIBUCION_ARCO_REMOTO`. LCH sí puede cruzar ejecutores como pulso booleano,
+pero no comparte una instancia de Place ni mueve un token remoto directamente.
+
+Las rutas remotas no usan retained y conservan tipo, delay y capacidad DCH. El
+receptor valida proyecto, deployment, epoch, propietario, conexión, tipo,
+secuencia y `messageId`. Un mensaje duplicado o atrasado se descarta sin volver
+a ejecutar el componente.
 
 ### 5.7 Vectores de conformidad
 
-_Pendiente: cómo agregar un vector y comprobar paridad Browser/MicroPython._
+Los vectores de `docs/mqtt/vectores_ir_v2/` son ejemplos ejecutables y la fuente
+de verdad para comprobar que Browser y MicroPython producen el mismo estado.
+Se organizan en:
+
+| Carpeta | Propósito |
+|---|---|
+| `modelos/validos` | IR que ambos validadores deben aceptar |
+| `modelos/invalidos` | IR que debe rechazarse con un diagnóstico estable |
+| `python/validos` y `python/invalidos` | Perfil permitido y prohibido de Functional Blocks |
+| `ejecucion` | Modelo, estado inicial, entradas por paso y snapshots esperados |
+
+Un vector de ejecución tiene esta forma:
+
+```json
+{
+  "descripcion": "Comportamiento que se congela",
+  "modelo": { "ir_version": 2, "elementos": [], "conexiones": [] },
+  "estado_inicial": {},
+  "pasos": [
+    {
+      "avance_tiempo_ms": 0,
+      "entradas": { "service-id": 5 },
+      "elementos_esperados": {}
+    }
+  ]
+}
+```
+
+Para agregar o cambiar semántica:
+
+1. crear el caso mínimo que diferencie el comportamiento;
+2. declarar todos los estados observables relevantes, no solo la salida final;
+3. incluir varios pasos si intervienen FIFO, LCH, Hold, timers o Petri;
+4. comprobar el estado inicial;
+5. ejecutar el mismo archivo con `MotorSimulacion` y `HilesEngineV2`;
+6. reiniciar ambos motores y repetir el vector para detectar estado residual;
+7. agregar además un modelo inválido si se introduce una regla de rechazo;
+8. actualizar la matriz de conformidad sin afirmar prueba física cuando solo se
+   usaron motores o dobles de protocolo.
+
+Comandos mínimos desde la raíz:
+
+```powershell
+Set-Location .\frontend
+npm.cmd run test:run
+
+Set-Location ..
+python -m unittest discover -s firmware/tests -t . -v
+```
+
+En el frontend, `ConformidadIrV2.test.ts` descubre automáticamente todos los
+JSON de `ejecucion/`. En firmware, `test_hiles_engine_v2.py` recorre la misma
+carpeta. Por eso un nuevo archivo correctamente formado entra en las dos suites
+sin mantener dos copias de las expectativas.
 
 ## 6. Colaboración y comunicación MQTT
 
