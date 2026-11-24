@@ -25,7 +25,7 @@ cómo se relacionan y enlaza su fuente de verdad.
 | 3. Estructura del repositorio | Listo para revisión | Código y scripts actuales |
 | 4. Frontend | Listo para revisión | Montaje, features, stores, services y estilos actuales |
 | 5. Motor y modelos | Listo para revisión | Motor, documento JSON, IR v2, particionado y vectores |
-| 6. Colaboración y MQTT | Pendiente | Protocolos v2/v3 |
+| 6. Colaboración y MQTT | Listo para revisión | Cliente MQTT, colaboración v2 y ejecución distribuida v3 |
 | 7. Firmware MicroPython | Pendiente | `firmware/pico/` |
 | 8. Flujos de desarrollo | Pendiente | Casos reales del proyecto |
 | 9. Pruebas y calidad | Pendiente | Suites actuales |
@@ -1141,32 +1141,317 @@ sin mantener dos copias de las expectativas.
 
 ### 6.1 Rol de Mosquitto
 
-_Pendiente: broker, MQTT TCP, MQTT WebSocket y ausencia de lógica de negocio en
-el broker._
+Mosquitto es el broker MQTT: recibe publicaciones y las entrega a todos los
+clientes suscritos al topic correspondiente. No conoce la semántica de HiLeS,
+no valida IR, no mueve tokens, no resuelve conflictos y no decide dónde se
+ejecuta un bloque.
+
+```text
+Navegador ── MQTT sobre WebSocket :9001 ──┐
+Navegador ── MQTT sobre WebSocket :9001 ──┼── Mosquitto
+Pico ─────── MQTT sobre TCP :1883 ────────┘
+```
+
+Los navegadores usan MQTT.js porque la API del navegador no permite abrir un
+socket MQTT TCP directo. Las Picos usan MQTT TCP. Ambos listeners llegan al
+mismo broker y pueden intercambiar mensajes aunque el transporte de entrada sea
+distinto.
+
+Vite y Mosquitto cumplen tareas independientes:
+
+- Vite entrega HTML, JavaScript, CSS y assets por HTTP en el puerto `5173`;
+- Mosquitto transporta JSON MQTT por `1883` o `9001`;
+- cerrar Vite no detiene el servicio Mosquitto;
+- tener Vite activo no significa que MQTT esté conectado.
+
+#### QoS y mensajes retained
+
+HiLeS usa principalmente QoS 0 y QoS 1:
+
+- **QoS 0:** entrega best effort. Es adecuado para cursores o telemetría que
+  pronto será reemplazada por una muestra nueva.
+- **QoS 1:** el mensaje llega al menos una vez. Puede duplicarse, por lo que una
+  operación con efectos debe deduplicarse mediante `operationId`, `id_mensaje`
+  o secuencia.
+- **Retain:** Mosquitto conserva el último payload del topic y lo entrega a un
+  cliente que se suscribe después. Se usa para estado recuperable, nunca para
+  un comando que no deba repetirse.
+
+Regla general del proyecto:
+
+| Tipo de información | QoS habitual | Retain | Razón |
+|---|---:|:---:|---|
+| Snapshot de documento | 1 | Sí | Un colaborador tardío necesita hidratar el proyecto |
+| Operación incremental | 1 | No | Es un evento; el checkpoint posterior la consolida |
+| Presencia/estado de ejecutor | 1 | Sí | Debe conocerse el último estado y permitir Last Will |
+| Cursor/telemetría/snapshot parcial frecuente | 0 | No | Una muestra posterior reemplaza la anterior |
+| Manifest, fragment y ACK | 1 | Sí | Un worker que reconecta debe recuperar el despliegue activo |
+| Canal remoto, comando o entrada | 1 | No | Retenerlos podría repetir una acción antigua |
+| Error | 1 | No | Es evidencia puntual, no estado permanente |
+
+El cliente web rechaza antes de publicar un payload mayor de 32 KiB y descarta
+mensajes que no sean JSON válido. Los consumidores aplican después la validación
+específica de cada protocolo.
+
+La conexión Local/LAN normalmente usa `ws://`; un broker remoto debe usar
+`wss://`, autenticación y control de acceso. Las credenciales permanecen en la
+memoria de la pestaña o en archivos locales excluidos. Nunca forman parte del
+documento, la URL ni un mensaje retained.
 
 ### 6.2 Identidad y proyectos
 
-_Pendiente: `projectId`, nombre visible, identidad de cliente e identidad de
-ejecutor._
+Una sesión tiene varias identidades con alcances diferentes:
+
+| Identidad | Ejemplo | Alcance y propósito |
+|---|---|---|
+| `projectId` | `proyecto-parqueadero` | Espacio común de topics y documento compartido |
+| Nombre visible | `Juan David Romero` | Texto que ven otros participantes junto al cursor y presencia |
+| `clientId` colaborativo | `web-<uuid>` | Identifica una pestaña en operaciones, presencia y convergencia v2 |
+| MQTT `clientId` | generado por la configuración MQTT | Identifica la conexión ante Mosquitto |
+| `executorId` | `browser:abc123` o `pico:pico01` | Identifica un worker capaz de recibir y ejecutar un fragment v3 |
+| `deploymentId` | `deploy-<uuid>` | Identifica una compilación distribuida completa |
+| `epoch` | `4` | Invalida mensajes de una configuración anterior del mismo deployment |
+| `fragmentId` | `<deploymentId>:<executorId>` | Identifica el fragment perteneciente a un worker |
+
+El `projectId` viaja en la URL como `?project=<id>`. Debe tener entre 3 y 64
+caracteres, comenzar por letra minúscula o dígito y continuar únicamente con
+`a-z`, `0-9`, `_` o `-`. Al escribir un valor no válido, la aplicación lo
+normaliza antes de construir topics.
+
+Dos navegadores colaboran solamente si cumplen las dos condiciones:
+
+1. apuntan al mismo broker MQTT;
+2. usan exactamente el mismo `projectId`.
+
+Compartir solo la URL no basta si un celular interpreta `localhost` como su
+propio dispositivo. Para una LAN, el perfil MQTT debe usar la IP del PC que
+ejecuta Mosquitto.
+
+El nombre visible se normaliza, se limita a 40 caracteres y se conserva en
+`sessionStorage`. La identidad colaborativa también pertenece a la pestaña.
+Abrir otra ventana o navegador puede crear otro participante aunque la persona
+escriba el mismo nombre.
+
+Colaborar y ejecutar son capacidades separadas. `clientId` identifica quién
+edita; `executorId` identifica dónde corre un fragment. Al activar **Ejecutar
+aquí**, la pestaña crea una sesión de BrowserWorker independiente. Cambiar el
+nombre visible no debe modificar `executorId` ni las asignaciones del modelo.
 
 ### 6.3 Sincronización entre navegadores
 
-_Pendiente: snapshot retenido, operaciones, presencia, cursores, selección,
-deduplicación y aislamiento entre proyectos._
+La colaboración usa el prefijo:
+
+```text
+udfjc/hiles/v2/projects/<projectId>/
+```
+
+Topics principales:
+
+| Sufijo | Contenido | QoS / Retain |
+|---|---|---|
+| `document/snapshot` | Documento completo para hidratación y checkpoints | 1 / Sí |
+| `document/ops` | `node.add`, `node.move`, `node.update`, `node.remove`, operaciones de connection y cambios del documento | 1 / No |
+| `presence/<clientId>` | Nombre, color, conexión, vista activa y TTL del participante | 1 / Sí |
+| `cursor` | Posición reciente del cursor en coordenadas del Canvas | 0 / No |
+
+#### Entrada a un proyecto
+
+El flujo al abrir una URL compartida es:
+
+1. `Editor` obtiene o crea el `projectId` de la URL.
+2. La persona confirma su nombre visible.
+3. `useProjectStore` crea un `ProjectSyncClient` con una copia inicial del
+   documento local.
+4. El cliente configura su Last Will de presencia y se suscribe a snapshot,
+   operaciones, presencia y cursor.
+5. Si MQTT ya estaba conectado, la conexión se recrea para instalar el Will en
+   el paquete CONNECT.
+6. Mosquitto entrega el snapshot retained, si existe.
+7. La aplicación espera 500 ms antes de comenzar a publicar cambios locales,
+   para evitar sobrescribir el snapshot recién recibido.
+8. Si no llegó snapshot, publica el documento local como snapshot inicial.
+9. A partir de ese momento, cada cambio de nodes/edges se convierte en una o
+   varias operaciones incrementales.
+
+Si MQTT no conecta, un fallback habilita la interfaz para edición local. Ese
+estado permite trabajar offline, pero no representa una sincronización válida.
+
+#### Operaciones y checkpoints
+
+`ProjectSyncClient` compara el documento confirmado con el nuevo documento y
+produce operaciones atómicas. Agrupa cambios locales durante aproximadamente
+150 ms para evitar publicar cada píxel de un arrastre. Después de operaciones
+correctas programa, tras unos 2 segundos de inactividad, un snapshot retained
+como checkpoint.
+
+Las operaciones permiten que dos personas modifiquen entidades distintas sin
+reemplazar el documento completo. El snapshot permite que una persona que entra
+después no tenga que reproducir todo el historial.
+
+#### Convergencia
+
+Cada mensaje lleva proyecto, `clientId`, `operationId`, reloj Lamport y fecha.
+Las reglas son:
+
+1. descartar mensajes de otro `projectId`;
+2. descartar el eco del propio `clientId`;
+3. deduplicar los últimos 128 `operationId`, porque QoS 1 puede repetirlos;
+4. al publicar, incrementar el reloj Lamport local;
+5. al recibir, avanzar a `max(local, remoto) + 1`;
+6. resolver cambios concurrentes sobre la misma entidad por Last Writer Wins
+   usando `(clock, clientId)` como orden determinista;
+7. conservar por separado la marca de cada node, connection y metadata;
+8. activar una guardia mientras se aplica un cambio remoto para que el store no
+   lo vuelva a publicar como cambio local.
+
+Aplicar un documento remoto actualiza nodes/edges y limpia la selección, pero
+conserva el historial local de undo/redo. El historial no se transmite a otros
+participantes.
+
+#### Presencia y cursores
+
+Cada pestaña publica presencia en su topic exclusivo con TTL predeterminado de
+30 segundos y heartbeat cercano a un tercio del TTL. Una desconexión limpia
+publica `conectado: false`; una caída abrupta activa el Last Will. Si ninguno
+llega, los demás clientes marcan inactivo al participante al vencer el TTL y
+eliminan su cursor.
+
+El Canvas limita la publicación de cursor a aproximadamente una muestra cada
+60 ms. Los cursores no son retained: al reconectar se espera una nueva muestra,
+en vez de mostrar una posición antigua como si fuera actual.
 
 ### 6.4 Ejecución distribuida
 
-_Pendiente: descubrimiento de ejecutores, manifest, fragments, ACK, commands,
-snapshots y errors._
+La ejecución distribuida usa un espacio diferente para no mezclar edición y
+runtime:
+
+```text
+udfjc/hiles/v3/projects/<projectId>/
+```
+
+Topics principales:
+
+| Topic relativo | Productor → consumidor | Función |
+|---|---|---|
+| `executors/<executorId>/status` | Worker → navegadores | Descubrimiento, capacidades y estado actual |
+| `deployments/manifest` | Controlador → workers | Mapa de propietarios, fragments y rutas del despliegue activo |
+| `deployments/<deploymentId>/fragments/<executorId>` | Controlador → worker | IR v2 local y rutas inbound/outbound del destino |
+| `.../ack/<executorId>` | Worker → controlador | Aceptación o rechazo del fragment |
+| `.../channels/<connectionId>` | Worker origen → worker destino | Valor CCH, evento DCH o pulso LCH entre ejecutores |
+| `.../snapshot/<executorId>` | Worker → interfaz | Estado parcial de los elementos propietarios |
+| `.../command` | Interfaz → workers | `start`, `step`, `stop` o `reset` |
+| `.../input` | Interfaz → propietario | Valor inyectado a un Service del fragment correcto |
+| `.../error` | Worker → interfaz | Diagnóstico estructurado del despliegue o runtime |
+
+El ciclo completo es:
+
+1. Cada BrowserWorker o Pico anuncia `executorId`, tipo, estado, versiones IR,
+   lenguajes y límites.
+2. El usuario asigna Structural Blocks y overrides permitidos.
+3. El navegador compila, resuelve propietarios y genera manifest/fragments.
+4. Publica manifest y fragment por ejecutor con QoS 1 y retain.
+5. Cada worker verifica identidad, IR, capacidades, tamaño y SHA-256.
+6. El worker publica un ACK de la misma epoch.
+7. Solo cuando todos los ACK requeridos son positivos se habilitan **Iniciar**
+   y **Paso**.
+8. Un canal local se procesa dentro del fragment; uno remoto se publica en el
+   topic de su connection.
+9. Cada worker publica únicamente el estado de sus elementos propietarios.
+10. El frontend valida epoch/propietario y agrega los snapshots para pintar un
+    único estado sobre el Canvas.
+
+Cada mensaje de canal declara proyecto, deployment, epoch, connection,
+propietario, secuencia, `messageId` y valor. El receptor comprueba todo el
+contexto antes de entregar el valor al motor. Duplicados, mensajes atrasados o
+de otra epoch se descartan.
+
+El broker no coordina este ciclo: `useDistributedExecutionStore`, el
+particionador, BrowserWorker y el runtime MicroPython implementan las reglas.
 
 ### 6.5 Reconexión y recuperación
 
-_Pendiente: retained, Last Will, expiración, redespliegue y estados obsoletos._
+El cliente MQTT del navegador mantiene un registro con conteo de consumidores
+por topic. Así, si dos features comparten una suscripción, cerrar una no
+desuscribe accidentalmente a la otra. Tras reconectar restaura todos los topics
+registrados. MQTT.js intenta reconectar cada 5 segundos y usa un timeout de
+conexión de 30 segundos.
+
+La recuperación colaborativa se apoya en cuatro mecanismos:
+
+- snapshot retained para reconstruir el último documento consolidado;
+- operaciones pendientes que vuelven a calcularse/publicarse al recuperar
+  `CONNECTED`;
+- presencia retained con Last Will y TTL;
+- deduplicación y reloj Lamport para tolerar reentregas u orden diferente.
+
+La recuperación distribuida usa:
+
+- estado retained y Last Will `offline` de cada ejecutor;
+- manifest, fragments y ACK retained de la epoch activa;
+- SHA-256 para comprobar que el fragment recuperado sea exactamente el
+  anunciado;
+- secuencias por connection para rechazar canales repetidos;
+- snapshots parciales no retained para evitar reconstruir runtime con
+  telemetría vieja.
+
+Cuando un worker vuelve, lee manifest y fragment retained, valida epoch/hash y
+publica de nuevo su ACK. No debe aceptar canales hasta completar esa
+resincronización.
+
+Si un ejecutor pasa a `offline`, sus elementos se muestran como **stale** u
+**Obsoleto**. Los snapshots de los demás fragmentos siguen siendo válidos. El
+estado stale informa que el último valor ya no está respaldado por un ejecutor
+activo; no debe borrarse silenciosamente ni presentarse como actual.
+
+Antes de una epoch nueva, el controlador limpia los retained del despliegue
+anterior mediante payload vacío. `epoch` evita que un mensaje tardío de la
+configuración previa se aplique al nuevo runtime. Retirar un despliegue también
+debe limpiar manifest, fragments y ACK retenidos; dejar retained antiguos puede
+hacer que un worker reconectado intente recuperar un despliegue que ya no
+existe.
 
 ### 6.6 Matrices verificables
 
-_Pendiente: Browser ↔ Browser, Pico ↔ Browser y Pico ↔ Pico, diferenciando
-simulación de hardware físico._
+La evidencia debe nombrar qué se probó realmente. Un broker real con ejecutores
+simulados valida red y protocolo, pero no valida Wi-Fi, memoria ni MicroPython
+de una placa.
+
+| Matriz o nivel | Qué demuestra | Qué no demuestra |
+|---|---|---|
+| Dos navegadores en la interfaz | Nombre, presencia, snapshot, edición, cursor y Canvas compartido | Firmware o hardware Pico |
+| Cuatro clientes MQTT reales | Fan-out, aislamiento entre projectIds, snapshot retained, presencia y cursor | Render de React o ejecución del motor |
+| BrowserWorker tests | IR, canales y runtime TypeScript de un ejecutor Browser | Broker o red real si usa transporte en memoria |
+| Runner distribuido `memory` | Manifest, fragments, ACK, canales, epoch, deduplicación y recuperación determinista | Mosquitto, sockets o hardware |
+| Runner distribuido `mqtt` | Lo anterior atravesando Mosquitto real | Que los ejecutores `pico:*` sean placas físicas; el runner usa dobles Node.js |
+| Pico física ↔ Browser | Transporte real, MicroPython, límites de placa y un navegador | Segunda Pico física |
+| Pico física ↔ Pico física | Ejecución completa entre dos placas | Nada si se reemplazan las placas por dobles; debe declararse la sustitución |
+
+Con `frontend/.env.local` configurado y Mosquitto activo, las comprobaciones de
+software se ejecutan desde la raíz:
+
+```powershell
+node .\scripts\test-project-collaboration.mjs
+node .\scripts\test-mqtt-four-clients.mjs
+node .\scripts\test-distributed-mqtt.mjs --mode=memory
+node .\scripts\test-distributed-mqtt.mjs --mode=mqtt --timeout=12000
+```
+
+Resultados esperados:
+
+- `test-project-collaboration`: cuatro clientes del proyecto A reciben la
+  operación, el proyecto B no la recibe, un cliente tardío recupera snapshot y
+  se observan presencia y cursor;
+- `test-mqtt-four-clients`: cuatro clientes reciben el mismo estado JSON;
+- runner `memory`: completa registro, carga, ACK, entradas, pasos, snapshots,
+  deduplicación, caída, recuperación y limpieza;
+- runner `mqtt`: completa las mismas etapas posibles sobre Mosquitto y declara
+  explícitamente que los ejecutores Pico son simulados.
+
+La prueba visual mínima Browser ↔ Browser debe usar nombres distintos, el mismo
+enlace `?project=...`, un cambio de componente, un movimiento y una recarga. La
+prueba física solo se registra como aprobada cuando se identifican las placas,
+firmware, configuración, comandos, snapshots y resultado observable. Un DryRun
+o `-AllowNoDevice` comprueba el procedimiento, no la matriz física.
 
 ## 7. Runtime MicroPython
 
