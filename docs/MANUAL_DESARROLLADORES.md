@@ -21,8 +21,8 @@ cómo se relacionan y enlaza su fuente de verdad.
 | Capítulo | Estado | Evidencia principal |
 |---|---|---|
 | 1. Visión técnica | Listo para revisión | `README.md` y arquitectura |
-| 2. Preparación del entorno | Pendiente | Guía de replicación |
-| 3. Estructura del repositorio | Pendiente | Código actual |
+| 2. Preparación del entorno | Listo para revisión | Guía de replicación y configuración actual |
+| 3. Estructura del repositorio | Listo para revisión | Código y scripts actuales |
 | 4. Frontend | Pendiente | `frontend/src/` |
 | 5. Motor y modelos | Pendiente | `engine/`, IR v2 y vectores |
 | 6. Colaboración y MQTT | Pendiente | Protocolos v2/v3 |
@@ -184,44 +184,282 @@ vectores documentados en
 
 ### 2.1 Requisitos
 
-_Pendiente: versiones verificadas de Git, Node.js, npm, Python, Mosquitto,
-MicroPython y herramientas opcionales para Pico._
+El entorno mínimo depende del trabajo que se realizará. Para modificar y probar
+el frontend no hace falta una Pico ni instalar MicroPython.
+
+| Herramienta | Cuándo se necesita | Versión o condición recomendada |
+|---|---|---|
+| **Windows** | Entorno de referencia del equipo | Windows 10 u 11 de 64 bits |
+| **PowerShell** | Comandos, scripts y automatización | Incluido con Windows; algunos comandos administrativos requieren abrirlo como administrador |
+| **Git** | Clonar, actualizar y publicar cambios | Versión reciente con acceso al repositorio |
+| **Node.js y npm** | Siempre que se trabaje en el frontend | Node.js 22 LTS o posterior; npm se instala con Node.js |
+| **Python 3** | Pruebas del firmware y herramientas de flota | Versión de escritorio reciente disponible como `python` |
+| **Eclipse Mosquitto** | Colaboración o ejecución distribuida real | Mosquitto 2.x; la configuración comprobada usa 2.1.2 |
+| **Thonny o `mpremote`** | Copiar firmware y configuración a una Pico | Solo para pruebas con hardware |
+| **MicroPython** | Ejecutar un fragment en una Pico W o Pico 2 W | Firmware compatible instalado en cada placa |
+
+El frontend fija sus dependencias mediante
+[`../frontend/package.json`](../frontend/package.json) y
+[`../frontend/package-lock.json`](../frontend/package-lock.json). Entre las
+tecnologías principales están React 19, TypeScript 6, Vite 8, Zustand 5,
+MQTT.js 5, Pyodide 0.26 y Vitest 5. El archivo de bloqueo es la fuente de verdad
+para las versiones exactas, por lo que se debe usar `npm ci` en instalaciones
+reproducibles.
+
+Para exponer el sistema a otros dispositivos de la LAN, el equipo debe estar en
+una red privada y el firewall debe permitir los puertos utilizados. Crear o
+modificar el servicio Mosquitto y sus reglas de firewall requiere permisos de
+administrador.
 
 ### 2.2 Clonar e instalar
 
-_Pendiente: comandos desde un PC limpio, ubicación correcta de `frontend/` y
-uso de `npm ci`._
+En un equipo nuevo, abrir PowerShell en la carpeta donde se guardará el proyecto
+y ejecutar:
+
+```powershell
+git clone https://github.com/KevMasMas/HiLeS_WEB.git
+Set-Location .\HiLeS_WEB
+git fetch --all --prune
+git switch multi-pico
+git pull --ff-only
+git status
+
+Set-Location .\frontend
+npm.cmd ci
+```
+
+Los comandos de npm deben ejecutarse desde `frontend/`, porque allí están el
+`package.json` y el lockfile de la aplicación. El `package-lock.json` de la raíz
+no describe las dependencias del frontend.
+
+En PowerShell, Windows puede impedir la ejecución de `npm.ps1` por la política
+de scripts. No es necesario cambiar la política del sistema: se puede invocar
+`npm.cmd` como en los ejemplos de este manual.
+
+Después de instalar, comprobar la base del proyecto:
+
+```powershell
+npm.cmd run test:run
+npm.cmd run lint
+npm.cmd run build
+```
+
+Estos comandos deben terminar sin errores antes de asumir que el entorno está
+preparado. Las advertencias o fallos preexistentes deben registrarse con su
+salida exacta; no se deben atribuir automáticamente al cambio en desarrollo.
 
 ### 2.3 Configuración local
 
-_Pendiente: `.env.local`, puertos `5173`, `1883` y `9001`, y reglas para no
-publicar credenciales._
+El frontend incluye
+[`../frontend/.env.example`](../frontend/.env.example) como plantilla. Para una
+configuración local persistente:
+
+```powershell
+Set-Location .\frontend
+Copy-Item .env.example .env.local
+```
+
+Variables disponibles:
+
+| Variable | Ejemplo local | Propósito |
+|---|---|---|
+| `VITE_MQTT_HOST` | `localhost` | Dirección del broker que usará el navegador |
+| `VITE_MQTT_WS_PORT` | `9001` | Puerto MQTT sobre WebSocket |
+| `VITE_MQTT_WS_PATH` | `/mqtt` | Ruta del listener WebSocket |
+| `VITE_MQTT_WS_PROTOCOL` | `ws` | `ws` en LAN; `wss` con TLS en un despliegue remoto |
+| `VITE_MQTT_USERNAME` | valor local | Usuario MQTT si el broker exige autenticación |
+| `VITE_MQTT_PASSWORD` | valor local | Contraseña MQTT; nunca debe publicarse |
+
+`.env.local` está excluido de Git. Se puede verificar antes de continuar:
+
+```powershell
+git check-ignore -v .env.local
+```
+
+La configuración del panel **Conexión** puede reemplazar estos valores durante
+la sesión. El archivo local define valores predeterminados; no es una base de
+datos compartida.
+
+La configuración de referencia de Mosquitto utiliza dos listeners:
+
+- `1883`: MQTT sobre TCP para Pico W / Pico 2 W y herramientas de prueba.
+- `9001`: MQTT sobre WebSocket para los navegadores.
+
+Vite sirve el frontend en `5173`. Vite y Mosquitto son procesos independientes:
+el primero entrega la interfaz y el segundo transporta mensajes. La instalación
+completa del broker, autenticación y firewall está documentada en
+[`GUIA_REPLICACION_COMPLETA_WINDOWS.md`](GUIA_REPLICACION_COMPLETA_WINDOWS.md).
+Los archivos de contraseñas, credenciales Wi-Fi, `.env.local` y
+`config_local.py` son locales y nunca deben añadirse al repositorio.
 
 ### 2.4 Arranque diario
 
-_Pendiente: orden de inicio de Mosquitto y Vite, acceso local y acceso desde
-otro dispositivo de la LAN._
+Si se necesita colaboración o ejecución distribuida, iniciar primero Mosquitto
+desde una consola de PowerShell con permisos de administrador:
+
+```powershell
+Start-Service mosquitto
+Get-Service mosquitto
+```
+
+Después, en otra consola, iniciar el frontend:
+
+```powershell
+Set-Location D:\Documentos\Hiles\frontend
+npm.cmd run dev -- --host 0.0.0.0
+```
+
+La ruta anterior corresponde al entorno usado para elaborar este manual. En
+otro equipo se debe sustituir por la ubicación real del clon. La opción
+`--host 0.0.0.0` permite que Vite escuche tanto en el equipo como en su LAN.
+
+- Desde el mismo PC: `http://localhost:5173/`.
+- Desde otro dispositivo: `http://IP_DEL_PC:5173/`.
+
+La dirección IPv4 del PC se obtiene con `ipconfig`. Ambos dispositivos deben
+tener acceso a la misma red y el firewall debe permitir el tráfico entrante.
+Para colaborar deben abrir el mismo enlace con el mismo parámetro, por ejemplo
+`?project=prueba-equipo`.
+
+`Ctrl+C` en la consola de Vite detiene solamente el frontend. Mosquitto, si está
+instalado como servicio, continúa activo. Se detiene por separado y únicamente
+cuando se desea apagar la comunicación MQTT:
+
+```powershell
+Stop-Service mosquitto
+```
 
 ### 2.5 Comprobación mínima
 
-_Pendiente: checklist de página accesible, broker conectado y prueba entre dos
-navegadores sin hardware._
+Antes de desarrollar una función colaborativa o distribuida, comprobar la
+infraestructura:
+
+```powershell
+Get-Service mosquitto
+Test-NetConnection localhost -Port 1883
+Test-NetConnection localhost -Port 9001
+```
+
+Luego realizar esta prueba sin hardware:
+
+1. Abrir `http://localhost:5173/?project=manual-dev-test` en un navegador.
+2. Abrir el mismo proyecto en una ventana privada, otro navegador o un equipo de
+   la LAN.
+3. Escribir un nombre diferente para cada participante y confirmar que ambos
+   aparecen conectados.
+4. Crear o renombrar un componente en una ventana y comprobar que el cambio
+   aparece en la otra.
+5. Mover el componente y verificar que su posición también se sincroniza.
+6. Recargar una ventana y comprobar que recupera el snapshot retenido.
+
+El entorno mínimo queda validado cuando:
+
+- la página abre en el puerto `5173`;
+- el panel **Conexión** muestra el broker conectado;
+- los puertos `1883` y `9001` responden cuando se usarán Picos y navegadores;
+- dos clientes con el mismo `projectId` comparten presencia y cambios;
+- tests, lint y build terminan correctamente.
+
+Sin Mosquitto se puede elegir **Continuar sin conexión** para modelar y probar
+funciones locales, pero no se valida colaboración ni ejecución distribuida.
 
 ## 3. Estructura del repositorio
 
 ### 3.1 Mapa de carpetas
 
-_Pendiente: describir `frontend/`, `firmware/`, `infrastructure/`, `scripts/`,
-`docs/`, `output/` y `entregas/`._
+La raíz separa aplicación, runtime, infraestructura, automatización, artefactos
+y evidencia académica:
+
+```text
+HiLeS_WEB/
+├── frontend/        Aplicación React, motor Browser y pruebas del frontend
+├── firmware/        Runtime MicroPython y pruebas ejecutables en escritorio
+├── infrastructure/ Configuración y documentación de servicios como Mosquitto
+├── scripts/         Generadores, preparación de Picos y pruebas integrales
+├── docs/            Arquitectura, protocolos, guías y este manual
+├── output/          Ejemplos JSON y paquetes generados para demostración
+├── entregas/        Planes, informes, registros y evidencia por entrega
+└── README.md        Estado vigente, inicio rápido y flujo principal
+```
+
+Dentro de `frontend/src/`, las responsabilidades se distribuyen así:
+
+```text
+frontend/src/
+├── domain/    Documento del editor y tipos centrales del modelo
+├── engine/    Motor TypeScript, grafo de datos y semántica Petri
+├── features/  Interfaz organizada por capacidad del producto
+├── services/  IR, MQTT, proyectos, criptografía y ejecución distribuida
+├── stores/    Estado Zustand del editor, proyecto, simulación y despliegue
+├── types/     Contratos TypeScript compartidos
+├── utils/     Funciones auxiliares sin responsabilidad de interfaz
+└── workers/   Ejecución aislada de JavaScript y Python/Pyodide
+```
+
+Las features actuales son `editor`, `collaboration`, `distributed`, `mqtt`,
+`onboarding`, `setup` y `simulation`. Antes de crear una carpeta transversal
+nueva, se debe comprobar si el comportamiento pertenece a una de ellas o a un
+service/store existente.
+
+El runtime de `firmware/pico/` conserva una separación equivalente: `core/`
+coordina tareas base; `hiles/` contiene el modelo y el motor; `pubsub/` maneja
+mensajería; `devices/` y `platform/` aíslan hardware y plataforma; `main.py` es
+el punto de arranque. Sus pruebas de escritorio están en `firmware/tests/`.
 
 ### 3.2 Código fuente frente a artefactos generados
 
-_Pendiente: explicar qué se edita manualmente, qué se genera y qué archivos
-locales nunca deben subirse._
+No todo archivo visible en el árbol tiene el mismo ciclo de vida:
+
+| Categoría | Ejemplos | Regla de trabajo |
+|---|---|---|
+| **Código fuente** | `frontend/src/`, `firmware/pico/`, `scripts/` | Se modifica manualmente y debe acompañarse de pruebas proporcionales al cambio |
+| **Contratos y documentación** | `docs/`, `README.md`, registros en `entregas/` | Se actualizan cuando cambia una interfaz, protocolo, instalación o evidencia |
+| **Ejemplos versionados** | JSON de demostración en `output/` | Se regeneran con su script cuando exista; no se corrigen a mano sin revisar el generador |
+| **Paquete de despliegue** | `output/hiles-pico-w-deploy*` | Se produce con `scripts/prepare-pico-deployment.ps1`; su contenido debe coincidir con firmware y manifiesto |
+| **Resultados de compilación** | `frontend/dist/`, `*.tsbuildinfo`, cachés | Son reproducibles y están ignorados; no deben añadirse a un commit |
+| **Dependencias descargadas** | `frontend/node_modules/` | Las reconstruye `npm ci`; nunca se versionan |
+| **Configuración privada** | `.env.local`, `config_local.py`, claves y archivos de contraseñas MQTT | Se crea por equipo o placa y nunca se publica |
+
+También deben excluirse logs, `__pycache__/`, respaldos de placas y credenciales
+Wi-Fi/MQTT. Antes de preparar un commit se debe revisar `git status` y, ante un
+archivo dudoso, consultar `.gitignore` y su origen en vez de añadirlo por
+comodidad.
+
+Los scripts de la raíz cumplen funciones diferentes:
+
+| Grupo | Scripts principales |
+|---|---|
+| Generación de demostraciones | `generate-coordinated-traffic-demo.mjs`, `generate-distributed-traffic-demo.mjs` |
+| Preparación y administración de Picos | `prepare-pico-deployment.ps1`, `manage-pico-fleet.py`, `test-pico-provisioning.ps1` |
+| Pruebas con MQTT real | `test-project-collaboration.mjs`, `test-mqtt-four-clients.mjs`, `test-distributed-mqtt.mjs` |
+| Prueba física | `test-distributed-physical.ps1` |
+
+Una prueba que use clientes simulados o dobles de hardware puede validar el
+protocolo, pero no reemplaza la evidencia de una ejecución física.
 
 ### 3.3 Dónde empezar según el tipo de cambio
 
-_Pendiente: tabla problema → carpeta → pruebas → documentación relacionada._
+La siguiente tabla orienta la primera inspección. No sustituye la búsqueda de
+referencias ni la lectura de las pruebas existentes.
+
+| Cambio | Código inicial | Verificación principal | Documento relacionado |
+|---|---|---|---|
+| Componente, conexión o interacción del Canvas | `frontend/src/features/editor/`, `domain/modelDocument.ts`, `stores/useEditorStore.ts` | Tests del store y prueba visual de edición/importación | Capítulos 4, 5 y formato del modelo |
+| Propiedad o semántica de ejecución | `frontend/src/engine/`, `services/ir/` | Tests del motor, IR y vectores de conformidad | [`mqtt/IR_V2.md`](mqtt/IR_V2.md) |
+| Functional Block con JavaScript o Python | `engine/`, `workers/`, `services/ir/` | Tests del ejecutor y paridad Browser/MicroPython | [`mqtt/IR_V2_PYTHON.md`](mqtt/IR_V2_PYTHON.md) |
+| Sincronización de editores | `features/collaboration/`, `services/projects/`, `stores/useProjectStore.ts` | Tests del store y `scripts/test-project-collaboration.mjs` | [`mqtt/PROTOCOLO_PROYECTOS_V2.md`](mqtt/PROTOCOLO_PROYECTOS_V2.md) |
+| Conexión o autenticación MQTT | `features/mqtt/`, `services/mqtt/`, `.env.example`, `infrastructure/mosquitto/` | Dos navegadores y broker real | [`mqtt/CONTRATO_MENSAJES_MQTT.md`](mqtt/CONTRATO_MENSAJES_MQTT.md) |
+| Asignación y ejecución distribuida | `features/distributed/`, `services/distributed/`, `stores/useDistributedExecutionStore.ts` | Tests distribuidos y `scripts/test-distributed-mqtt.mjs` | [`mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md`](mqtt/PROTOCOLO_EJECUCION_DISTRIBUIDA_V3.md) |
+| Runtime de una Pico | `firmware/pico/` | `firmware/tests/`, conformidad y luego prueba física | [`architecture/ARQUITECTURA_PICO.md`](architecture/ARQUITECTURA_PICO.md) |
+| Alta o preparación de placas | `scripts/manage-pico-fleet.py`, `scripts/prepare-pico-deployment.ps1` | Tests de flota/provisionamiento y revisión del manifiesto | [`GUIA_AGREGAR_PICO_Y_EJECUTORES.md`](GUIA_AGREGAR_PICO_Y_EJECUTORES.md) |
+| Ejemplo de demostración | `scripts/generate-*.mjs`, `output/` | Importación, despliegue y comportamiento esperado | README o guía específica del ejemplo |
+| Instalación o proceso del equipo | `docs/`, `README.md`, `entregas/` | Repetir comandos desde un entorno conocido | Guía y registro afectados |
+
+Para cualquier cambio, el recorrido mínimo es: localizar la fuente de verdad,
+buscar todas las referencias del símbolo o contrato, leer las pruebas cercanas,
+implementar, ejecutar la verificación correspondiente y actualizar la
+documentación. Un cambio de semántica del motor debe revisarse en Browser y
+MicroPython; uno de protocolo debe comprobarse con un broker MQTT real.
 
 ## 4. Arquitectura del frontend
 
