@@ -20,7 +20,7 @@ cómo se relacionan y enlaza su fuente de verdad.
 
 | Capítulo | Estado | Evidencia principal |
 |---|---|---|
-| 1. Visión técnica | Pendiente | `README.md` y arquitectura |
+| 1. Visión técnica | Listo para revisión | `README.md` y arquitectura |
 | 2. Preparación del entorno | Pendiente | Guía de replicación |
 | 3. Estructura del repositorio | Pendiente | Código actual |
 | 4. Frontend | Pendiente | `frontend/src/` |
@@ -56,22 +56,129 @@ cómo se relacionan y enlaza su fuente de verdad.
 
 ### 1.1 Problema que resuelve HiLeS Web
 
-_Pendiente: explicar el objetivo del producto y el tipo de sistemas que permite
-modelar sin asumir conocimientos previos del repositorio._
+HiLeS Web es un editor colaborativo y un entorno de ejecución distribuida para
+modelos HiLeS. Permite representar gráficamente la estructura, el flujo de
+datos y la lógica de control de un sistema sin escribir manualmente toda su
+implementación.
+
+El modelo combina componentes estructurales y funcionales con redes de Petri:
+
+- **Structural Block:** agrupa una parte del sistema y define una unidad natural
+  de asignación a un ejecutor.
+- **Functional Block:** transforma entradas mediante una expresión o código
+  Python permitido por el motor.
+- **Service:** representa una entrada o salida en la frontera del modelo.
+- **Sample** y **Hold:** convierten información entre canales continuos y
+  discretos.
+- **Place** y **Transition:** expresan estado, tokens y reglas de disparo de una
+  red de Petri.
+
+Estos componentes se conectan mediante Continuous Channel (CCH), Discrete Event
+Channel (DCH) y Logical / Petri Channel (LCH). El resultado se conserva como un
+documento JSON que puede editarse, importarse, exportarse, simularse y
+compilarse a una representación intermedia IR v2.
+
+El problema técnico principal no es solo dibujar el circuito: el mismo modelo
+debe producir una semántica equivalente cuando corre en un navegador o en el
+runtime MicroPython, incluso si sus bloques se reparten entre varios
+ejecutores. Por ello, el proyecto incluye validación, particionado, transporte
+MQTT, confirmaciones de despliegue y pruebas de conformidad compartidas.
 
 ### 1.2 Capacidades principales
 
-_Pendiente: modelado jerárquico, simulación, colaboración, distribución entre
-navegadores y Raspberry Pi Pico W, importación y exportación JSON._
+La aplicación reúne cinco capacidades relacionadas, pero separables:
+
+1. **Modelado visual.** Permite crear componentes HiLeS, configurarlos desde el
+   panel de propiedades, anidarlos en Structural Blocks y conectarlos mediante
+   los tres tipos de canal admitidos.
+2. **Simulación.** El motor TypeScript ejecuta pasos, retardos, transformaciones,
+   Sample, Hold y redes de Petri. El usuario puede inyectar valores en Services,
+   observar tokens y reiniciar el estado.
+3. **Persistencia portable.** El modelo puede importarse y exportarse como JSON.
+   Antes de ejecutarlo se valida y se compila a IR v2.
+4. **Colaboración.** Varios navegadores con el mismo `projectId` comparten el
+   documento, presencia, cursores y selección mediante MQTT. Cada participante
+   conserva una identidad visual propia por pestaña.
+5. **Ejecución distribuida.** Los Structural Blocks pueden asignarse a
+   navegadores o Raspberry Pi Pico W / Pico 2 W. El frontend compila y divide el
+   modelo, publica un fragment por ejecutor y agrega los snapshots parciales que
+   recibe durante la ejecución.
+
+El soporte funcional actual incluye ejecución Browser ↔ Browser sobre un broker
+real y pruebas automatizadas del motor MicroPython. Las matrices Pico ↔ Browser
+y Pico ↔ Pico todavía requieren evidencia final con placas físicas; una prueba
+con dobles de protocolo no debe documentarse como si fuera hardware real.
 
 ### 1.3 Dos ejes independientes
 
-_Pendiente: diferenciar colaboración de edición y destino de ejecución._
+La interfaz separa dos decisiones que anteriormente podían confundirse:
+
+| Decisión | Dónde se configura | Opciones principales | Qué controla |
+|---|---|---|---|
+| **Modo de conexión** | Panel **Conexión** | Local/LAN (`ws://`) o Remoto (`wss://`) | Cómo se comunica el navegador con el broker MQTT |
+| **Destino de ejecución** | Panel **Ejecutores** | Este navegador, otro navegador o una Pico | Dónde se ejecuta cada Structural Block y sus componentes internos |
+
+Cambiar el modo de conexión no mueve la ejecución de un bloque. De la misma
+forma, asignar un bloque a una Pico no cambia por sí solo la dirección del
+broker.
+
+También debe distinguirse entre **colaborador** y **ejecutor**:
+
+- Un colaborador abre el mismo `projectId`, edita el documento y publica su
+  presencia.
+- Un ejecutor anuncia capacidades, acepta fragments y procesa comandos del
+  despliegue.
+- Un navegador puede ser solamente colaborador. Solo se convierte en ejecutor
+  cuando la persona activa **Ejecutar aquí**.
+- Una Pico funciona como ejecutor y no ofrece la interfaz de edición.
+
+La identidad del participante tampoco es la identidad del ejecutor. El nombre
+visible, el identificador de cliente MQTT y el `executorId` cumplen funciones
+distintas y no deben reutilizarse como si fueran una única clave.
 
 ### 1.4 Arquitectura resumida
 
-_Pendiente: incluir un diagrama navegador ↔ Mosquitto ↔ navegadores/Picos y
-explicar por qué no existe un backend HTTP tradicional._
+HiLeS Web no utiliza un backend HTTP tradicional con controladores, base de
+datos o lógica de negocio centralizada. La aplicación React se ejecuta en cada
+navegador y Mosquitto actúa únicamente como intermediario de mensajes.
+
+```text
+Vite HTTP :5173 ────────┬──▶ Navegador A: editor + colaborador + ejecutor opcional
+                        └──▶ Navegador B: editor + colaborador + ejecutor opcional
+
+Navegador A ── MQTT/WebSocket :9001 ──┐
+Navegador B ── MQTT/WebSocket :9001 ──┼──▶ Mosquitto
+Pico W / Pico 2 W ── MQTT/TCP :1883 ──┘
+       ejecutor pico:<DEVICE_ID>
+```
+
+Responsabilidad de cada pieza:
+
+| Pieza | Responsabilidad | Lo que no hace |
+|---|---|---|
+| **Vite** | Sirve los archivos del frontend durante desarrollo y los expone a la LAN | No sincroniza modelos ni ejecuta componentes HiLeS |
+| **Frontend React** | Edita el documento, valida, compila, particiona, coordina el despliegue y muestra el estado agregado | No reemplaza el firmware de las placas |
+| **Motor Browser** | Ejecuta localmente un modelo o un fragment usando TypeScript, Workers y Pyodide cuando corresponde | No almacena un estado global centralizado para todos los clientes |
+| **Mosquitto** | Enruta mensajes MQTT, conserva mensajes retained y publica Last Will | No interpreta IR ni decide qué bloque corre en cada dispositivo |
+| **Runtime MicroPython** | Valida y ejecuta fragments en una Pico, intercambia canales remotos y publica ACK, snapshots y errores | No contiene lógica específica de un ejemplo como parqueadero o semáforos |
+
+El flujo distribuido, a alto nivel, es el siguiente:
+
+1. Cada ejecutor anuncia sus capacidades bajo el `projectId` actual.
+2. El usuario asigna los Structural Blocks a ejecutores compatibles.
+3. El frontend valida el documento, lo compila a IR v2 y lo divide en fragments.
+4. Cada ejecutor valida su fragment y responde con un ACK.
+5. Los controles **Iniciar**, **Paso**, **Detener** y **Reiniciar** operan sobre
+   el despliegue aceptado.
+6. Los canales que cruzan ejecutores viajan por MQTT.
+7. Cada ejecutor publica un snapshot parcial y el frontend compone la vista
+   completa del sistema.
+
+Esta arquitectura permite trabajar sin hardware usando ejecutores de navegador
+y, cuando hay placas disponibles, conservar el mismo modelo y protocolo para
+distribuirlo. La equivalencia funcional entre ambos motores se verifica con los
+vectores documentados en
+[`mqtt/vectores_ir_v2/MATRIZ_CONFORMIDAD_PERSONA_4.md`](mqtt/vectores_ir_v2/MATRIZ_CONFORMIDAD_PERSONA_4.md).
 
 ## 2. Preparación del entorno de desarrollo
 
