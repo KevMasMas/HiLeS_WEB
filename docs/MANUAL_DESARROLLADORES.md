@@ -26,8 +26,8 @@ cómo se relacionan y enlaza su fuente de verdad.
 | 4. Frontend | Listo para revisión | Montaje, features, stores, services y estilos actuales |
 | 5. Motor y modelos | Listo para revisión | Motor, documento JSON, IR v2, particionado y vectores |
 | 6. Colaboración y MQTT | Listo para revisión | Cliente MQTT, colaboración v2 y ejecución distribuida v3 |
-| 7. Firmware MicroPython | Pendiente | `firmware/pico/` |
-| 8. Flujos de desarrollo | Pendiente | Casos reales del proyecto |
+| 7. Firmware MicroPython | Listo para revisión | Runtime, configuración, worker v3 y despliegue seguro |
+| 8. Flujos de desarrollo | Listo para revisión | Casos reales y puntos de extensión del proyecto |
 | 9. Pruebas y calidad | Pendiente | Suites actuales |
 | 10. Git y contribución | Pendiente | Flujo de la rama compartida |
 | 11. Seguridad | Pendiente | Configuración local y límites |
@@ -1457,53 +1457,689 @@ o `-AllowNoDevice` comprueba el procedimiento, no la matriz física.
 
 ### 7.1 Estructura del firmware
 
-_Pendiente: módulos principales en `firmware/pico/` y ciclo de arranque._
+El firmware es un monolito modular: en la placa existe un solo proceso y un
+scheduler cooperativo, pero las responsabilidades están separadas por paquetes.
+
+```text
+firmware/pico/
+├── main.py       Composición del runtime y punto de arranque
+├── core/         Clock, Task y Scheduler
+├── pubsub/       Bus interno Node, topics y transporte MQTT
+├── hiles/        Validación, canales, motores IR y DistributedWorker
+├── devices/      LED de diagnóstico y Watchdog
+├── platform/     Adaptadores de Wi-Fi, machine, GPIO y umqtt
+└── examples/     Pruebas manuales pequeñas; no forman parte del paquete canónico
+```
+
+La regla de dependencias es:
+
+```text
+main ──▶ core + pubsub + hiles + devices + platform
+pubsub ──▶ core
+hiles ──▶ core + pubsub
+devices ──▶ core + pubsub
+platform ──▶ APIs específicas de MicroPython
+```
+
+`core/` y `hiles/` no deben importar directamente `machine`, `network` ni
+`umqtt`. Esa separación permite ejecutar el motor y las pruebas en un PC
+inyectando reloj, transporte y hardware falsos.
+
+#### Scheduler cooperativo
+
+Una `Task` tiene periodo, prioridad, próximo vencimiento, estado habilitado y
+métricas. `Scheduler.run_pending()` recorre las tareas por prioridad y orden de
+registro, ejecuta una vez las que vencieron y vuelve a programarlas desde la
+hora real de terminación. No intenta recuperar en ráfaga iteraciones perdidas.
+
+Cada implementación de `update()` debe:
+
+- realizar una cantidad acotada de trabajo y retornar rápidamente;
+- conservar en atributos el trabajo que continuará en otro ciclo;
+- evitar `while True`, espera activa o `sleep` para completar una secuencia;
+- encolar trabajo costoso desde callbacks MQTT, no ejecutarlo dentro del
+  callback;
+- declarar `max_update_ms` cuando necesite presupuesto de tiempo.
+
+El scheduler mide duración, número de ejecuciones, errores y overruns. Una
+excepción se informa al manejador, pero no elimina automáticamente la tarea ni
+impide que las demás se ejecuten.
+
+#### Ciclo de arranque
+
+MicroPython ejecuta `main.py`. `build_default_application()`:
+
+1. carga `config_local.py`;
+2. resuelve `DEVICE_ID`, `MQTT_CLIENT_ID`, `executorId`, proyecto y topics;
+3. crea `Scheduler` y el bus interno `Node`;
+4. crea el LED de la placa y `LedTask`;
+5. crea `EngineTaskV2`, que conserva soporte IR v1 por compatibilidad;
+6. crea el adaptador Wi-Fi y `MqttTransport`;
+7. crea `WatchdogTask` para telemetría y métricas;
+8. crea `DistributedWorker` para el protocolo v3;
+9. registra los componentes en `scheduler.components`;
+10. entra en `scheduler.run_forever()`.
+
+Las tareas visibles son `mqtt`, `led`, `motor`, `watchdog` y `worker_v3`.
+`main.py` solo las conecta: la lógica de IR, MQTT o dispositivos permanece en
+sus módulos.
+
+`Node` es un bus publish/subscribe interno. Recibe objetos Python ya
+decodificados y desacopla motor, LED, watchdog y transporte. Si un callback
+falla, registra el error y continúa entregando a los demás suscriptores.
+
+`MqttTransport` comprueba Wi-Fi, conecta, procesa como máximo una lectura breve
+por actualización, aplica keepalive, valida el límite de 32 KiB y programa la
+reconexión. No ejecuta el circuito dentro del callback del socket.
 
 ### 7.2 Configuración por placa
 
-_Pendiente: `config_local.py`, identidad estable, red, proyecto y broker._
+Cada placa usa el mismo código fuente y un `config_local.py` distinto. La
+plantilla versionada es `firmware/pico/config_local.example.py`; la copia real
+está ignorada por Git y contiene secretos.
+
+| Campo | Regla |
+|---|---|
+| `WIFI_SSID` / `WIFI_PASSWORD` | Red de 2.4 GHz accesible por la Pico; no se publican |
+| `MQTT_HOST` | IPv4 o host del PC/broker; nunca `localhost` ni `127.0.0.1` en la placa |
+| `MQTT_PORT` | Normalmente `1883`, listener MQTT TCP |
+| `MQTT_USERNAME` / `MQTT_PASSWORD` | Credenciales del broker, locales a la placa |
+| `DEVICE_ID` | Identidad estable y única de la placa, sin espacios ni `/`, `+`, `#` |
+| `MQTT_CLIENT_ID` | Único por conexión; normalmente igual a `DEVICE_ID` |
+| `HILES_TEAM_ID` | Segmento v1 conservado por compatibilidad; normalmente `equipo1` |
+| `HILES_PROJECT_ID` | Debe coincidir exactamente con `?project=` de la aplicación |
+| `WORKER_MAX_FRAGMENT_BYTES` | Capacidad anunciada; valor de referencia 30 000 |
+| `WORKER_MAX_ELEMENTS` | Capacidad anunciada; valor de referencia 64 |
+| `WORKER_STATUS_PERIOD_MS` | Heartbeat de estado; valor de referencia 5 000 ms |
+| `ENGINE_PERIOD_MS` | Frecuencia con que la tarea del motor revisa su cola; referencia 20 ms |
+| `ENGINE_STEP_INTERVAL_MS` | Intervalo de ejecución continua; referencia 1 000 ms |
+| `ENGINE_QUEUE_SIZE` | Capacidad de comandos/entradas pendientes; referencia 32 |
+| `WATCHDOG_PERIOD_MS` | Periodo de telemetría; referencia 5 000 ms |
+
+`resolve_device_id()` usa, en orden, `DEVICE_ID`, el identificador físico de
+`machine.unique_id()`, `MQTT_CLIENT_ID` y finalmente `pico01`. Conviene definir
+`DEVICE_ID` explícitamente para que la identidad no cambie entre instalaciones.
+El ejecutor visible se deriva como `pico:<DEVICE_ID>`.
+
+Todas las placas de un mismo modelo comparten broker y `HILES_PROJECT_ID`, pero
+cada una necesita `DEVICE_ID` y `MQTT_CLIENT_ID` propios. Si al encender una
+placa desaparece otra, la causa probable es un `MQTT_CLIENT_ID` duplicado.
+
+La aplicación puede generar el archivo desde **Ejecutores → Preparar otra
+Raspberry Pi Pico**. El generador:
+
+- valida campos obligatorios, puerto e identificadores MQTT;
+- escapa los textos como literales Python;
+- descarga el archivo sin guardar las credenciales en el proyecto,
+  `localStorage` ni MQTT;
+- no detecta IDs repetidos, banda Wi-Fi incorrecta ni una IP del broker
+  equivocada;
+- no escribe en la placa mediante Web Serial.
+
+Antes de una sesión física, comprobar que PC y Picos están en la misma red de
+2.4 GHz, que no existe aislamiento entre clientes y que la IPv4 configurada
+sigue siendo la del PC. Las IP de VPN, WSL, Hyper-V o VirtualBox no son el host
+del broker para la Pico.
 
 ### 7.3 Recepción y validación de fragmentos
 
-_Pendiente: protocolo, límites, checksum, ACK y errores estructurados._
+`DistributedWorker` es una Task del protocolo v3. Al arrancar:
+
+- configura un Last Will retained con estado `offline`;
+- se suscribe al manifest del `HILES_PROJECT_ID`;
+- se suscribe solo al filtro de fragments dirigido a su `executorId`;
+- publica estado y capacidades con firmware `3.0.0`;
+- procesa una cantidad acotada de eventos y publicaciones en cada `update()`.
+
+Manifest y fragment pueden llegar en cualquier orden porque ambos son
+retained. Si llega primero el fragment, el worker lo conserva temporalmente
+hasta recibir el manifest de la misma combinación `(deploymentId, epoch)`.
+
+Antes de activar un fragment comprueba:
+
+1. versión de protocolo, proyecto, deployment y epoch válidos;
+2. `executor_id` y `owner_executor_id` iguales a su propio `executorId`;
+3. existencia de un resumen para ese ejecutor en el manifest;
+4. SHA-256 del payload recibido o de su serialización canónica;
+5. tamaño menor o igual a `WORKER_MAX_FRAGMENT_BYTES`;
+6. objeto de modelo con IR v2 soportada;
+7. cantidad de elementos dentro de la capacidad anunciada;
+8. lenguaje de cada Functional Block soportado;
+9. ownership de todos los elementos según el manifest;
+10. estructura, referencias, tipos, canales, límites y perfil Python de IR v2;
+11. compilación correcta de todos los Functional Blocks Python;
+12. validez de inbound/outbound routes.
+
+La carga es atómica: primero construye un `HilesEngineV2` temporal. Solo si
+todo es válido reemplaza el motor activo, reinicia secuencias/deduplicación,
+suscribe las rutas del nuevo deployment y publica ACK positivo, estado `ready`
+y snapshot inicial.
+
+Un rechazo publica ACK negativo y error estructurado con código, etapa y, si
+aplica, elemento o conexión. El fragmento y motor activos anteriores se
+conservan; una entrega inválida no debe dejar la placa a medio actualizar.
+
+El worker acepta canales únicamente después de resincronizar manifest y
+fragment. Valida proyecto, deployment, epoch, connection, propietario, tipo de
+valor, secuencia y `messageId`. Mantiene una ventana acotada de deduplicación,
+por lo que una reentrega QoS 1 no vuelve a alimentar el motor.
+
+Al recibir payload vacío en el manifest o fragment retained activo, libera el
+fragmento, desuscribe sus topics dinámicos, limpia motor y vuelve al estado
+`online`. Una epoch antigua se ignora.
 
 ### 7.4 Motor MicroPython
 
-_Pendiente: elementos, canales, Python permitido, memoria y tareas asíncronas._
+`HilesEngineV2` implementa en MicroPython la misma semántica observable del
+motor TypeScript:
+
+- Service, Functional Block, Sample, Hold, Place y Transition;
+- tipos `boolean`, `integer`, `real`, `string`, `vector` y `custom`;
+- CCH retenido, DCH FIFO, LCH de un paso y Petri arcs;
+- delays no bloqueantes de elementos, canales y Transitions;
+- tokens, pesos, capacidad y política de conflicto;
+- snapshot, errores, reinicio y detección de trabajo pendiente.
+
+El constructor recibe una IR ya validada, crea elementos y canales, calcula el
+orden topológico y compila los Functional Blocks antes de quedar activo. Puede
+registrar inbound routes para recibir valores remotos y outbound routes para
+publicarlos mediante el worker.
+
+`EngineTaskV2` separa el motor de MQTT. Su cola contiene cargas, comandos,
+entradas externas o entradas locales de dispositivos. Cada `update()` procesa
+trabajo acotado. La ejecución continua usa el reloj del scheduler y
+`ENGINE_STEP_INTERVAL_MS`; no bloquea el resto de tareas.
+
+El runtime conserva el motor v1 y los topics históricos para compatibilidad y
+diagnóstico, pero la interfaz actual distribuye fragments v3 con IR v2. No se
+debe añadir lógica nueva únicamente al motor v1.
+
+#### Python en la placa
+
+`PythonExecutor` valida el perfil restringido, compila una vez por carga y
+ejecuta repetidamente la función. Expone métricas de compilaciones, ejecuciones,
+errores, duración y overruns. Las entradas y salidas se validan y copian como
+valores JSON acotados para evitar mutación compartida.
+
+El perfil bloquea imports, bucles, acceso a hardware, red, sistema de archivos,
+introspección y builtins peligrosos. Aun así no debe aceptarse código de una
+persona no autorizada: las restricciones protegen el runtime, pero no
+constituyen aislamiento criptográfico.
+
+#### Memoria y recuperación
+
+La Pico tiene memoria limitada. Antes de construir un fragment se ejecuta
+garbage collection y el límite útil de fragment se mantiene por debajo del
+payload MQTT máximo. El motor evita copias innecesarias durante propagación,
+pero clona los valores al cruzar la frontera de entrada.
+
+Si se pierde el broker, el estado pasa a `degraded`; el motor local puede
+conservarse. Las salidas remotas producidas durante la interrupción se guardan
+en un outbox acotado y se intentan publicar al reconectar. Antes de volver a
+aceptar canales, el worker recupera manifest y fragment retained y confirma la
+epoch activa.
+
+`WatchdogTask` publica tiempo activo, memoria, métricas por Task y sensores
+opcionales. Un error de telemetría no debe detener el motor. `LedTask` es un
+diagnóstico genérico de placa y no contiene reglas del modelo HiLeS.
 
 ### 7.5 Preparación y despliegue
 
-_Pendiente: paquete canónico, manifiesto, backup, copia segura y preservación
-de configuración local._
+El paquete canónico se genera desde la raíz:
+
+```powershell
+& .\scripts\prepare-pico-deployment.ps1
+Get-FileHash .\output\hiles-pico-w-deploy.zip -Algorithm SHA256
+Get-Content .\output\hiles-pico-w-deploy.sha256
+```
+
+El script incluye `main.py`, `config_local.example.py`, `core/`, `devices/`,
+`hiles/`, `platform/`, `pubsub/`, la guía de instalación y
+`MANIFEST.sha256.json`. Excluye deliberadamente:
+
+- `config_local.py` y cualquier credencial;
+- `umqtt/` y `lib/umqtt/`, porque son dependencias instaladas en la placa;
+- `examples/`, `__pycache__/` y archivos `.pyc`;
+- cualquier archivo no declarado por el manifiesto.
+
+El generador calcula SHA-256 de cada fuente, verifica el ZIP contra el
+manifiesto y crea un checksum del archivo final. Si encuentra
+`output/hiles-pico-w-deploy/config_local.py`, se detiene antes de limpiar o
+regenerar para no borrar una configuración que alguien dejó allí.
+
+Antes de usar hardware deben pasar:
+
+```powershell
+python -m unittest discover -s firmware/tests -t . -v
+& .\scripts\prepare-pico-deployment.ps1
+& .\scripts\test-pico-provisioning.ps1
+```
+
+Las pruebas de escritorio sustituyen reloj, Wi-Fi, GPIO, MQTT y broker por
+dobles deterministas. Verifican arquitectura, motor, channels, fragments,
+deduplicación, reconexión y aprovisionamiento, pero no prueban radio, memoria
+real ni filesystem físico.
+
+#### Instalación inicial
+
+1. Instalar en la placa la versión de MicroPython correspondiente a Pico W o
+   Pico 2 W.
+2. Instalar `umqtt.simple`.
+3. Copiar `main.py`, `core/`, `devices/`, `hiles/`, `platform/` y `pubsub/` del
+   paquete, conservando los `__init__.py`.
+4. Crear y copiar `config_local.py` con la identidad de esa placa.
+5. Reiniciar y observar en consola las tareas activas, Wi-Fi, MQTT y estado del
+   worker.
+
+La copia real se hace con Thonny o `mpremote`. Un puerto `COMx` no es una
+carpeta y no debe pasarse como `DevicePath`. El volumen `RPI-RP2` con
+`INFO_UF2.TXT` es el bootloader para instalar MicroPython, no el filesystem
+donde se copia el runtime.
+
+#### Actualización de una placa existente
+
+`scripts/test-distributed-physical.ps1` ofrece `DryRun`, `Inventory`, `Backup`
+y `Deploy` para un filesystem accesible. En `Backup` o `Deploy`:
+
+1. crea un respaldo en una ruta nueva;
+2. calcula y verifica hashes del respaldo;
+3. copia el runtime canónico como una unidad;
+4. conserva `config_local.py`, `umqtt/` y `lib/umqtt/`;
+5. compara el resultado con las fuentes;
+6. elimina solo rutas pasadas explícitamente mediante `-ObsoletePath` y rechaza
+   borrar configuración, dependencias o rutas canónicas.
+
+Nunca se debe actualizar una placa sin respaldo ni asumir que
+`-AllowNoDevice` constituye una prueba física. Esa opción permite registrar el
+pendiente cuando no hay hardware.
+
+#### Verificación después de copiar
+
+- la consola muestra `mqtt`, `led`, `motor`, `watchdog` y `worker_v3`;
+- aparece conexión a la IP correcta del broker en `1883`;
+- **Ejecutores** muestra `Pico <DEVICE_ID>` dentro del proyecto correcto;
+- la placa anuncia IR v2, Python/expresión y capacidades esperadas;
+- un bloque asignado recibe ACK positivo;
+- **Paso** produce snapshot y, si existe, salida de canal remoto;
+- reiniciar restaura el estado inicial;
+- desconectar la placa publica `offline` por Last Will o expira su estado;
+- `config_local.py` permanece fuera de Git y de cualquier evidencia pública.
 
 ### 7.6 Agregar otra placa
 
-_Pendiente: Pico W, Pico 2 W, inventario y validación posterior._
+Cada placa es un executor independiente. Para agregar una Pico W o Pico 2 W no
+se duplica el proyecto ni se crea otro broker: se instala el mismo runtime y se
+le entrega una identidad única mediante `config_local.py`.
+
+1. Preparar la placa con MicroPython y `umqtt.simple`.
+2. Copiar el mismo paquete canónico descrito en 7.5.
+3. Crear un `config_local.py` propio. `DEVICE_ID` no puede repetirse; Wi-Fi,
+   broker y `PROJECT_ID` deben apuntar al entorno compartido.
+4. Reiniciar la placa y confirmar que aparece como un executor distinto en
+   **Ejecutores**.
+5. Asignarle elementos desde el frontend, desplegar una nueva epoch y esperar
+   su ACK antes de ejecutar.
+6. Comprobar que el inventario muestra todas las placas previstas y que cada
+   fragment contiene únicamente los elementos asignados a su executor.
+7. Ejecutar un modelo con al menos un channel remoto entre dos executors para
+   validar ruta, orden, deduplicación y snapshots.
+
+Cambiar una placa física no debe cambiar la semántica del modelo. La Pico W y
+la Pico 2 W comparten contrato; cualquier diferencia de hardware se encapsula
+en `platform/` o `devices/`. Si una placa no anuncia las capacidades requeridas
+por un fragment, el despliegue debe rechazarse en vez de ejecutar parcialmente.
 
 ## 8. Flujos de desarrollo
 
+Este capítulo reúne las rutas que se siguen al cambiar el producto. No todos
+los cambios atraviesan todas las capas, pero sí deben empezar por una decisión
+explícita sobre su alcance:
+
+| Cambio | Capas mínimas |
+|---|---|
+| Solo presentación | tipos de interfaz, glyph, renderer, estilos y prueba visual |
+| Dato persistente del diagrama | tipos, defaults, editor, documento, migración y pruebas de importación |
+| Semántica ejecutable | documento, compilador/validador IR, Browser, MicroPython y vectores de conformidad |
+| Distribución | particionado, contrato MQTT, frontend, firmware y prueba con más de un executor |
+| Colaboración | documento, operaciones, topics, convergencia y prueba con dos navegadores |
+
+La regla principal es mantener una sola fuente de verdad. Una forma visual no
+define por sí sola el comportamiento; el documento JSON no contiene estado de
+ejecución; y el firmware no debe inventar una semántica diferente a la del
+motor Browser.
+
+Antes de editar:
+
+1. escribir el comportamiento observable y los casos de error;
+2. decidir si afecta compatibilidad del documento o de la IR;
+3. preparar una prueba que falle con el comportamiento actual;
+4. implementar desde el contrato compartido hacia cada consumidor;
+5. ejecutar las pruebas de las capas tocadas y registrar las limitaciones.
+
 ### 8.1 Agregar un componente HiLeS de extremo a extremo
 
-_Pendiente: tipo y representación gráfica → editor → propiedades → documento
-JSON → compilador IR → motor Browser → motor MicroPython → pruebas → docs._
+Un componente completo debe poder crearse, verse, configurarse, guardarse,
+importarse y —si es ejecutable— producir el mismo resultado en Browser y
+MicroPython. Agregarlo solo a la paleta crea un componente aparente, no un
+componente HiLeS funcional.
+
+#### Paso 1: definir el contrato
+
+Antes del código se documentan:
+
+- nombre técnico en inglés y categoría;
+- puertos de entrada y salida, dirección y cardinalidad;
+- propiedades persistentes, valores por defecto y validaciones;
+- glyph con el que se reconoce en paleta y canvas;
+- regla de ejecución, errores y comportamiento ante entradas ausentes;
+- soporte esperado: visual, Browser, MicroPython y distribución.
+
+El identificador técnico debe ser estable. Cambiar después un `type` guardado
+en JSON exige una migración; cambiar solamente su etiqueta visible no.
+
+#### Paso 2: incorporarlo al editor
+
+El recorrido actual es:
+
+1. declarar el tipo y sus propiedades en `frontend/src/types/hiles.ts`;
+2. agregar el nombre visible en inglés en
+   `frontend/src/types/translations.ts`;
+3. dibujar el símbolo reutilizable en
+   `frontend/src/features/editor/HilesGlyph.tsx`;
+4. ubicarlo en su grupo de `Palette.tsx`;
+5. renderizar el nodo y sus handles en `CustomNodes.tsx`;
+6. definir puertos, tamaño, propiedades y defaults en
+   `frontend/src/stores/useEditorStore.ts`;
+7. exponer únicamente propiedades editables en `PropertiesPanel.tsx`.
+
+El glyph de la paleta y la figura del canvas deben comunicar la misma forma.
+Los handles visibles deben corresponder exactamente con los puertos que guarda
+el modelo; un handle decorativo produce conexiones imposibles de compilar.
+Si el componente puede vivir dentro de un Structural Block, debe conservar la
+relación padre-hijo y coordenadas relativas para que se mueva con el bloque y
+se oculte o muestre con su nivel de detalle.
+
+#### Paso 3: persistirlo sin perder modelos anteriores
+
+`frontend/src/domain/modelDocument.ts` normaliza, valida, serializa y migra el
+documento. El nuevo componente debe sobrevivir este ciclo:
+
+```text
+crear → exportar JSON → cerrar/restaurar → importar JSON → exportar otra vez
+```
+
+La segunda exportación debe conservar tipo, ID, posición, parent, puertos y
+propiedades relevantes. No se guardan selección, panel abierto, conexión MQTT,
+tokens de ejecución ni otros datos transitorios.
+
+Si el componente es opcional y los documentos viejos siguen siendo válidos,
+puede conservarse la versión del esquema y aplicarse un default durante la
+normalización. Si cambia el significado de datos existentes, se incrementa la
+versión y se agrega una migración determinista. Nunca se corrige un documento
+silenciosamente perdiendo información.
+
+#### Paso 4: agregar la semántica ejecutable
+
+Para ejecución Browser se implementa o amplía un elemento de
+`frontend/src/engine/elementos/` y se registra en el punto de construcción de
+`elementos/index.ts`. El elemento debe cumplir el contrato del scheduler:
+actualizaciones acotadas, sin esperas bloqueantes y con salidas reproducibles
+para la misma entrada y reloj lógico.
+
+Después se actualizan, según corresponda:
+
+- `frontend/src/services/ir/tiposIrV2.ts`, para representar el contrato;
+- `compiladorIrV2.ts`, para traducir el documento;
+- `validadorIrV2.ts`, para rechazar combinaciones inválidas;
+- `particionarIr.ts`, si el componente tiene propietario o canales remotos;
+- `firmware/pico/hiles/`, para ejecutar la misma regla en MicroPython.
+
+Si todavía no existe soporte de runtime, el compilador debe emitir un error
+claro. No debe convertirlo en otro componente ni omitirlo para que el deploy
+parezca exitoso.
+
+#### Paso 5: probar la integración
+
+La evidencia mínima es:
+
+- prueba de defaults y puertos en `useEditorStore.test.ts`;
+- prueba de importación/exportación y migración;
+- prueba de compilación y validación IR;
+- prueba unitaria del elemento Browser;
+- prueba equivalente en `firmware/tests`;
+- vector compartido cuando el resultado deba ser idéntico entre motores;
+- prueba visual de palette, canvas, propiedades y zoom;
+- prueba de particionado si cruza executors.
+
+Finalmente se documenta el componente, su forma gráfica y sus restricciones.
+La tarea está terminada cuando el componente recorre el flujo completo, no
+cuando solamente aparece en pantalla.
 
 ### 8.2 Modificar un canal
 
-_Pendiente: contrato local, ruta remota, capacidad, orden y compatibilidad._
+Un channel lleva valores entre puertos. Puede ser local —productor y consumidor
+en el mismo executor— o remoto —cada extremo pertenece a un executor distinto—.
+La regla lógica debe ser la misma; MQTT solo reemplaza el transporte interno.
+
+Antes de cambiarlo se especifica:
+
+- qué valores admite y si se copian al entrar o salir;
+- capacidad de la cola y política cuando se llena;
+- orden garantizado;
+- comportamiento sin consumidor, al reconectar y al reiniciar;
+- identidad estable de la ruta;
+- efecto sobre modelos ya exportados y fragments desplegados.
+
+#### Ruta local
+
+El motor Browser y el runtime MicroPython deben aplicar la misma política de
+enqueue/dequeue. Un cambio de capacidad o descarte afecta el resultado del
+modelo, por lo que requiere pruebas en ambos motores. No se debe usar una cola
+sin límite: en navegador oculta el problema y en una Pico termina agotando
+memoria.
+
+#### Ruta remota
+
+`particionarIr.ts` determina qué channels cruzan executors. El compilador debe
+asignar una identidad de ruta estable a cada cruce y los fragments deben
+coincidir en tipo, productor, consumidor y epoch. El transporte remoto añade
+metadatos de secuencia y deduplicación, pero no modifica el valor HiLeS.
+
+Al tocar el protocolo se revisan en conjunto:
+
+- tipos y validador IR v2;
+- particionado y manifiesto de despliegue;
+- publicación/recepción MQTT en Browser;
+- channel y worker en `firmware/pico/hiles/`;
+- recuperación después de desconexión;
+- mensajes de error y métricas.
+
+Los comandos y valores de channel no se publican retained. Un retained viejo
+podría ejecutarse de nuevo tras reconectar. Manifest y fragments sí usan
+retained porque describen la versión activa, no una acción efímera.
+
+#### Compatibilidad y prueba
+
+Si cambia la forma del mensaje o la semántica de la cola, se versiona el
+contrato. Un receptor debe rechazar una versión desconocida antes de aplicar
+el valor. La prueba mínima conecta dos elementos localmente y luego la misma
+topología en dos executors; ambas ejecuciones deben producir la misma secuencia
+observable. También se prueban duplicado, desorden, cola llena, desconexión,
+reconexión y cambio de epoch.
 
 ### 8.3 Agregar una propiedad al modelo
 
-_Pendiente: defaults, migración, validación, importación/exportación y
-compatibilidad hacia atrás._
+Primero se clasifica la propiedad:
+
+| Clase | Ejemplo | ¿Se guarda en el documento? |
+|---|---|---|
+| Semántica | expresión, valor inicial, capacidad | Sí |
+| Presentación estable | etiqueta, color elegido, posición | Sí |
+| Interfaz transitoria | selección, hover, panel abierto | No |
+| Ejecución | token actual, cola, contador de pasos | No; va en snapshot |
+| Conexión o secreto | password, sesión MQTT | No |
+
+Para una propiedad persistente:
+
+1. agregar el campo al tipo correspondiente en `types/hiles.ts`;
+2. definir un default explícito en `useEditorStore.ts`;
+3. agregar control, ayuda y validación en `PropertiesPanel.tsx`;
+4. normalizar y serializar el valor en `modelDocument.ts`;
+5. decidir compatibilidad y migración;
+6. incluirlo en IR si altera la ejecución;
+7. implementarlo en Browser y MicroPython si llega al runtime;
+8. probar creación, edición, undo/redo, autosave, exportación e importación.
+
+Un campo opcional no significa “comportamiento indefinido”. Si falta en un
+JSON antiguo, la normalización debe producir siempre el mismo default. Para
+números se validan finitud y rango; para strings, longitud y formato; para
+enumeraciones, únicamente valores conocidos. Un valor inválido genera un
+diagnóstico con el elemento y la propiedad afectados.
+
+Se incrementa `schemaVersion` cuando cambia el significado del documento o se
+necesita transformar información existente. Agregar un dato opcional con un
+default compatible normalmente no lo requiere. La migración debe ser pura,
+determinista, repetible y conservar IDs y conexiones.
+
+Como la colaboración transmite cambios del documento, una propiedad
+persistente también viajará entre navegadores. Debe verificarse que editarla
+remotamente converge y no crea un ciclo de eco. Si el dato es secreto o local,
+no debe entrar al documento para empezar.
 
 ### 8.4 Modificar la colaboración
 
-_Pendiente: topics, mensajes, estado retenido, deduplicación y pruebas con dos
-navegadores._
+La colaboración sincroniza el documento editable, no la pantalla completa de
+otro usuario. Antes de introducir un mensaje nuevo se intenta expresar el
+cambio con las operaciones existentes sobre nodos, conexiones o metadatos.
+Agregar un contrato MQTT es necesario solamente cuando aparece una entidad o
+garantía nueva.
+
+#### Diseñar el contrato
+
+1. Definir quién publica y quién consume.
+2. Elegir el topic en `projectTopics.ts`, siempre bajo el `projectId`.
+3. Declarar el payload y su versión en `projectMessages.ts`.
+4. Decidir QoS, retained y expiración.
+5. Establecer clave de entidad, orden, deduplicación y regla de conflicto.
+6. Definir validación y diagnóstico para mensajes inválidos.
+
+Solo el snapshot/base que permite incorporarse al proyecto se conserva
+retained. Presencia, cursor, operaciones y comandos son efímeros. Nunca se
+publican credenciales ni estado privado de la interfaz.
+
+#### Aplicar sin crear ecos
+
+`ProjectSyncClient.ts` valida y convierte mensajes MQTT en eventos del dominio.
+`useProjectStore.ts` decide cómo incorporarlos al documento. Una operación
+remota debe marcarse como remota mientras actualiza el store; de lo contrario,
+el subscriber local vuelve a publicarla y crea un eco.
+
+La operación incluye identificadores suficientes para reconocer duplicados.
+El orden lógico no debe depender de la hora del computador. Cuando dos usuarios
+editan la misma entidad, la regla de resolución debe ser determinista; cuando
+editan entidades distintas, ambos cambios deben conservarse.
+
+Todo payload se valida antes de tocar Zustand. Un mensaje con versión, tipo,
+ID o estructura desconocidos se ignora y se registra; no se aplica a medias.
+
+#### Verificar con dos navegadores
+
+Primero se agregan pruebas unitarias de serialización, validación,
+deduplicación, orden y conflicto. Después se ejecuta la prueba de colaboración
+con broker real:
+
+```powershell
+node .\scripts\test-project-collaboration.mjs
+```
+
+La revisión manual usa dos sesiones o navegadores con nombres diferentes:
+
+1. abrir la misma URL con `?project=<id>`;
+2. esperar presencia de ambos participantes;
+3. crear, mover, editar y eliminar entidades alternando navegadores;
+4. hacer ediciones simultáneas en entidades distintas y luego en la misma;
+5. desconectar uno, editar con el otro y reconectarlo;
+6. recargar ambos y comparar documento exportado.
+
+El resultado correcto no es solo “se ve igual”: ambos clientes deben terminar
+con el mismo documento canónico, sin IDs duplicados, conexiones huérfanas ni
+operaciones repetidas. Los topics retained de proyectos de prueba se limpian
+al terminar para no contaminar ejecuciones posteriores.
 
 ### 8.5 Modificar el firmware
 
-_Pendiente: paridad, paquete generado, pruebas unitarias y prueba física._
+El firmware es una implementación del contrato compartido bajo restricciones
+de MicroPython. No es un segundo producto con reglas propias. Un cambio que
+afecta semántica ejecutable comienza con un caso observable común y termina
+cuando Browser y MicroPython pasan la misma expectativa.
+
+#### Implementación segura
+
+- conservar dependencias entre módulos en una sola dirección;
+- encapsular reloj, Wi-Fi, MQTT, GPIO y filesystem detrás de adaptadores;
+- evitar threads y esperas largas; cada Task debe devolver el control;
+- acotar colas, buffers, fragments y reintentos;
+- no capturar excepciones sin publicar un diagnóstico útil;
+- mantener `config_local.py` fuera del repositorio y del paquete;
+- no usar APIs de CPython que MicroPython no proporciona.
+
+Cuando se agrega un elemento o mensaje, primero se actualiza el contrato IR o
+MQTT y el validador. El runtime debe rechazar versiones y capacidades que no
+entiende antes de reemplazar el fragment activo. La instalación de una nueva
+epoch sigue siendo atómica: validar, verificar hash, construir, reemplazar y
+enviar ACK.
+
+#### Pruebas sin placa
+
+La mayor parte se valida en el computador con los dobles de `firmware/tests`:
+
+```powershell
+python -m unittest discover -s firmware/tests -t . -v
+& .\scripts\prepare-pico-deployment.ps1
+& .\scripts\test-pico-provisioning.ps1
+```
+
+Las pruebas deben cubrir camino correcto, payload inválido, duplicado,
+reconexión, memoria/cola al límite y recuperación tras error. Si el cambio toca
+un elemento HiLeS, se añade o actualiza su vector compartido y se ejecuta en
+ambos motores.
+
+El paquete generado, no una carpeta armada manualmente, es el artefacto que se
+entrega. Se verifica su manifiesto y SHA-256. Los cambios de código no se copian
+directamente sobre una placa sin regenerar el paquete, porque eso impide saber
+qué versión quedó instalada.
+
+#### Prueba física
+
+La prueba de escritorio no sustituye hardware. Cuando haya una Pico disponible:
+
+1. respaldar su filesystem y verificar hashes;
+2. desplegar el paquete conservando `config_local.py` y `umqtt`;
+3. comprobar arranque, Wi-Fi, broker, inventario y capacidades;
+4. desplegar un fragment y confirmar ACK, step y snapshot;
+5. probar desconexión y reconexión;
+6. observar memoria y estabilidad durante varios ciclos;
+7. registrar placa, versión, comandos, resultado y limitaciones.
+
+Si no hay hardware, el cambio puede quedar validado en escritorio, pero se
+documenta explícitamente que la prueba física está pendiente. No se declara
+compatibilidad física basándose únicamente en mocks.
+
+### 8.6 Lista de cierre para cualquier cambio
+
+Antes de solicitar integración se confirma:
+
+- [ ] El comportamiento y los errores están descritos.
+- [ ] Los nombres técnicos permanecen en inglés y son estables.
+- [ ] El documento JSON anterior sigue abriendo o tiene migración.
+- [ ] Browser y MicroPython conservan paridad cuando aplica.
+- [ ] La IR y los mensajes rechazan versiones desconocidas.
+- [ ] No se persisten secretos ni estado transitorio.
+- [ ] Las colas, payloads y reintentos tienen límites.
+- [ ] Las pruebas de las capas modificadas pasan.
+- [ ] Se verificó importación/exportación y colaboración cuando aplica.
+- [ ] Se actualizó documentación y registro de cambios.
+- [ ] Se anotó cualquier prueba física pendiente.
 
 ## 9. Pruebas y control de calidad
 
