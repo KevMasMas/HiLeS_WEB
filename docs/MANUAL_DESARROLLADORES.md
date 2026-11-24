@@ -1,9 +1,83 @@
 # Manual para desarrolladores de HiLeS Web
 
-> **Estado:** borrador completo para revisión técnica
+> **Versión del manual:** `1.0-rc1`
+> **Estado:** contenido auditado; revisión externa y aprobación definitivas pendientes
 > **Responsable inicial:** Juan David Romero
 > **Rama de trabajo:** `multi-pico`
-> **Última revisión estructural:** 23 de noviembre de 2026
+> **Base técnica revisada:** `a419d33` (`multi-pico`)
+> **Última revisión técnica:** 23 de noviembre de 2026
+> **Aprobación definitiva:** pendiente de revisión por otra persona y prueba de
+> instalación por un desarrollador nuevo
+
+## Cómo utilizar este manual
+
+El manual se puede leer de principio a fin, pero está diseñado para consulta:
+
+1. usar el índice para llegar al subsistema que se modificará;
+2. leer primero su contrato y sus límites;
+3. seguir el flujo de desarrollo del capítulo 8;
+4. ejecutar únicamente las pruebas que correspondan al cambio, además de la
+   regresión mínima del capítulo 9;
+5. cerrar con el checklist del apéndice A.
+
+Cuando este manual y el código difieran, la implementación y sus pruebas son la
+fuente de verdad para el comportamiento vigente. Los contratos de `docs/mqtt/`
+explican el diseño esperado y los registros de `entregas/` conservan evidencia
+histórica; una afirmación histórica no convierte automáticamente ese
+comportamiento en vigente.
+
+### Índice general
+
+- [1. Visión técnica del sistema](#1-visión-técnica-del-sistema)
+- [2. Preparación del entorno](#2-preparación-del-entorno-de-desarrollo)
+- [3. Estructura del repositorio](#3-estructura-del-repositorio)
+- [4. Arquitectura del frontend](#4-arquitectura-del-frontend)
+- [5. Motor y modelos](#5-motor-de-simulación-y-modelos)
+- [6. Colaboración y MQTT](#6-colaboración-y-comunicación-mqtt)
+- [7. Runtime MicroPython](#7-runtime-micropython)
+- [8. Flujos de desarrollo](#8-flujos-de-desarrollo)
+- [9. Pruebas y calidad](#9-pruebas-y-control-de-calidad)
+- [10. Git y contribución](#10-git-y-flujo-de-contribución)
+- [11. Seguridad](#11-seguridad-y-configuración-sensible)
+- [12. Diagnóstico](#12-diagnóstico-y-recuperación)
+- [13. Glosario](#13-glosario-técnico)
+- [Apéndice A. Checklist](#apéndice-a-checklist-para-una-contribución)
+- [Apéndice B. Revisión y mantenimiento](#apéndice-b-revisión-y-mantenimiento-del-manual)
+
+### Inicio rápido
+
+Requisitos previos: Git, Node.js compatible y PowerShell. Los comandos parten
+de la carpeta que contendrá el clon:
+
+```powershell
+git clone https://github.com/KevMasMas/HiLeS_WEB.git
+Set-Location .\HiLeS_WEB
+git switch multi-pico
+Set-Location .\frontend
+npm.cmd ci
+Copy-Item .env.example .env.local
+npm.cmd run test:run
+npm.cmd run lint
+npm.cmd run build
+npm.cmd run dev -- --host 0.0.0.0 --port 5173 --strictPort
+```
+
+Resultado esperado: tests, lint y build terminan con código cero; después Vite
+muestra una URL local y la aplicación abre en `http://localhost:5173/`.
+Mosquitto no es necesario para editar o simular localmente; sí lo es para
+colaboración y ejecución distribuida. Si `npm` falla por `npm.ps1`, usar
+`npm.cmd`, como en todos los ejemplos de este manual.
+
+### Ruta de aprendizaje según el rol
+
+| Rol | Recorrido recomendado |
+|---|---|
+| Editor y UX | 1 → 2 → 3 → 4 → 5.4 → 8.1/8.3 → 9 |
+| Motor TypeScript | 1 → 3 → 5 completo → 8.1/8.2 → 9 |
+| Colaboración/MQTT | 1 → 2.3–2.5 → 6 → 8.4 → 9.4 → 11/12 |
+| Distribución multi-executor | 5.5–5.7 → 6.4–6.6 → 7.3–7.4 → 8.2 → 9.4 |
+| Firmware MicroPython | 2 → 5 → 7 → 8.5 → 9.3/9.4 → 11/12 |
+| Integración y QA | 1 → 2 → 6.6 → 9 → 10 → 12 |
 
 ## Propósito del manual
 
@@ -105,10 +179,19 @@ La aplicación reúne cinco capacidades relacionadas, pero separables:
    recibe durante la ejecución.
 
 El soporte funcional actual incluye ejecución Browser ↔ Browser sobre un broker
-real, pruebas automatizadas del motor MicroPython y validación con dos placas
-Pico físicas. La prueba física confirmó el funcionamiento conjunto de las
-placas dentro de la red local; los dobles de protocolo se conservan para pruebas
-repetibles, pero no sustituyen esa evidencia.
+real, pruebas automatizadas del motor MicroPython y una línea base validada con
+dos placas físicas dentro de la LAN. Git sí documenta esa implementación en dos
+niveles: `ae9ac32` conserva inventario, respaldo y despliegue exitosos de una
+Pico W RP2040 y una Pico 2 W RP2350; el commit posterior `a419d33` registra que
+el equipo confirmó el funcionamiento conjunto de ambas placas. La prueba física
+se considera realizada, no pendiente.
+
+Lo que no quedó adjunto al commit es una traza reproducible con `projectId`,
+asignaciones, payloads de ACK, channels y snapshots de esa ejecución conjunta.
+Esto limita la auditoría posterior, pero no invalida el resultado confirmado
+por el equipo. El `README.md` de `origin/main` en `97a2a46` todavía dice que la
+evidencia física está pendiente porque ese merge ocurrió antes de `a419d33` y no
+contiene el manual actualizado de `multi-pico`.
 
 ### 1.3 Dos ejes independientes
 
@@ -152,6 +235,26 @@ Navegador B ── MQTT/WebSocket :9001 ──┼──▶ Mosquitto
 Pico W / Pico 2 W ── MQTT/TCP :1883 ──┘
        ejecutor pico:<DEVICE_ID>
 ```
+
+```mermaid
+flowchart LR
+    V[Vite HTTP :5173]
+    A[Navegador A<br/>React + editor + BrowserWorker opcional]
+    B[Navegador B<br/>React + editor + BrowserWorker opcional]
+    M[(Mosquitto<br/>broker MQTT)]
+    P1[Pico W<br/>DistributedWorker]
+    P2[Pico 2 W<br/>DistributedWorker]
+
+    V -->|sirve la SPA| A
+    V -->|sirve la SPA| B
+    A <-->|MQTT/WebSocket :9001| M
+    B <-->|MQTT/WebSocket :9001| M
+    P1 <-->|MQTT/TCP :1883| M
+    P2 <-->|MQTT/TCP :1883| M
+```
+
+Mosquitto entrega publicaciones y retained, pero no valida documentos, IR ni
+fragments. Esa validación ocurre en los clientes web y en cada worker.
 
 Responsabilidad de cada pieza:
 
@@ -202,10 +305,11 @@ el frontend no hace falta una Pico ni instalar MicroPython.
 El frontend fija sus dependencias mediante
 [`../frontend/package.json`](../frontend/package.json) y
 [`../frontend/package-lock.json`](../frontend/package-lock.json). Entre las
-tecnologías principales están React 19, TypeScript 6, Vite 8, Zustand 5,
-MQTT.js 5, Pyodide 0.26 y Vitest 5. El archivo de bloqueo es la fuente de verdad
-para las versiones exactas, por lo que se debe usar `npm ci` en instalaciones
-reproducibles.
+tecnologías principales están React 19.2.8, TypeScript 6.0.3, Vite 8.2.2,
+Zustand 5.0.15, MQTT.js 5.16.0, Pyodide 0.26.3, Vitest 5.0.1 y
+`@xyflow/react` 12.11.5 según el lockfile revisado. `package.json` declara
+rangos; el archivo de bloqueo es la fuente de verdad para la instalación
+exacta, por lo que se debe usar `npm ci` en entornos reproducibles.
 
 Para exponer el sistema a otros dispositivos de la LAN, el equipo debe estar en
 una red privada y el firewall debe permitir los puertos utilizados. Crear o
@@ -253,12 +357,18 @@ salida exacta; no se deben atribuir automáticamente al cambio en desarrollo.
 
 El frontend incluye
 [`../frontend/.env.example`](../frontend/.env.example) como plantilla. Para una
-configuración local persistente:
+configuración local persistente, continuar desde `frontend/`, que es el
+directorio final de la sección 2.2:
 
 ```powershell
-Set-Location .\frontend
 Copy-Item .env.example .env.local
+git check-ignore -v .env.local
 ```
+
+Si se inicia este procedimiento desde la raíz del repositorio, ejecutar primero
+`Set-Location .\frontend`. El resultado esperado de `git check-ignore` debe
+señalar una regla `*.local`. Si no aparece, no continuar hasta revisar
+`frontend/.gitignore`.
 
 Variables disponibles:
 
@@ -267,15 +377,20 @@ Variables disponibles:
 | `VITE_MQTT_HOST` | `localhost` | Dirección del broker que usará el navegador |
 | `VITE_MQTT_WS_PORT` | `9001` | Puerto MQTT sobre WebSocket |
 | `VITE_MQTT_WS_PATH` | `/mqtt` | Ruta del listener WebSocket |
-| `VITE_MQTT_WS_PROTOCOL` | `ws` | `ws` en LAN; `wss` con TLS en un despliegue remoto |
+| `VITE_MQTT_WS_PROTOCOL` | `ws` | Protocolo WebSocket; el alcance actual usa `ws` en LAN |
 | `VITE_MQTT_USERNAME` | valor local | Usuario MQTT si el broker exige autenticación |
-| `VITE_MQTT_PASSWORD` | valor local | Contraseña MQTT; nunca debe publicarse |
+| `VITE_MQTT_PASSWORD` | valor local | Contraseña de una cuenta MQTT de privilegios mínimos |
 
-`.env.local` está excluido de Git. Se puede verificar antes de continuar:
+`.env.local` está excluido de Git, pero eso solo evita publicarlo en el
+repositorio. Vite expone las variables `VITE_*` al código cliente y sus valores
+pueden quedar incluidos en el bundle o ser observados desde el navegador y la
+red. Por tanto, no son secretos frente a quien usa la aplicación. La cuenta
+MQTT del frontend no debe ser administrativa ni reutilizar credenciales
+personales.
 
-```powershell
-git check-ignore -v .env.local
-```
+La autenticación del broker comprueba usuario y contraseña, pero `ws://` y MQTT
+TCP en `1883` no cifran el tráfico. El perfil LAN implementado usa autenticación
+sin TLS; debe limitarse a una red de confianza y a reglas de firewall locales.
 
 La configuración del panel **Conexión** puede reemplazar estos valores durante
 la sesión. El archivo local define valores predeterminados; no es una base de
@@ -295,6 +410,9 @@ Los archivos de contraseñas, credenciales Wi-Fi, `.env.local` y
 
 ### 2.4 Arranque diario
 
+Los siguientes comandos parten de la raíz del repositorio. Si Mosquitto está
+instalado como servicio, abrir primero una consola con permisos de administrador:
+
 Si se necesita colaboración o ejecución distribuida, iniciar primero Mosquitto
 desde una consola de PowerShell con permisos de administrador:
 
@@ -306,13 +424,16 @@ Get-Service mosquitto
 Después, en otra consola, iniciar el frontend:
 
 ```powershell
-Set-Location D:\Documentos\Hiles\frontend
+Set-Location .\frontend
 npm.cmd run dev -- --host 0.0.0.0
 ```
 
-La ruta anterior corresponde al entorno usado para elaborar este manual. En
-otro equipo se debe sustituir por la ubicación real del clon. La opción
+Si la consola no está en la raíz, ubicarse primero en la carpeta real del clon;
+no se requiere una ruta absoluta específica de un integrante. La opción
 `--host 0.0.0.0` permite que Vite escuche tanto en el equipo como en su LAN.
+El resultado esperado es una línea `Local: http://localhost:5173/`. Si el puerto
+está ocupado, identificar el proceso o usar explícitamente otro puerto y abrir
+esa misma URL en los clientes.
 
 - Desde el mismo PC: `http://localhost:5173/`.
 - Desde otro dispositivo: `http://IP_DEL_PC:5173/`.
@@ -333,7 +454,7 @@ Stop-Service mosquitto
 ### 2.5 Comprobación mínima
 
 Antes de desarrollar una función colaborativa o distribuida, comprobar la
-infraestructura:
+infraestructura desde cualquier consola PowerShell:
 
 ```powershell
 Get-Service mosquitto
@@ -493,6 +614,33 @@ main.tsx
         └── MqttPanel ── portal ──▶ pestaña Conexión de PanelDock
 ```
 
+```mermaid
+flowchart TB
+    Main[main.tsx] --> App[App.tsx]
+    App --> Editor[Editor.tsx]
+    App --> MqttPanel[MqttPanel]
+    Editor --> Canvas[Canvas + React Flow]
+    Editor --> Palette[Palette]
+    Editor --> Dock[PanelDock]
+    MqttPanel -->|React portal| Dock
+
+    Canvas --> EditorStore[useEditorStore]
+    Editor --> ProjectStore[useProjectStore]
+    Editor --> DistributedStore[useDistributedExecutionStore]
+    EditorStore --> Model[domain/modelDocument.ts]
+    ProjectStore --> ProjectSync[ProjectSyncClient]
+    DistributedStore --> Compiler[compiladorIrV2 + particionarIr]
+    DistributedStore --> BrowserWorker[BrowserWorker]
+    ProjectSync --> MqttClient[MqttBrowserClient]
+    BrowserWorker --> DistTransport[TransporteMqttDistribuido]
+    MqttClient --> Broker[(Mosquitto)]
+    DistTransport --> Broker
+```
+
+Los dos transportes MQTT comparten configuración, pero mantienen conexiones y
+tiempos de reconexión propios. Los stores coordinan estado; los services
+implementan contratos y no renderizan interfaz.
+
 `MqttPanel` se monta junto al editor para conservar sus suscripciones aunque su
 pestaña esté cerrada. Cuando `PanelDock` registra el destino del portal, React
 traslada visualmente el panel a la pestaña **Conexión** sin desmontarlo.
@@ -596,9 +744,14 @@ de protocolo o del motor.
 | `collaboration` | Nombre visible, participantes, ShareDialog, cursor, seguimiento de otro colaborador y enfoque de elementos |
 | `distributed` | Descubrimiento visible de ejecutores, asignaciones, despliegue, estado de ACK, errores y reglas de habilitación de controles |
 | `simulation` | Lista de Services inyectables, formulario de entradas y resumen del estado agregado |
-| `mqtt` | Perfil Local/LAN o Remoto, estado de conexión, reconexión y diagnóstico de mensajes |
+| `mqtt` | Perfil Local/LAN, estado de conexión, reconexión y diagnóstico; el tipo `remote`/`wss` permanece en el código, pero no es un perfil desplegado ni validado en el alcance actual |
 | `onboarding` | EmptyCanvas, ejemplo mínimo, ayudas contextuales y tutorial guiado |
 | `setup` | Formulario y descarga de `config_local.py` para preparar una Pico |
+
+El selector y los tipos de configuración conservan soporte preparatorio para
+`remote`/`wss`. Esa presencia en el frontend no demuestra certificados, ACL,
+infraestructura o pruebas de un acceso por Internet; el perfil soportado por el
+proyecto actual sigue siendo Local/LAN.
 
 La TopBar es la entrada común a las capacidades principales:
 
@@ -996,6 +1149,26 @@ crear elementos y canales IR v2 tipados
 IrModeloV2 válido o lista de diagnósticos
 ```
 
+```mermaid
+flowchart LR
+    D[HilesModelDocument<br/>schemaVersion 1 o 2]
+    M[migrateV1toV2]
+    C[compilarDocumentoAIrV2]
+    V[validarModeloIrV2]
+    IR[IrModeloV2]
+    A[resolverAsignacionesDistribuidasV3]
+    P[particionarIrV2Distribuida]
+    MF[Manifest v3]
+    F[Fragments por executor]
+    E[Diagnósticos; sin modelo parcial]
+
+    D --> M --> C --> V
+    V -->|válido| IR --> A --> P
+    V -->|inválido| E
+    P --> MF
+    P --> F
+```
+
 La raíz IR contiene `ir_version`, identidad y versión del modelo, nombre,
 metadata de compilación, entradas externas, elementos y conexiones. Los tipos
 de elementos ejecutables son `service`, `functional_block`, `sample`, `hold`,
@@ -1066,10 +1239,11 @@ El particionador es determinista y no consulta UI, reloj ni broker:
 8. serializa canónicamente, calcula SHA-256 y genera el manifest.
 
 El manifest identifica proyecto, deployment, epoch, propietarios, resumen de
-fragments y rutas. Cada resumen lleva `fragmentId`, `executorId`, hash, tamaño y
-elementos. El worker rechaza un fragment si no es su propietario, no soporta la
-IR/lenguaje, excede su capacidad o no coincide el hash. El despliegue no puede
-iniciar hasta recibir ACK positivo de todos los fragments requeridos.
+fragments y rutas. Cada resumen lleva `fragment_id`, `executor_id`, hash,
+tamaño y elementos. El worker rechaza un fragment si no es su propietario, no
+soporta la IR/lenguaje, excede su capacidad o no coincide el hash. El control
+de ejecución no habilita **Iniciar** ni **Paso** hasta recibir ACK positivo de
+todos los fragments requeridos.
 
 Los Petri arcs nunca se convierten en rutas MQTT. Un Place y una Transition
 conectados deben permanecer en el mismo fragment; separarlos produce
@@ -1078,8 +1252,21 @@ pero no comparte una instancia de Place ni mueve un token remoto directamente.
 
 Las rutas remotas no usan retained y conservan tipo, delay y capacidad DCH. El
 receptor valida proyecto, deployment, epoch, propietario, conexión, tipo,
-secuencia y `messageId`. Un mensaje duplicado o atrasado se descarta sin volver
+secuencia y `message_id`. Un mensaje duplicado o atrasado se descarta sin volver
 a ejecutar el componente.
+
+SHA-256 detecta que los bytes no coinciden con el resumen anunciado, pero no
+demuestra quién publicó el manifest. En la configuración LAN actual cualquier
+cliente que conozca las credenciales compartidas y tenga permiso de publicación
+puede producir manifest y fragments con hashes coherentes.
+
+La sustitución es atómica dentro de cada worker: primero construye y valida un
+motor temporal y solo después reemplaza su fragment activo. No existe una
+transacción global entre executors. Además, el controlador actual limpia los
+fragments retained de la epoch anterior antes de publicar los nuevos; si uno de
+los nuevos fragments es rechazado, otros workers pueden haberlo aceptado y el
+anterior ya puede haberse liberado. Los ACK bloquean los comandos desde la
+interfaz, pero no implementan rollback coordinado.
 
 ### 5.7 Vectores de conformidad
 
@@ -1257,6 +1444,13 @@ Topics principales:
 | `presence/<clientId>` | Nombre, color, conexión, vista activa y TTL del participante | 1 / Sí |
 | `cursor` | Posición reciente del cursor en coordenadas del Canvas | 0 / No |
 
+Retained no significa permanente ni no temporal. La presencia es temporal,
+pero se publica retained en un topic exclusivo por `clientId` para que quien
+entra tarde conozca el último estado. Su TTL, heartbeat y Last Will determinan
+si sigue vigente. El cursor también es temporal, pero no es retained porque una
+posición antigua no aporta un estado recuperable. Las operaciones son eventos
+no retained; el snapshot es el checkpoint retained que las consolida.
+
 #### Entrada a un proyecto
 
 El flujo al abrir una URL compartida es:
@@ -1275,6 +1469,26 @@ El flujo al abrir una URL compartida es:
 8. Si no llegó snapshot, publica el documento local como snapshot inicial.
 9. A partir de ese momento, cada cambio de nodes/edges se convierte en una o
    varias operaciones incrementales.
+
+```mermaid
+sequenceDiagram
+    participant A as Navegador A
+    participant M as Mosquitto
+    participant B as Navegador B
+
+    A->>M: CONNECT con Last Will presence/A offline
+    A->>M: presence/A online (QoS 1, retained)
+    A->>M: document/snapshot (QoS 1, retained)
+    B->>M: SUB snapshot, ops, presence/+, cursor
+    M-->>B: snapshot retained
+    M-->>B: presence/A retained
+    B->>M: presence/B online (QoS 1, retained)
+    B-->>M: cursor (QoS 0, no retained)
+    A->>M: document/ops node.update (QoS 1, no retained)
+    M-->>B: operación; validar proyecto y operationId
+    B->>B: Lamport + LWW por entidad; aplicar con guardia de eco
+    A->>M: checkpoint document/snapshot (QoS 1, retained)
+```
 
 Si MQTT no conecta, un fallback habilita la interfaz para edición local. Ese
 estado permite trabajar offline, pero no representa una sincronización válida.
@@ -1311,6 +1525,14 @@ Aplicar un documento remoto actualiza nodes/edges y limpia la selección, pero
 conserva el historial local de undo/redo. El historial no se transmite a otros
 participantes.
 
+Este mecanismo no es un CRDT de campos. La clave de conflicto es el node o la
+connection completos: dos cambios simultáneos sobre propiedades distintas del
+mismo node compiten por LWW y uno puede perderse. Un snapshot actúa sobre la
+clave global `document` y reemplaza el documento completo aceptado. Por ello se
+debe evitar editar simultáneamente la misma entidad en una demostración crítica
+y conservar checkpoints frecuentes; la convergencia determinista no equivale
+a conservar todas las intenciones del usuario.
+
 #### Presencia y cursores
 
 Cada pestaña publica presencia en su topic exclusivo con TTL predeterminado de
@@ -1346,6 +1568,11 @@ Topics principales:
 | `.../input` | Interfaz → propietario | Valor inyectado a un Service del fragment correcto |
 | `.../error` | Worker → interfaz | Diagnóstico estructurado del despliegue o runtime |
 
+Política vigente: status, manifest, fragment y ACK usan QoS 1 y retained;
+channel, command e input usan QoS 1 sin retain; snapshot usa QoS 0 sin retain;
+error usa QoS 1 sin retain. Un ACK retained describe el resultado de una epoch
+concreta y se limpia al retirar su despliegue; no es un comando.
+
 El ciclo completo es:
 
 1. Cada BrowserWorker o Pico anuncia `executorId`, tipo, estado, versiones IR,
@@ -1363,8 +1590,51 @@ El ciclo completo es:
 10. El frontend valida epoch/propietario y agrega los snapshots para pintar un
     único estado sobre el Canvas.
 
+```mermaid
+sequenceDiagram
+    actor U as Usuario
+    participant C as useDistributedExecutionStore
+    participant M as Mosquitto
+    participant W1 as BrowserWorker
+    participant W2 as DistributedWorker Pico
+
+    U->>C: Desplegar
+    C->>C: serializar, compilar IR v2 y particionar
+    C->>M: limpiar retained del despliegue anterior
+    C->>M: fragments nuevos (QoS 1, retained)
+    C->>M: manifest nuevo (QoS 1, retained)
+    M-->>W1: manifest + fragment propio
+    M-->>W2: manifest + fragment propio
+    W1->>M: ACK aceptado o rechazado (retained)
+    W2->>M: ACK aceptado o rechazado (retained)
+    M-->>C: ACK de cada executor
+    alt todos los ACK son positivos
+        C-->>U: habilitar Iniciar y Paso
+    else falta o falla un ACK
+        C-->>U: bloquear comandos y mostrar diagnóstico
+    end
+```
+
+```mermaid
+flowchart LR
+    BW[BrowserWorker<br/>MotorSimulacion]
+    BT[TransporteMqttDistribuido]
+    MQ[(Mosquitto)]
+    PT[MqttTransport MicroPython]
+    PW[DistributedWorker<br/>HilesEngineV2]
+
+    BW -->|channel QoS 1<br/>no retained| BT
+    BT --> MQ
+    MQ --> PT
+    PT -->|validar project, deployment,<br/>epoch, owner, type y sequence| PW
+    PW -->|snapshot QoS 0<br/>no retained| PT
+    PT --> MQ
+    MQ --> BT
+    BT --> BW
+```
+
 Cada mensaje de canal declara proyecto, deployment, epoch, connection,
-propietario, secuencia, `messageId` y valor. El receptor comprueba todo el
+propietario, secuencia, `message_id` y valor. El receptor comprueba todo el
 contexto antes de entregar el valor al motor. Duplicados, mensajes atrasados o
 de otra epoch se descartan.
 
@@ -1373,11 +1643,12 @@ particionador, BrowserWorker y el runtime MicroPython implementan las reglas.
 
 ### 6.5 Reconexión y recuperación
 
-El cliente MQTT del navegador mantiene un registro con conteo de consumidores
-por topic. Así, si dos features comparten una suscripción, cerrar una no
-desuscribe accidentalmente a la otra. Tras reconectar restaura todos los topics
-registrados. MQTT.js intenta reconectar cada 5 segundos y usa un timeout de
-conexión de 30 segundos.
+El frontend usa dos conexiones MQTT. `MqttBrowserClient`, consumido por MQTT v1
+y colaboración v2, mantiene un conteo de consumidores por topic, restaura las
+suscripciones, reintenta cada 5 segundos y usa timeout de 30 segundos.
+`TransporteMqttDistribuido`, usado por el controlador y BrowserWorker v3, tiene
+su propio registro, reintenta cada 4 segundos y usa timeout de 15 segundos.
+Cerrar una conexión no conserva automáticamente la sesión de la otra.
 
 La recuperación colaborativa se apoya en cuatro mecanismos:
 
@@ -1398,8 +1669,11 @@ La recuperación distribuida usa:
   telemetría vieja.
 
 Cuando un worker vuelve, lee manifest y fragment retained, valida epoch/hash y
-publica de nuevo su ACK. No debe aceptar canales hasta completar esa
-resincronización.
+publica de nuevo su ACK. BrowserWorker y DistributedWorker bloquean la recepción
+de channels, commands e inputs mientras `resincronizando` está activo. Sin
+embargo, sus outboxes de salida pueden empezar a vaciarse al recuperar el
+transporte antes de terminar esa resincronización; por ello la implementación
+actual no ofrece una barrera global de channels durante la reconexión.
 
 Si un ejecutor pasa a `offline`, sus elementos se muestran como **stale** u
 **Obsoleto**. Los snapshots de los demás fragmentos siguen siendo válidos. El
@@ -1407,11 +1681,49 @@ estado stale informa que el último valor ya no está respaldado por un ejecutor
 activo; no debe borrarse silenciosamente ni presentarse como actual.
 
 Antes de una epoch nueva, el controlador limpia los retained del despliegue
-anterior mediante payload vacío. `epoch` evita que un mensaje tardío de la
-configuración previa se aplique al nuevo runtime. Retirar un despliegue también
-debe limpiar manifest, fragments y ACK retenidos; dejar retained antiguos puede
-hacer que un worker reconectado intente recuperar un despliegue que ya no
-existe.
+anterior mediante payload vacío y después publica los nuevos fragments y el
+manifest. Esa limpieza hace que el worker libere el motor anterior. `epoch`
+evita que un channel tardío se aplique a otro runtime, pero no revierte una
+epoch parcialmente aceptada.
+
+Comportamiento comprobado en el código:
+
+| Situación | Resultado implementado |
+|---|---|
+| Fragment inválido mientras el anterior sigue cargado | El worker publica ACK negativo y conserva su motor anterior; es atomicidad local |
+| Flujo normal de nueva epoch desde la interfaz | Primero se limpian los fragments anteriores; por tanto, el motor viejo puede haberse liberado antes de validar el nuevo |
+| ACK negativo | Bloquea los comandos desde la interfaz y registra el error; no ordena rollback a los workers que aceptaron |
+| Ausencia de ACK | Mantiene el despliegue esperando y los comandos bloqueados; no hay timeout de rollback coordinado |
+| Executor desconectado | Su estado pasa a `offline` o `degraded` y la interfaz marca sus valores como stale; otros executors no se detienen automáticamente |
+| Reconexión con retained íntegros | Revalida el mismo manifest/fragment, reemite ACK sin reiniciar el estado si hash y epoch coinciden |
+| Manifest retained eliminado | El worker libera el fragment activo y queda `online`/`offline` sin motor |
+| Fragment retained activo eliminado | El worker propietario libera ese fragment; no existe restauración automática desde una copia local |
+| Pérdida del broker | El motor local puede seguir avanzando y el outbox conserva una cantidad acotada; no existe consenso global durante la partición |
+| Mensaje duplicado o atrasado | Se descarta por `message_id`, secuencia, deployment y epoch dentro de ventanas acotadas |
+
+Retirar un despliegue envía `stop` y limpia manifest, fragments y ACK retained.
+Si el proceso se interrumpe a mitad de esa limpieza pueden quedar retained
+huérfanos; el proyecto no implementa una transacción del broker ni un
+reconciliador global que los elimine después.
+
+```mermaid
+stateDiagram-v2
+    [*] --> online: worker conectado sin fragment
+    online --> deploying: recibe manifest y fragment
+    deploying --> ready: validación local correcta y ACK positivo
+    deploying --> online: fragment rechazado sin versión activa
+    ready --> running: command start
+    running --> ready: stop o reset
+    ready --> degraded: pierde broker
+    running --> degraded: pierde broker
+    degraded --> deploying: reconecta y espera retained
+    deploying --> ready: mismo hash y epoch resincronizados
+    ready --> online: manifest o fragment activo se limpia
+    running --> online: manifest o fragment activo se limpia
+```
+
+El estado local anterior puede conservarse ante un fragment aislado inválido,
+pero el diagrama no implica rollback global ni ejecución exactamente una vez.
 
 ### 6.6 Matrices verificables
 
@@ -1484,6 +1796,29 @@ pubsub ──▶ core
 hiles ──▶ core + pubsub
 devices ──▶ core + pubsub
 platform ──▶ APIs específicas de MicroPython
+```
+
+La composición en ejecución se puede leer así:
+
+```mermaid
+flowchart TD
+    Main[main.py] --> Scheduler[core / Scheduler]
+    Main --> Bus[pubsub / Node]
+    Main --> Worker[hiles / DistributedWorker]
+    Main --> EngineTask[hiles / EngineTaskV2]
+    Main --> Transport[pubsub / MqttTransport]
+    Main --> Devices[devices / LED y Watchdog]
+    Transport <--> Broker[(Mosquitto)]
+    Transport <--> Bus
+    Worker <--> Bus
+    Worker --> EngineTask
+    EngineTask --> Engine[hiles / HilesEngineV2]
+    Scheduler --> Transport
+    Scheduler --> Worker
+    Scheduler --> EngineTask
+    Scheduler --> Devices
+    Transport --> Platform[platform / Wi-Fi, machine y umqtt]
+    Devices --> Platform
 ```
 
 `core/` y `hiles/` no deben importar directamente `machine`, `network` ni
@@ -1621,12 +1956,14 @@ suscribe las rutas del nuevo deployment y publica ACK positivo, estado `ready`
 y snapshot inicial.
 
 Un rechazo publica ACK negativo y error estructurado con código, etapa y, si
-aplica, elemento o conexión. El fragmento y motor activos anteriores se
-conservan; una entrega inválida no debe dejar la placa a medio actualizar.
+aplica, elemento o conexión. Si el motor anterior todavía está cargado, la
+validación temporal permite conservarlo. Esto no garantiza rollback en el flujo
+normal de la interfaz: antes de una nueva epoch el controlador limpia el
+fragment retained anterior y esa limpieza ordena al worker descargarlo.
 
 El worker acepta canales únicamente después de resincronizar manifest y
 fragment. Valida proyecto, deployment, epoch, connection, propietario, tipo de
-valor, secuencia y `messageId`. Mantiene una ventana acotada de deduplicación,
+valor, secuencia y `message_id`. Mantiene una ventana acotada de deduplicación,
 por lo que una reentrega QoS 1 no vuelve a alimentar el motor.
 
 Al recibir payload vacío en el manifest o fragment retained activo, libera el
@@ -1665,6 +2002,11 @@ debe añadir lógica nueva únicamente al motor v1.
 ejecuta repetidamente la función. Expone métricas de compilaciones, ejecuciones,
 errores, duración y overruns. Las entradas y salidas se validan y copian como
 valores JSON acotados para evitar mutación compartida.
+
+El presupuesto predeterminado es 20 000 µs por ejecución. La duración se mide
+al terminar: superar el presupuesto produce `PYTHON_TIEMPO_EXCEDIDO` y una
+métrica de overrun, pero no constituye una interrupción preventiva. El perfil
+sin bucles reduce ese riesgo y el scheduler sigue necesitando trabajo acotado.
 
 El perfil bloquea imports, bucles, acceso a hardware, red, sistema de archivos,
 introspección y builtins peligrosos. Aun así no debe aceptarse código de una
@@ -1780,7 +2122,7 @@ le entrega una identidad única mediante `config_local.py`.
 1. Preparar la placa con MicroPython y `umqtt.simple`.
 2. Copiar el mismo paquete canónico descrito en 7.5.
 3. Crear un `config_local.py` propio. `DEVICE_ID` no puede repetirse; Wi-Fi,
-   broker y `PROJECT_ID` deben apuntar al entorno compartido.
+   broker y `HILES_PROJECT_ID` deben apuntar al entorno compartido.
 4. Reiniciar la placa y confirmar que aparece como un executor distinto en
    **Ejecutores**.
 5. Asignarle elementos desde el frontend, desplegar una nueva epoch y esperar
@@ -2029,8 +2371,13 @@ garantía nueva.
 5. Establecer clave de entidad, orden, deduplicación y regla de conflicto.
 6. Definir validación y diagnóstico para mensajes inválidos.
 
-Solo el snapshot/base que permite incorporarse al proyecto se conserva
-retained. Presencia, cursor, operaciones y comandos son efímeros. Nunca se
+La política vigente no se puede resumir como “solo el snapshot es retained”:
+el snapshot del documento y la presencia por cliente se publican con QoS 1 y
+retained; las operaciones usan QoS 1 sin retained y el cursor QoS 0 sin
+retained. En ejecución distribuida también son retained el estado del executor,
+manifest, fragments y ACK; channels, commands, inputs, snapshots parciales y
+errores no lo son. La presencia sigue siendo temporal porque contiene TTL,
+heartbeat y Last Will, aunque el broker retenga su último mensaje. Nunca se
 publican credenciales ni estado privado de la interfaz.
 
 #### Aplicar sin crear ecos
@@ -2091,9 +2438,9 @@ cuando Browser y MicroPython pasan la misma expectativa.
 
 Cuando se agrega un elemento o mensaje, primero se actualiza el contrato IR o
 MQTT y el validador. El runtime debe rechazar versiones y capacidades que no
-entiende antes de reemplazar el fragment activo. La instalación de una nueva
-epoch sigue siendo atómica: validar, verificar hash, construir, reemplazar y
-enviar ACK.
+entiende antes de reemplazar el fragment activo. La instalación dentro de un
+worker es atómica: validar, verificar hash, construir, reemplazar y enviar ACK.
+El despliegue de todos los workers no es una transacción global.
 
 #### Pruebas sin placa
 
@@ -2133,7 +2480,106 @@ Si durante un cambio futuro no hay hardware, se registra que ese cambio solo se
 validó en escritorio. Esto no invalida la evidencia física de la línea base,
 pero el cambio nuevo no se declara validado físicamente basándose en mocks.
 
-### 8.6 Lista de cierre para cualquier cambio
+### 8.6 Ejemplo real: recorrer `executionDelay` de la interfaz al firmware
+
+Este ejemplo permite aprender el recorrido completo sin inventar una feature.
+`executionDelay` ya existe y retrasa la publicación de la salida de un elemento
+sin bloquear el scheduler. La representación persistida usa ese nombre en el
+documento y la IR usa `retardo_ms`.
+
+#### Contrato observable
+
+1. Seleccionar un Functional Block y escribir `300` en **Execution Delay**.
+2. Exportar e importar el modelo conserva
+   `properties.executionDelay: 300`.
+3. Compilar produce `retardo_ms: 300` para ese elemento.
+4. Al inyectar una entrada, el resultado no aparece antes de 300 ms lógicos y
+   aparece al vencer el temporizador.
+5. El navegador y MicroPython producen el mismo comportamiento y otras Tasks no
+   se detienen durante la espera.
+
+#### Trazabilidad del dato
+
+| Frontera | Archivo y responsabilidad |
+|---|---|
+| Tipo de editor | `frontend/src/types/hiles.ts` declara `executionDelay` en `HilesNodeProperties` |
+| Valor inicial | `frontend/src/stores/useEditorStore.ts` lo inicializa en `0` |
+| Interfaz | `frontend/src/features/editor/PropertiesPanel.tsx` muestra **Execution Delay** y actualiza el nodo |
+| Documento JSON | `frontend/src/domain/modelDocument.ts` serializa las `properties` del nodo |
+| Compilación | `frontend/src/services/ir/compiladorIrV2.ts` normaliza el valor y emite `retardo_ms` |
+| Validación | `frontend/src/services/ir/validadorIrV2.ts` exige un entero entre 0 y 600 000 ms |
+| Browser runtime | `frontend/src/engine/MotorSimulacion.ts` arma y vence el timer con reloj lógico |
+| MicroPython runtime | `firmware/pico/hiles/elements_v2.py` lee `retardo_ms` y `engine_v2.py` agenda la salida |
+| Conformidad | `docs/mqtt/vectores_ir_v2/ejecucion/03_retardos_y_cancelacion.json` fija un caso compartido |
+
+El cambio de nombre entre documento e IR es deliberado: el documento conserva
+el contrato de la interfaz y el compilador genera el contrato wire compartido.
+No se debe leer `executionDelay` directamente en MicroPython ni escribir
+`retardo_ms` desde el panel.
+
+Fragmentos reales del recorrido:
+
+```typescript
+// frontend/src/services/ir/compiladorIrV2.ts
+const retardoElemento = normalizarRetardoMs(
+  props.executionDelay ?? props.delay,
+);
+
+// Al construir el elemento IR:
+...(retardoElemento !== undefined
+  ? { retardo_ms: retardoElemento }
+  : {}),
+```
+
+```python
+# firmware/pico/hiles/engine_v2.py
+if elemento.retardo_ms > 0 and not isinstance(elemento, TransitionV2):
+    salidas = self._apply_element_delay(elemento, salidas)
+```
+
+Ambos motores conservan la salida anterior mientras el timer está pendiente y
+publican la nueva al vencer. Transition usa su propio timer Petri para no
+aplicar el mismo delay dos veces.
+
+#### Cómo modificarlo de forma segura
+
+Si se cambiara el rango o la semántica, el orden correcto sería:
+
+1. escribir el caso observable y actualizar el vector compartido;
+2. ajustar tipo, valor inicial y control de propiedades;
+3. conservar importación/exportación o agregar migración si cambia el JSON;
+4. modificar compilador y validador de IR como una sola frontera;
+5. aplicar la misma semántica a ambos motores;
+6. probar justo antes del vencimiento, en el vencimiento, reset, reemplazo del
+   modelo y un valor fuera de rango;
+7. ejecutar la regresión completa.
+
+Comprobación enfocada desde la raíz:
+
+```powershell
+Set-Location .\frontend
+npm.cmd run test:run -- src/engine/__tests__/MotorSimulacionIrV2.test.ts
+Set-Location ..
+python -m unittest firmware.tests.test_hiles_delays -v
+```
+
+Los casos existentes comprueban retardo de canal, retardo de elemento,
+cancelación de Transition, reset, sustitución del modelo y que el scheduler siga
+ejecutando otras tareas. Después de la prueba enfocada siguen siendo obligatorios
+la suite completa, lint y build del capítulo 9.
+
+Verificación manual:
+
+1. iniciar Vite y crear un Service conectado por CCH a un Functional Block;
+2. configurar el bloque para transformar su entrada y escribir `300` en
+   **Execution Delay**;
+3. exportar el modelo y confirmar `executionDelay: 300` en sus `properties`;
+4. volver a importarlo y confirmar que el panel conserva el valor;
+5. inyectar una entrada desde **Simulación** y avanzar el reloj: la salida no
+   cambia antes del vencimiento y sí después;
+6. pulsar **Reiniciar** y confirmar que no queda un timer pendiente.
+
+### 8.7 Lista de cierre para cualquier cambio
 
 Antes de solicitar integración se confirma:
 
@@ -2320,6 +2766,24 @@ empaquetado ni distribución. Cuando sí los modifica, cualquier falta de prueba
 física debe quedar explícita y no se atribuye al nuevo cambio la validación de
 la versión anterior.
 
+### 9.6 Matriz de evidencia disponible
+
+Esta matriz separa resultados históricos de la verificación ejecutada durante
+la auditoría. Una fila solo demuestra el escenario que nombra.
+
+| Fecha | Rama / commit | Entorno y versiones registradas | Hardware | Escenario y comando | Resultado | Limitaciones | Evidencia |
+|---|---|---|---|---|---|---|---|
+| 2026-10-09 | `mqtt-pico`; `069ad92`, `831b79c` | Frontend de la entrega; la entrada no fija todas las versiones | Pico W v1 | Service web ↔ MQTT ↔ Pico; humedad `70` y rechazo de `setenta` | Prueba física reportada; frontend 39/39, lint y build | Caso MQTT v1; no demuestra distribución v3 ni dos placas | [`REGISTRO_CAMBIOS_MQTT_PICO.md`](../entregas/entrega-4-9-octubre/REGISTRO_CAMBIOS_MQTT_PICO.md) |
+| 2026-10-25 | cierre de entrega 6 | Broker LAN y navegador; versiones en la guía de la entrega | Pico W como fuente remota | Python, Sample/Hold, CCH/DCH/Petri y delays; demo manual | Recorrido declarado aprobado por el usuario | Sensores GPIO no formaron parte del recorrido; es evidencia histórica | [`GUIA_DEMO.md`](../entregas/entrega-6-20-octubre/GUIA_DEMO.md) |
+| 2026-11-06 | `d15d5a0` | Windows 11, Node 26.2.0 y Python 3.13.2 registrados | Sin placas en los runners de software | Frontend, firmware, conformidad y runner distribuido | Firmware 169 OK; frontend 187 tests con timeout intermitente de `PanelDock` en 8/11 corridas; lint/build OK | Los executors `pico:*` del runner eran dobles; el informe dejó el flujo físico pendiente | [`INFORME_FINAL_ENTREGA_8.md`](../entregas/entrega-8-6-noviembre/INFORME_FINAL_ENTREGA_8.md) |
+| 2026-11-06 y 2026-11-11 | artefactos incluidos luego en `ae9ac32` | Script de flota y firmware `3.0.0` | COM5 Pico W RP2040 / MicroPython 1.28.0; COM8 Pico 2 W RP2350 / MicroPython 1.29.0 | Deploy con respaldo, hashes, preservación de configuración y umqtt; inventario posterior | `ok: true`; ambos filesystems coinciden con las fuentes tras desplegar | Demuestra inventario y sincronización del runtime, no registra ACK/channels/snapshots de un modelo Pico ↔ Pico | [`physical-deploy-20261106.json`](../output/physical-deploy-20261106.json), [`physical-inventory-20261111.json`](../output/physical-inventory-20261111.json) |
+| 2026-11-23 | `multi-pico`, `a419d33` | Confirmación del equipo incorporada al manual después del merge de `main` | Dos placas Pico en la LAN | Funcionamiento conjunto de la línea base física | Validación Pico ↔ Pico / dos placas registrada como realizada | El commit no adjunta `projectId`, ACK, channels, snapshots ni consola; `origin/main` en `97a2a46` conserva el estado anterior como pendiente | Historial de `docs/MANUAL_DESARROLLADORES.md` en `a419d33` |
+| 2026-11-23 | `multi-pico`, auditoría sobre `a419d33` | Windows NT 10.0.26300, PowerShell 7.6.9, Node 24.18.0, npm 11.16.0, Vite 8.2.2, Vitest 5.0.1 | Sin placa conectada | `npm.cmd run test:run`; `npm.cmd run lint`; `npm.cmd run build` | 32 archivos y 187/187 tests OK; lint OK; build OK, con avisos de externalización Pyodide y chunk principal >500 kB | No incluye revisión visual ni repetición del hardware | Auditoría documentada en esta revisión; repetir comandos de 9.2 |
+| 2026-11-23 | misma auditoría | Node 24.18.0 | Cuatro workers en memoria, dos con identidad `pico:*` simulada | `node .\scripts\test-distributed-mqtt.mjs --mode=memory` | Seis etapas OK: registro, 4 ACK, entrada/pasos/20 snapshots, deduplicación, reconexión y liberación | Sin broker, Wi-Fi, MicroPython ni placa | Runner versionado en `scripts/test-distributed-mqtt.mjs` |
+| 2026-11-23 | misma auditoría | PowerShell 7.6.9 | Filesystem temporal, sin placa | `& .\scripts\test-pico-provisioning.ps1` | `Pruebas de aprovisionamiento Pico: PASS` | Valida copia, backup y protecciones en disco temporal; no radio ni memoria física | Script versionado en `scripts/test-pico-provisioning.ps1` |
+| 2026-11-23 | misma auditoría | Python 3.13.12 incluido con pgAdmin 4 | Sin placa; fakes de reloj, Wi-Fi, GPIO y transporte | `python.exe -m unittest discover -s firmware/tests -t . -v` | 180/180 tests firmware aprobados en 0,618 s | Prueba de escritorio; no mide memoria, radio ni filesystem real | Suite versionada en `firmware/tests/` |
+| 2026-11-23 | misma auditoría | Mosquitto 2.1.2 temporal en `127.0.0.1:19001`; Node 24.18.0 | Cinco clientes de colaboración y cuatro workers de protocolo simulados | `test-mqtt-four-clients.mjs`; `test-project-collaboration.mjs`; `test-distributed-mqtt.mjs --mode=mqtt --timeout=12000` | 4/4 clientes; colaboración, snapshot retained, presencia, cursor y aislamiento OK; seis etapas distribuidas, 4 ACK, 20 snapshots, 2 descartes y resultado 5 → 6 OK | Broker real, pero executors `pico:*` son dobles Node.js; listener de prueba restringido a localhost y sin autenticación | Runners versionados en `scripts/`; `.env.local` fue restaurado por hash al terminar |
+
 ## 10. Git y flujo de contribución
 
 ### 10.1 Antes de empezar
@@ -2482,6 +2946,12 @@ El generador de `config_local.py` produce una descarga local y no guarda la
 contraseña en Zustand, localStorage ni MQTT. Un respaldo de placa se trata como
 secreto porque puede contener el mismo archivo.
 
+`frontend/.env.local` evita versionar las credenciales, pero no las convierte
+en secretos frente al usuario del navegador. Vite sustituye las variables
+`VITE_*` durante el build y su valor puede inspeccionarse en el JavaScript o en
+la conexión MQTT. Solo se usan cuentas de aplicación con permisos mínimos; una
+clave administrativa nunca se entrega al frontend.
+
 ### 11.2 Límites de la LAN
 
 El perfil Local/LAN usa:
@@ -2494,6 +2964,13 @@ Este perfil solo es aceptable en una red de laboratorio confiable, con
 autenticación y firewall limitado a la LAN. `ws://` no cifra usuario,
 contraseña ni mensajes. No se deben abrir `1883`, `9001` o `5173` hacia
 Internet mediante port forwarding.
+
+La configuración de ejemplo de Mosquitto implementa autenticación mediante
+`password_file`, pero no TLS ni ACL por topic. Autenticarse no cifra el tráfico
+ni limita por sí solo qué proyectos puede leer o publicar una cuenta. El
+`projectId` organiza el namespace y evita cruces accidentales; no es una
+frontera de autorización. Del mismo modo, SHA-256 detecta un fragment alterado
+respecto del manifest, pero no demuestra quién lo publicó.
 
 El acceso remoto por Internet no forma parte del alcance actual. Por eso no se
 considera pendiente configurar ni probar `wss://`, TLS o ACL para un broker
@@ -2641,9 +3118,13 @@ capacidad, versión IR, perfil Python y rutas remotas. La ausencia de ACK indica
 conectividad, topic, executor desconectado o timeout; no es equivalente a un
 rechazo.
 
-No se pulsa ejecutar si faltan ACK. Si una nueva epoch falla, los workers deben
-conservar el fragmento anterior; revisar su snapshot permite confirmar que no
-se activó una mezcla. Para aislar la red, ejecutar primero:
+No se pulsa ejecutar si faltan ACK. Un worker conserva el motor anterior cuando
+rechaza un fragmento aislado sin que se haya limpiado la versión activa. En el
+flujo normal, el controlador limpia primero los retained anteriores; por eso
+una epoch fallida puede dejar un worker sin motor y otros con el fragmento
+nuevo. La interfaz bloquea comandos, pero no ejecuta rollback global. Se revisan
+ACK, estado y snapshot de cada executor para detectar esa situación. Para
+aislar la red, ejecutar primero:
 
 ```powershell
 node .\scripts\test-distributed-mqtt.mjs --mode=memory
@@ -2684,6 +3165,23 @@ recuperar. Opciones seguras:
 no publicado. No forman parte del procedimiento normal. Un commit ya subido a
 una rama compartida se corrige con un nuevo commit; no se fuerza ni reescribe
 sin coordinación explícita del equipo.
+
+### 12.7 Riesgos técnicos que requieren tareas independientes
+
+La auditoría del manual encontró comportamientos que no deben “corregirse” solo
+en la documentación. No se modificaron en esta revisión porque requieren diseño,
+pruebas y acuerdo del equipo:
+
+| Riesgo observado | Consecuencia posible | Trabajo recomendado |
+|---|---|---|
+| No existe transacción ni rollback global del despliegue | Una epoch rechazada puede dejar executors sin motor o con versiones distintas | Diseñar preparación/commit en dos fases o restauración explícita y probar fallos parciales |
+| La limpieza de retained puede quedar interrumpida | Manifest, fragments o ACK huérfanos pueden reaparecer al reconectar | Agregar reconciliación idempotente por deployment/epoch |
+| BrowserWorker y Pico pueden vaciar el outbox al reconectar antes de terminar la resincronización | Una salida producida durante la partición puede publicarse antes de confirmar la epoch activa | Introducir una barrera de salida hasta validar manifest y fragment; cubrir orden y descarte |
+| LWW se aplica a la entidad completa, no a cada propiedad | Dos ediciones simultáneas sobre propiedades diferentes del mismo nodo pueden perder una | Definir operaciones por campo o una estrategia CRDT/merge más granular |
+| `migrateV1toV2()` existe, pero importación, autosave y documento remoto aceptan schema 1 sin invocarla | Un documento v1 puede omitir valores que la migración pretendía completar | Centralizar parseo, migración y validación; agregar fixtures v1 de las tres rutas |
+| Credenciales compartidas sin ACL y transporte `ws://`/TCP plano | Un cliente de la LAN con la cuenta puede observar o publicar otros topics y credenciales viajan sin cifrar | Mantener la red aislada; si cambia el alcance, diseñar cuentas/ACL/TLS antes de exponerla |
+| SHA-256 sin firma | Verifica integridad respecto del manifest, no autenticidad del publicador | Si el modelo de amenaza lo exige, autenticar artefactos o reforzar autorización del broker |
+| La implementación y validación conjunta con dos placas está documentada, pero su traza detallada no quedó versionada | El resultado confirmado por el equipo no puede reproducirse solo con `projectId`, ACK, channels y snapshots guardados en Git | En la próxima repetición, adjuntar esos datos como evidencia adicional sin volver a marcar la implementación como pendiente |
 
 ## 13. Glosario técnico
 
@@ -2747,21 +3245,66 @@ sin coordinación explícita del equipo.
 - [ ] Revisar que no se incluyan secretos.
 - [ ] Crear commit y confirmar el push en la rama correcta.
 
-## Apéndice B. Criterio de terminado del manual
+## Apéndice B. Revisión y mantenimiento del manual
 
-Este borrador cubre el recorrido completo del sistema y queda listo para
-revisión técnica. Se considerará aprobado cuando una persona que no haya
-trabajado en el proyecto pueda:
+### B.1 Criterio de terminado
 
-1. Ejecutar HiLeS Web en un PC limpio.
-2. Conectar un segundo navegador por LAN.
-3. Identificar el módulo responsable de un comportamiento.
-4. Implementar un cambio pequeño con su prueba.
-5. Entender cómo el modelo pasa de JSON a IR y a fragments.
-6. Preparar una Pico sin publicar secretos.
-7. Diagnosticar un fallo básico usando únicamente este manual y sus enlaces.
+El contenido cubre el recorrido completo y fue contrastado con la base técnica
+`a419d33`. Su aprobación editorial sigue pendiente hasta que una persona que no
+haya trabajado en el proyecto pueda, sin instrucciones externas:
 
-La revisión debe anotar comandos o pantallas que hayan cambiado y corregir la
-fuente de verdad además del manual. Cada cambio futuro de arquitectura,
-protocolo, instalación o seguridad debe actualizar la sección correspondiente
-en el mismo commit.
+1. ejecutar HiLeS Web en un PC limpio;
+2. conectar un segundo navegador por LAN;
+3. identificar el módulo responsable de un comportamiento;
+4. implementar un cambio pequeño con su prueba;
+5. explicar cómo el modelo pasa de JSON a IR y a fragments;
+6. preparar una Pico sin publicar secretos;
+7. diagnosticar un fallo básico usando este manual y sus enlaces.
+
+La revisión externa debe registrar sistema operativo, versiones, comandos,
+resultado y cualquier paso ambiguo. Hasta realizarla, **listo para revisión** no
+significa **aprobado por un desarrollador nuevo**.
+
+### B.2 Historial de revisiones
+
+| Fecha | Commit o estado | Alcance |
+|---|---|---|
+| 2026-11-23 | `fb56495` | Creación del borrador y estructura inicial |
+| 2026-11-23 | `f6bdefe`–`3a9a7db` | Visión, entorno, repositorio, frontend, motor, MQTT, firmware y flujos |
+| 2026-11-23 | `0b832f4` | Pruebas, Git, seguridad, diagnóstico, glosario y cierre |
+| 2026-11-23 | `a419d33` | Alcance exclusivamente LAN y declaración de validación con dos Picos |
+| 2026-11-23 | este commit | Auditoría contra código, lockfiles, tests y evidencia; corrección de garantías, diagramas y ejemplo reproducible |
+
+### B.3 Inconsistencias resueltas en la auditoría
+
+| Afirmación o ambigüedad previa | Fuente revisada | Corrección aplicada |
+|---|---|---|
+| Solo snapshot/base era retained | `projectTopics.ts`, `services/distributed/topics.ts` y publishers | Se documentaron snapshot y presencia colaborativa, y status/manifest/fragment/ACK distribuidos como retained |
+| Presencia retained parecía incompatible con que fuera temporal | `ProjectSyncClient.ts` | Se explicaron TTL, heartbeat y Last Will: retención del último mensaje no elimina su caducidad semántica |
+| Una epoch fallida siempre conservaba el motor anterior | store de despliegue y workers | Se separó atomicidad local de ausencia de rollback global y se documentó la limpieza previa |
+| Reconectar garantizaba recuperación completa antes de emitir | `BrowserWorker.ts` y `distributed_worker.py` | Se registró que inbound queda bloqueado, pero el outbox puede empezar a vaciarse antes de terminar resync |
+| La documentación de `main` y `multi-pico` discrepaba sobre las dos Picos | `README.md` en `97a2a46`, artefactos de `ae9ac32` y manual en `a419d33` | Se reconoció la implementación y validación conjunta como realizada; se separó de la ausencia de una traza detallada versionada |
+| `.env.local` mantenía secreta la contraseña MQTT | Vite y consumo de variables `VITE_*` | Se aclaró que evita Git, pero el navegador/bundle expone el valor al usuario local |
+| Autenticación MQTT equivalía a seguridad completa | `mosquitto.conf.example` | Se separaron autenticación, cifrado y autorización; la plantilla no configura TLS ni ACL |
+| `projectId` aislaba usuarios de forma segura | Construcción de topics | Se definió como namespace, no como frontera de autorización |
+| SHA-256 autenticaba el despliegue | validadores de manifest/fragment | Se limitó la garantía a integridad respecto del manifest, no identidad del publicador |
+| Los comandos de configuración cambiaban dos veces a `frontend/` | secuencia de preparación | Se fijó el directorio de trabajo de cada comando |
+| El documento explicaba extensión en abstracto | recorrido de `executionDelay` | Se agregó un ejemplo real desde propiedades y JSON hasta IR, Browser, MicroPython y tests |
+
+### B.4 Cuándo actualizar el manual
+
+| Cambio en el proyecto | Secciones mínimas que deben revisarse |
+|---|---|
+| Versión de dependencia, requisito o comando | 2, 9 y quickstart |
+| Componente visual, store o flujo de interfaz | 4, 5.4, 8 y glosario |
+| Esquema JSON o migración | 5.2, 8.1/8.6, 9 y diagnóstico |
+| Semántica del motor o IR | 5, 7.4, 8.2/8.5, vectores y evidencia |
+| Topic, payload, QoS, retained o reconexión | 6, 8.4, 9.4, 11 y 12 |
+| Particionado, deployment o recuperación | 5.6, 6.4–6.6, 7.3, 9 y 12 |
+| Firmware, capacidades o paquete | 7, 8.5, 9.3 y evidencia física |
+| Perfil de red o seguridad | 2.3–2.5, 11 y diagnóstico |
+
+Cada cambio futuro corrige primero la fuente de verdad y sus pruebas, y actualiza
+el manual en el mismo commit. La revisión debe anotar comandos o pantallas que
+hayan cambiado; los registros históricos no se reescriben para aparentar que el
+comportamiento actual existía antes.
