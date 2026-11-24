@@ -23,7 +23,7 @@ cómo se relacionan y enlaza su fuente de verdad.
 | 1. Visión técnica | Listo para revisión | `README.md` y arquitectura |
 | 2. Preparación del entorno | Listo para revisión | Guía de replicación y configuración actual |
 | 3. Estructura del repositorio | Listo para revisión | Código y scripts actuales |
-| 4. Frontend | Pendiente | `frontend/src/` |
+| 4. Frontend | Listo para revisión | Montaje, features, stores, services y estilos actuales |
 | 5. Motor y modelos | Pendiente | `engine/`, IR v2 y vectores |
 | 6. Colaboración y MQTT | Pendiente | Protocolos v2/v3 |
 | 7. Firmware MicroPython | Pendiente | `firmware/pico/` |
@@ -465,31 +465,296 @@ MicroPython; uno de protocolo debe comprobarse con un broker MQTT real.
 
 ### 4.1 Punto de entrada y composición general
 
-_Pendiente: Vite, React y montaje del editor._
+El frontend es una Single Page Application escrita en React y TypeScript. Vite
+se encarga del servidor de desarrollo y del build, pero no contiene la lógica
+de modelado ni sincronización. El punto de entrada es
+[`../frontend/src/main.tsx`](../frontend/src/main.tsx): busca el elemento
+HTML `root`, activa `StrictMode` y monta `App` dentro de un Error Boundary.
+
+El Error Boundary evita que una excepción de render deje una pantalla vacía:
+muestra el stack del error en una vista de diagnóstico. No recupera el estado ni
+reemplaza el manejo normal de errores en stores y services.
+
+[`../frontend/src/App.tsx`](../frontend/src/App.tsx) monta dos ramas:
+
+```text
+main.tsx
+└── ErrorBoundary
+    └── App
+        ├── Editor
+        │   ├── TopBar
+        │   ├── Participants
+        │   ├── DisplayNameDialog
+        │   └── editor-workspace
+        │       ├── Canvas
+        │       ├── Palette
+        │       └── PanelDock
+        └── MqttPanel ── portal ──▶ pestaña Conexión de PanelDock
+```
+
+`MqttPanel` se monta junto al editor para conservar sus suscripciones aunque su
+pestaña esté cerrada. Cuando `PanelDock` registra el destino del portal, React
+traslada visualmente el panel a la pestaña **Conexión** sin desmontarlo.
+
+`Editor.tsx` compone el espacio de trabajo y coordina únicamente estado de
+presentación: panel abierto, nombre del archivo y `projectId`. Al iniciar:
+
+1. restaura el autosave local;
+2. asegura que la URL tenga un `projectId` válido;
+3. solicita un nombre visible si la pestaña todavía no lo tiene;
+4. inicia `useProjectStore` con proyecto e identidad;
+5. espera el snapshot colaborativo o habilita el trabajo sin conexión;
+6. monta el Canvas, la Palette y los paneles laterales.
+
+El nombre del participante y la identidad del navegador viven en
+`sessionStorage`: pertenecen a la pestaña, no al documento. El modelo se guarda
+por separado mediante el store del editor.
 
 ### 4.2 Editor y Canvas
 
-_Pendiente: nodos, conexiones, selección, zoom, Structural Blocks y relación
-padre/hijo._
+El Canvas usa React Flow (`@xyflow/react`). La librería resuelve viewport,
+selección, arrastre, handles y eventos de conexión; HiLeS aporta sus propios
+nodos, aristas y reglas mediante `HilesNode` y `HilesEdge`.
+
+El estado canónico del dibujo es un par de arreglos:
+
+- `nodes`: componentes con `id`, posición, tipo HiLeS, puertos y propiedades;
+- `edges`: conexiones con extremos, handles, tipo de canal, ruta, peso y delay.
+
+React Flow recibe una vista derivada de esos arreglos, pero los cambios vuelven
+a `useEditorStore` mediante `onNodesChange`, `onEdgesChange` y `onConnect`. El
+Canvas no conserva una segunda copia permanente del modelo.
+
+#### Creación y selección
+
+En escritorio, la Palette coloca un elemento mediante drag and drop. En
+dispositivos donde arrastrar es incómodo, también puede emitir la acción
+`hiles:add-element`, que agrega el componente en el centro del viewport o dentro
+del Structural Block seleccionado. Al pulsar un nodo o una conexión, el store
+guarda una sola selección activa y `PropertiesPanel` presenta sus campos.
+
+Antes de crear una conexión, `getConnectionValidation` comprueba, entre otras
+reglas:
+
+- que origen y destino existan y sean distintos;
+- que los canales de datos salgan de un Output Port y lleguen a un Input Port;
+- que los tipos de datos sean compatibles;
+- que LCH use puertos de control;
+- que una red de Petri alterne Place y Transition;
+- que la misma conexión no exista ya.
+
+La apariencia de la arista no define su semántica. La fuente de verdad es
+`hilesConnectionType`; color, trazo, punta y label se vuelven a normalizar al
+importar el documento.
+
+#### Structural Blocks y elementos internos
+
+Un componente está realmente dentro de un Structural Block cuando su nodo tiene
+`parentId` apuntando al bloque. No basta con dibujar el bloque detrás. En ese
+caso:
+
+- la posición del hijo es relativa a su padre;
+- React Flow usa `extent: 'parent'` para limitarlo al bloque;
+- `expandParent: true` permite ampliar el padre cuando haga falta;
+- mover el padre mueve visualmente toda su descendencia;
+- eliminar un padre elimina recursivamente sus hijos y conexiones afectadas;
+- exportar JSON conserva `parentId` y las posiciones relativas;
+- importar o sincronizar reconstruye la misma jerarquía.
+
+Al soltar un componente, el Canvas busca el Structural Block abierto más
+profundo que contenga el punto. Esto permite bloques anidados. Los cálculos de
+posición absoluta recorren todos los `parentId`, mientras que lo almacenado en
+el hijo continúa siendo relativo a su padre inmediato.
+
+#### Zoom, colapso y detalle
+
+El viewport admite un zoom entre `0.08` y `2.5`. A partir de `0.5` se muestra la
+lógica interna; por debajo de ese valor los hijos se ocultan y cada Structural
+Block cambia a una representación resumida. Un hijo también se oculta si él o
+alguno de sus padres no es visible, o si un padre está colapsado. Las conexiones
+con un extremo oculto se ocultan junto con él.
+
+La vista resumida es estado de presentación (`summaryMode`) y no se serializa.
+En cambio, `collapsed`, `visible` y `locked` son propiedades del documento. El
+Canvas muestra una indicación para acercarse y permite alternar las etiquetas de
+destino de los componentes internos sin modificar el modelo.
+
+El Canvas incluye controles de zoom, MiniMap en pantallas amplias, paneo y
+cursores remotos. Delete/Backspace elimina la selección siempre que el foco no
+esté en un campo editable; Ctrl/Cmd+Z y Ctrl/Cmd+Y controlan el historial.
 
 ### 4.3 Features
 
-_Pendiente: responsabilidades de `editor`, `collaboration`, `distributed`,
-`simulation`, `mqtt`, `onboarding` y `setup`._
+`frontend/src/features/` organiza la interfaz por capacidad. Una feature puede
+usar stores y services, pero no debe duplicar en un componente visual la lógica
+de protocolo o del motor.
+
+| Feature | Responsabilidad |
+|---|---|
+| `editor` | Shell, TopBar, Canvas, Palette, nodos, aristas, PropertiesPanel y coordinación de paneles |
+| `collaboration` | Nombre visible, participantes, ShareDialog, cursor, seguimiento de otro colaborador y enfoque de elementos |
+| `distributed` | Descubrimiento visible de ejecutores, asignaciones, despliegue, estado de ACK, errores y reglas de habilitación de controles |
+| `simulation` | Lista de Services inyectables, formulario de entradas y resumen del estado agregado |
+| `mqtt` | Perfil Local/LAN o Remoto, estado de conexión, reconexión y diagnóstico de mensajes |
+| `onboarding` | EmptyCanvas, ejemplo mínimo, ayudas contextuales y tutorial guiado |
+| `setup` | Formulario y descarga de `config_local.py` para preparar una Pico |
+
+La TopBar es la entrada común a las capacidades principales:
+
+| Grupo | Acciones |
+|---|---|
+| Modelado | **Elementos** y **Ejecutores** |
+| Paneles auxiliares | **Entradas**, **Propiedades** y **Conexión** |
+| Ejecución | **Iniciar**, **Paso**, **Detener** y **Reiniciar** |
+| Equipo y ayuda | **Compartir** y **Ayuda** |
+| Menú `⋯` | Deshacer, rehacer, nuevo proyecto, importar y exportar JSON; en móvil también accesos ocultos de la barra |
+
+Solo existe un juego visible de controles de ejecución. Su habilitación viene de
+`features/distributed/executionControl.ts`, que interpreta la fase del
+despliegue, los ACK y la disponibilidad de ejecutores. Los botones no deben
+habilitarse con condiciones paralelas escritas directamente en otra vista.
+
+`panelState.ts` aplica exclusión mutua entre Palette, PanelDock y
+DistributedPanel. En escritorio puede mantenerse la Palette mientras se abre
+otro panel si no colisiona; en móvil solo permanece abierto un bottom sheet.
 
 ### 4.4 Stores y estado
 
-_Pendiente: Zustand, estado del documento, simulación, proyecto compartido y
-ejecución distribuida._
+Zustand concentra el estado compartido fuera del árbol de React. Los stores no
+son una base de datos: viven en memoria y solo persisten las partes que cada uno
+declara explícitamente.
+
+| Store | Estado que gobierna | Persistencia o transporte |
+|---|---|---|
+| `useEditorStore` | Nodes, edges, selección, tipo de conexión, historial, mensajes e importación/exportación | Autosave en `localStorage`; documento colaborativo por `useProjectStore` |
+| `useProjectStore` | `projectId`, identidad visual, colaboradores, cursores y estado de sincronización | Identidad en `sessionStorage`; documento y presencia mediante MQTT |
+| `useDistributedExecutionStore` | Ejecutores, asignaciones, manifest, ACK, snapshots, errores y BrowserWorker | Protocolo MQTT v3; es la fuente oficial de la ejecución distribuida |
+| `useSimulationStore` | Motor local, entradas y runtime de simulación | Memoria; conserva compatibilidad con ejecución local/remota anterior |
+| `useRemoteExecutionStore` | Sesión remota de una sola Pico del contrato anterior | Compatibilidad; no gobierna el flujo distribuido v3 actual |
+| `useFollowStore` | Colaborador al que se está siguiendo | Memoria de interfaz |
+
+El flujo principal de una edición es:
+
+```text
+Interacción del usuario
+        │
+        ▼
+useEditorStore ── actualiza nodes/edges ──▶ React vuelve a renderizar
+        │
+        ├── debounce 600 ms ──▶ autosave local
+        ├── suscripción ──────▶ ProjectSyncClient publica operación/snapshot
+        └── suscripción ──────▶ useSimulationStore reconstruye el grafo si cambió la semántica
+```
+
+`useEditorStore` normaliza nodos y aristas al importar, valida el documento,
+mantiene hasta un número acotado de snapshots para undo/redo y agrupa un
+arrastre o redimensionamiento en una sola transacción de historial. Aplicar un
+documento remoto no debe borrar ni inventar el historial local.
+
+Los valores de ejecución son transitorios. Los stores de simulación y
+distribución escriben `data.runtime` para pintar valores, tokens, actividad,
+errores u obsolescencia en el Canvas, pero `serializeModel` solo exporta nombre,
+puertos, propiedades, layout y relaciones. De esta forma un snapshot de
+ejecución no contamina el documento colaborativo.
+
+`useProjectStore` espera brevemente un snapshot retained antes de publicar el
+estado local. Cuando el broker no conecta, un fallback libera la interfaz para
+trabajar offline. Esta liberación no equivale a una conexión exitosa y no debe
+usarse como prueba de colaboración.
+
+`useDistributedExecutionStore` compila el documento a IR v2, resuelve
+asignaciones, particiona, publica fragments, recibe ACK y agrega snapshots. Un
+BrowserWorker tiene una identidad de sesión distinta del nombre del
+colaborador. Mantener esa separación evita que cambiar el nombre visible cambie
+el destino de despliegue.
 
 ### 4.5 Services
 
-_Pendiente: MQTT, proyectos, IR, criptografía y transporte distribuido._
+Los services implementan lógica reutilizable que no depende de una vista
+concreta. La dirección esperada de dependencias es:
+
+```text
+React feature ──▶ store ──▶ service ──▶ motor, Worker o MQTT
+      │              │          │
+      └─ presenta    └─ coordina └─ valida y transporta
+```
+
+| Service | Responsabilidad |
+|---|---|
+| `services/projects` | URL del proyecto, topics, mensajes y `ProjectSyncClient` para snapshot, operaciones, presencia y cursores |
+| `services/mqtt` | Perfil activo, validación de URL, cliente MQTT WebSocket, mensajes base y puentes de ejecución remota |
+| `services/ir` | Tipos, validadores y compiladores IR; expresiones y particionado distribuido |
+| `services/distributed` | Contratos v3, topics y `BrowserWorker` que ejecuta un fragment asignado al navegador |
+| `services/crypto` | SHA-256 usado para comprobar integridad de artefactos y fragments |
+
+`domain/modelDocument.ts` define el documento del editor, su versión, migración,
+serialización y validación estructural. No es un formato de ejecución: el
+service de IR toma ese documento y produce el modelo normalizado que consumen
+los motores.
+
+Los Workers de `frontend/src/workers/` aíslan código de Functional Blocks:
+`javascript.worker.ts` ejecuta JavaScript y `pyodide.worker.ts` ejecuta Python.
+El aislamiento permite imponer límites de tiempo y evita bloquear directamente
+el hilo visual; no convierte código arbitrario en confiable, por lo que los
+validadores siguen siendo obligatorios.
+
+Al añadir comportamiento nuevo:
+
+- una regla del documento pertenece a `domain/`;
+- una regla de ejecución pertenece a `engine/` o `services/ir/`;
+- un contrato o transporte pertenece a `services/`;
+- coordinación de estado compartido pertenece a un store;
+- render, formularios e interacción pertenecen a una feature;
+- una función pura pequeña y transversal puede pertenecer a `utils/`.
+
+Esta separación evita que un botón publique directamente topics construidos a
+mano o que un service dependa del DOM para decidir la semántica del sistema.
 
 ### 4.6 Interfaz responsive y accesibilidad
 
-_Pendiente: viewports admitidos, paneles mutuamente excluyentes, teclado,
-foco, tutorial y criterios visuales._
+La interfaz usa CSS responsive y no una segunda aplicación móvil. Los puntos de
+quiebre principales son:
+
+| Ancho o capacidad | Adaptación |
+|---|---|
+| Más de `1460px` | Barra completa y panel lateral flotante |
+| Hasta `1460px` | Se ocultan labels secundarios para conservar espacio |
+| Hasta `1180px` | La TopBar se divide en filas y los controles táctiles aumentan |
+| Hasta `760px` | Palette y paneles se convierten en bottom sheets; se oculta MiniMap y acciones secundarias pasan al menú `⋯` |
+| Pointer coarse | Botones y ayudas usan objetivos táctiles de al menos 42 px |
+
+Se usa `100dvh` para responder a las barras del navegador móvil y
+`safe-area-inset-*` para no colocar acciones debajo de zonas reservadas del
+dispositivo. Los paneles tienen scroll interno y una altura máxima; abrir uno en
+móvil cierra los demás para no cubrir todo el Canvas.
+
+Criterios de accesibilidad ya incorporados:
+
+- controles con `aria-label`, `aria-pressed`, `aria-selected` o roles de tab;
+- dialogs con título asociado y `aria-modal`;
+- mensajes de conexión y guardado con `role="status"` o `aria-live`;
+- errores importantes con `role="alert"`;
+- estilo visible para navegación con teclado mediante `:focus-visible`;
+- atajos que no interceptan teclas mientras se escribe en un input o editor;
+- soporte de `prefers-reduced-motion` para reducir animaciones;
+- nombre obligatorio antes de iniciar colaboración, con foco inicial y error
+  textual además del cambio visual.
+
+Una modificación responsive no se considera verificada solo porque compila.
+Debe probarse, como mínimo, en estos escenarios:
+
+1. escritorio amplio con Palette y PanelDock;
+2. ancho intermedio cercano a `1180px`;
+3. móvil cercano a `390 × 844` con teclado virtual;
+4. tablet o emulación con pointer coarse;
+5. navegación por Tab, Escape cuando aplique y foco visible;
+6. apertura alternada de Palette, Propiedades, Entradas, Conexión y Ejecutores;
+7. edición de un campo sin que el foco se pierda por un render o una
+   actualización remota.
+
+Las transiciones puras de paneles se prueban en `PanelDock.test.tsx`. Las
+comprobaciones visuales y de teclado virtual siguen requiriendo una revisión en
+navegador real o emulado.
 
 ## 5. Motor de simulación y modelos
 
