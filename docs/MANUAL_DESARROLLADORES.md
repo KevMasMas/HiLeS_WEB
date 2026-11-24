@@ -1,6 +1,6 @@
 # Manual para desarrolladores de HiLeS Web
 
-> **Estado:** borrador estructural para revisión
+> **Estado:** borrador completo para revisión técnica
 > **Responsable inicial:** Juan David Romero
 > **Rama de trabajo:** `multi-pico`
 > **Última revisión estructural:** 23 de noviembre de 2026
@@ -28,11 +28,11 @@ cómo se relacionan y enlaza su fuente de verdad.
 | 6. Colaboración y MQTT | Listo para revisión | Cliente MQTT, colaboración v2 y ejecución distribuida v3 |
 | 7. Firmware MicroPython | Listo para revisión | Runtime, configuración, worker v3 y despliegue seguro |
 | 8. Flujos de desarrollo | Listo para revisión | Casos reales y puntos de extensión del proyecto |
-| 9. Pruebas y calidad | Pendiente | Suites actuales |
-| 10. Git y contribución | Pendiente | Flujo de la rama compartida |
-| 11. Seguridad | Pendiente | Configuración local y límites |
-| 12. Diagnóstico | Pendiente | Problemas reproducidos |
-| 13. Glosario | Pendiente | Terminología HiLeS |
+| 9. Pruebas y calidad | Listo para revisión | Suites de frontend, firmware, MQTT y hardware |
+| 10. Git y contribución | Listo para revisión | Flujo seguro de la rama compartida |
+| 11. Seguridad | Listo para revisión | Secretos, red y perfil Python |
+| 12. Diagnóstico | Listo para revisión | Árboles de comprobación y recuperación |
+| 13. Glosario | Listo para revisión | Terminología HiLeS, MQTT y distribución |
 
 ## Fuentes de verdad existentes
 
@@ -2145,9 +2145,31 @@ Antes de solicitar integración se confirma:
 
 ### 9.1 Pirámide de pruebas
 
-_Pendiente: unidades, integración, conformidad, MQTT real, visuales y físicas._
+Las pruebas se organizan por costo y por cantidad de dependencias externas. Una
+prueba de nivel superior complementa a las inferiores; no las reemplaza.
+
+| Nivel | Qué demuestra | Ejemplos del repositorio |
+|---|---|---|
+| Unidad | Una función, elemento o store cumple su contrato | Vitest en `frontend/src/**/*.test.ts`; unittest en `firmware/tests/` |
+| Integración local | Varias capas trabajan juntas sin red física | motor + IR, store + documento, scheduler + transporte falso |
+| Conformidad | Browser y MicroPython interpretan igual un contrato | vectores de `docs/mqtt/vectores_ir_v2/` |
+| Distribuida en memoria | Particionado, fragments y workers sin broker | `test-distributed-mqtt.mjs --mode=memory` |
+| MQTT real | Topics, retained, QoS, credenciales y reconexión reales | scripts de colaboración, cuatro clientes y distribución MQTT |
+| Visual/manual | Interacción, responsive, zoom, paneles y accesibilidad | dos navegadores, PC, tablet o móvil |
+| Física | Radio, memoria, filesystem y hardware reales | Pico W/Pico 2 W y `test-distributed-physical.ps1` |
+
+La mayor parte de los casos debe quedar en unidad e integración porque son
+rápidos y deterministas. La red real se reserva para contratos MQTT y la placa
+para aquello que no puede simularse: Wi-Fi, memoria efectiva, GPIO, reinicio y
+filesystem de MicroPython.
+
+Al corregir un defecto se agrega primero el caso mínimo que lo reproduce. Si
+el fallo cruzó capas —por ejemplo, JSON → IR → firmware— se conserva además
+una prueba en la frontera donde debió detectarse.
 
 ### 9.2 Comandos del frontend
+
+Desde la raíz del repositorio:
 
 ```powershell
 cd frontend
@@ -2156,86 +2178,551 @@ npm.cmd run lint
 npm.cmd run build
 ```
 
+`test:run` ejecuta Vitest una vez y devuelve un código de salida. `lint` revisa
+reglas de TypeScript, React y Hooks. `build` ejecuta TypeScript y produce el
+bundle de Vite; detecta imports, tipos o recursos que una prueba aislada puede
+no alcanzar.
+
+Durante el desarrollo se puede ejecutar un archivo concreto:
+
+```powershell
+cd frontend
+npm.cmd run test:run -- src/stores/useEditorStore.test.ts
+```
+
+Antes de integrar se ejecuta siempre la suite completa, lint y build. Que Vite
+arranque no demuestra que el build de producción compile, y que compile no
+demuestra que la semántica sea correcta.
+
+Para una revisión visual:
+
+```powershell
+cd frontend
+npm.cmd run dev -- --host 0.0.0.0 --port 5173 --strictPort
+```
+
+Se comprueban al menos creación y conexión de componentes, propiedades,
+importación/exportación, undo/redo, zoom, Structural Blocks, paneles, tamaño
+móvil y recarga. Si el cambio afecta colaboración, se usan dos sesiones con la
+misma URL de proyecto.
+
 ### 9.3 Pruebas del firmware
 
-_Pendiente: intérprete compatible, descubrimiento de tests y resultado esperado._
+Las pruebas del firmware están escritas para ejecutarse desde un Python de
+escritorio. Sustituyen reloj, GPIO, Wi-Fi, cliente MQTT y transporte por fakes,
+pero importan el código real de `firmware/pico/`.
+
+Desde la raíz:
+
+```powershell
+python -m unittest discover -s firmware/tests -t . -v
+```
+
+`-s` indica dónde descubrir archivos `test_*.py`; `-t .` mantiene la raíz como
+directorio superior de imports; `-v` muestra cada caso. El resultado aprobado
+termina con `OK` y código de salida cero. Si `python` no está en `PATH`, se usa
+el ejecutable instalado conservando los mismos argumentos.
+
+La suite cubre scheduler, bus interno, LED, watchdog, MQTT, valores runtime,
+channels, expresiones, Python restringido, motores IR v1/v2, worker distribuido,
+paridad y herramientas de flota. Un módulo nuevo debe traer su prueba; no se
+crean archivos vacíos para aparentar cobertura.
+
+Después de cambiar el runtime o el empaquetado se ejecuta también:
+
+```powershell
+& .\scripts\prepare-pico-deployment.ps1
+& .\scripts\test-pico-provisioning.ps1
+```
+
+El primer script genera el ZIP y sus hashes. El segundo despliega sobre un
+filesystem temporal y demuestra que se preservan configuración y dependencias.
+Ninguno demuestra todavía que el cambio funcione sobre radio o memoria física.
 
 ### 9.4 Pruebas distribuidas
 
-_Pendiente: runners en memoria, broker real, colaboración y hardware._
+Las pruebas se ejecutan en orden creciente de costo.
+
+#### Sin broker
+
+```powershell
+node .\scripts\test-distributed-mqtt.mjs --mode=memory
+```
+
+El modo `memory` valida compilación, particionado, manifest, fragments, workers
+y channels remotos con transporte en memoria. Es la primera comprobación para
+un cambio distribuido.
+
+#### Con Mosquitto real
+
+Requiere broker activo y `frontend/.env.local` válido:
+
+```powershell
+node .\scripts\test-mqtt-four-clients.mjs
+node .\scripts\test-project-collaboration.mjs
+node .\scripts\test-distributed-mqtt.mjs --mode=mqtt --timeout=12000
+```
+
+Estas pruebas validan respectivamente entrega a cuatro clientes, convergencia
+de colaboración y ejecución distribuida sobre topics reales. Los executors
+`pico:*` del runner MQTT son dobles en Node.js; el broker es real, la placa no.
+
+Cada ejecución debe usar un proyecto de prueba aislado y limpiar retained al
+terminar. Si una prueba falla, se conserva el primer error y se revisan logs del
+broker antes de repetir; aumentar el timeout no corrige credenciales, topics o
+un listener incorrectos.
+
+#### Procedimiento físico
+
+Sin una placa se puede validar el flujo sin escribir un dispositivo:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\test-distributed-physical.ps1 -Mode DryRun -AllowNoDevice
+```
+
+Con hardware se ejecutan `Inventory`, `Backup` y luego `Deploy` sobre un
+filesystem válido, nunca sobre `COMx` ni sobre el volumen bootloader `RPI-RP2`.
+Después se repite el escenario desde la interfaz y se recopilan ACK, snapshots,
+estado de executors y consola serie.
 
 ### 9.5 Evidencia mínima antes de integrar
 
-_Pendiente: comandos, resultados exactos, limitaciones, capturas cuando
-apliquen y actualización del registro._
+La evidencia debe permitir a otra persona repetir la comprobación. El registro
+incluye:
+
+1. rama y commit o estado local probado;
+2. entorno relevante: Windows, Node, navegador, Python, broker y placa;
+3. comandos exactos ejecutados;
+4. resultado: cantidad de tests, `OK`, build completado o error observado;
+5. escenario manual y comportamiento esperado/obtenido;
+6. capturas únicamente cuando el resultado sea visual;
+7. pruebas omitidas y motivo, por ejemplo “sin Pico física”;
+8. riesgos o limitaciones restantes.
+
+No se aceptan como evidencia “funciona” o una captura sin pasos. Tampoco se
+pegan `.env.local`, contraseñas, `config_local.py`, tokens ni contenido de
+respaldos. Los resultados se registran en el archivo de cambios de la entrega
+siguiendo su estructura existente.
+
+Un cambio puede integrarse con una prueba física pendiente si el alcance y la
+limitación quedan explícitos y las capas simulables pasaron. No puede marcarse
+como físicamente validado.
 
 ## 10. Git y flujo de contribución
 
 ### 10.1 Antes de empezar
 
-_Pendiente: confirmar rama, revisar cambios locales, hacer fetch/pull y no
-sobrescribir trabajo ajeno._
+El repositorio suele trabajarse sobre una rama compartida de entrega. Antes de
+editar se identifica la rama y se separa lo propio de lo ajeno:
+
+```powershell
+git branch --show-current
+git status --short --branch
+git remote -v
+git fetch origin
+```
+
+Después de `fetch`, se revisa qué llegó antes de incorporarlo:
+
+```powershell
+git log --oneline HEAD..origin/<rama>
+git diff --stat HEAD..origin/<rama>
+```
+
+Si el working tree está limpio y la rama remota solo avanzó linealmente:
+
+```powershell
+git pull --ff-only origin <rama>
+```
+
+`--ff-only` evita crear un merge accidental. Si hay cambios locales, primero
+se inspeccionan; no se usa `reset --hard`, `clean`, `checkout -- .` ni se
+sobrescriben archivos para “igualar Git”. Los archivos sin seguimiento también
+pueden pertenecer a otra persona y no deben agregarse al commit por comodidad.
+
+Si se necesita apartar trabajo propio, se puede crear un commit temporal o un
+stash con mensaje después de revisar exactamente qué incluirá. Un stash con
+`-u` incorpora archivos sin seguimiento, así que se usa solo si se conocen.
 
 ### 10.2 Durante el cambio
 
-_Pendiente: alcance pequeño, nombres claros, pruebas y documentación._
+Cada cambio debe tener un objetivo reconocible. Antes de editar se buscan las
+referencias y pruebas del contrato con `rg`; luego se modifica la fuente de
+verdad y sus consumidores, no copias aisladas.
+
+Reglas de trabajo:
+
+- mantener nombres técnicos en inglés y textos explicativos en español;
+- no reformatear archivos ajenos sin necesidad;
+- no mezclar una funcionalidad, una limpieza general y documentación no
+  relacionada en el mismo commit;
+- agregar pruebas cerca de la capa que cambia;
+- conservar compatibilidad o incluir migración/versionado;
+- revisar `git status` con frecuencia para detectar archivos generados;
+- no añadir `node_modules`, `dist`, `.env.local`, secretos ni outputs locales;
+- actualizar manual y registro cuando cambie un contrato o procedimiento.
+
+En una rama compartida se vuelve a hacer `fetch` antes de cerrar el cambio. Si
+el remoto avanzó, se integra de forma consciente y se repiten las pruebas sobre
+el resultado combinado.
 
 ### 10.3 Commit y push
 
-_Pendiente: revisión del diff, mensajes descriptivos en español, rama correcta
-y comprobación del remoto._
+Antes del commit:
+
+```powershell
+git status --short
+git diff --check
+git diff --stat
+git diff -- <archivo>
+```
+
+Se agregan rutas explícitas. Evitar `git add .` cuando existen archivos ajenos
+o sin seguimiento:
+
+```powershell
+git add -- ruta/al/archivo1 ruta/al/archivo2
+git diff --cached --check
+git diff --cached --stat
+git diff --cached
+```
+
+El mensaje se escribe en español, en imperativo o infinitivo descriptivo y sin
+frases genéricas como “cambios”:
+
+```powershell
+git commit -m "Documentar pruebas y diagnóstico del proyecto"
+```
+
+Antes de publicar se confirma otra vez la rama. El push siempre la nombra para
+evitar enviar a `main` por error:
+
+```powershell
+git branch --show-current
+git push origin <rama>
+```
+
+Finalmente:
+
+```powershell
+git status --short --branch
+git log -1 --oneline
+git rev-parse HEAD
+git rev-parse origin/<rama>
+```
+
+Los dos últimos hashes deben coincidir si el push quedó actualizado. Si el
+remoto rechaza por avance de otra persona, no se fuerza: se hace `fetch`, se
+revisa la diferencia, se integra y se vuelve a validar.
 
 ### 10.4 Registro de cambios
 
-_Pendiente: responsable, archivos, pruebas, evidencia, pendientes y commit._
+Cada entrega conserva su propio plan y registro bajo `entregas/`. Se sigue la
+estructura ya usada por el equipo para que todos los aportes sean comparables.
+Una entrada debe indicar:
+
+- responsable con nombre completo;
+- tarea o persona del plan reemplazada por el nombre cuando corresponda;
+- objetivo y comportamiento entregado;
+- archivos principales modificados;
+- decisiones técnicas y compatibilidad;
+- comandos de prueba y resultados;
+- prueba manual o física realizada;
+- limitaciones y pendientes reales;
+- hash y mensaje del commit después de crearlo.
+
+El registro no sustituye el historial Git ni el manual. Git responde qué línea
+cambió; el registro explica por qué, cómo se verificó y qué quedó fuera. Si el
+commit todavía no existe, se deja el campo por completar y se actualiza luego,
+sin inventar un hash.
 
 ## 11. Seguridad y configuración sensible
 
 ### 11.1 Secretos excluidos
 
-_Pendiente: Wi-Fi, credenciales MQTT, archivos `.env.local`,
-`config_local.py` y respaldos de placas._
+Los siguientes datos nunca entran al repositorio, documento JSON colaborativo,
+topics retained, URL, capturas ni registros:
+
+- SSID y contraseña Wi-Fi;
+- usuario y contraseña MQTT;
+- certificados y claves privadas;
+- `frontend/.env.local`;
+- `config_local.py` de cada placa;
+- archivos de contraseñas de Mosquitto;
+- respaldos de filesystem de las Picos;
+- tokens, cookies o datos personales de una sesión.
+
+Se versionan únicamente plantillas como `.env.example` y
+`config_local.example.py`, con valores ficticios. Antes de un commit:
+
+```powershell
+git status --short
+git check-ignore -v frontend/.env.local
+git check-ignore -v firmware/pico/config_local.py
+git diff --cached
+```
+
+Si un secreto llegó a un commit o remoto, borrarlo en otro commit no lo elimina
+del historial. Se revoca o cambia inmediatamente la credencial, se avisa al
+equipo y después se coordina la limpieza del historial si hace falta.
+
+El generador de `config_local.py` produce una descarga local y no guarda la
+contraseña en Zustand, localStorage ni MQTT. Un respaldo de placa se trata como
+secreto porque puede contener el mismo archivo.
 
 ### 11.2 Límites de la LAN
 
-_Pendiente: cuándo `ws://` es aceptable y cuándo se requiere `wss://`._
+El perfil Local/LAN usa:
+
+- Vite por HTTP, normalmente puerto `5173`;
+- MQTT/TCP para Picos, normalmente `1883`;
+- MQTT sobre WebSocket para navegadores, normalmente `ws://<ip>:9001`.
+
+Este perfil solo es aceptable en una red de laboratorio confiable, con
+autenticación y firewall limitado a la LAN. `ws://` no cifra usuario,
+contraseña ni mensajes. No se deben abrir `1883`, `9001` o `5173` hacia
+Internet mediante port forwarding.
+
+Para acceso remoto se requiere un broker configurado con TLS, cuentas por rol,
+ACL por topics, certificados válidos y WebSocket seguro `wss://`. La interfaz
+permite configurar ese perfil, pero el despliegue remoto seguro no ha sido
+certificado por esta entrega. Una VPN administrada puede extender la LAN, pero
+no reemplaza autenticación ni ACL.
+
+Las credenciales usadas en el frontend son visibles para quien controla ese
+navegador; por eso deben ser cuentas de aplicación con privilegios mínimos, no
+credenciales administrativas del broker.
 
 ### 11.3 Código Python del modelo
 
-_Pendiente: sintaxis permitida, operaciones bloqueadas, presupuestos y
-validación Browser/MicroPython._
+Un Functional Block puede usar el perfil Python acotado de IR v2. Se admite una
+expresión de una línea o una única función `def calcular(...)` con:
+
+- asignaciones y variables locales;
+- `if`, `elif`, `else` y `return`;
+- operadores aritméticos, booleanos y comparaciones;
+- indexación y slicing;
+- `inputs.get(...)`;
+- builtins permitidos como `abs`, `bool`, `float`, `int`, `len`, `max`, `min`,
+  `round`, `str` y `sum`.
+
+Se rechazan imports, bucles, clases, lambdas, async, excepciones, atributos
+generales, nombres `__dunder__`, archivos, red, hardware, `eval` y `exec`.
+El código se limita a 2 048 bytes y 40 líneas, con hasta 16 inputs y 16 outputs.
+Los valores también respetan los límites de IR v2 descritos en 5.5.
+
+Una salida puede devolverse directamente. Varias salidas usan un diccionario
+con las claves declaradas. `None` significa no publicar en ese paso.
+
+La misma validación sintáctica y de valores se ejecuta antes del despliegue y
+en MicroPython. Los vectores de conformidad comprueban errores y resultados en
+ambos motores. Este perfil reduce superficie de fallo, pero no es un sandbox
+criptográfico para ejecutar código hostil. Solo se aceptan modelos de usuarios
+autorizados y el runtime mantiene presupuestos de tamaño y tiempo.
 
 ## 12. Diagnóstico y recuperación
 
 ### 12.1 El frontend no inicia
 
-_Pendiente: Node.js, dependencias, `npm.ps1`, puertos y caché._
+Comprobar en este orden:
+
+1. estar en `frontend/` y verificar `node --version` y `npm.cmd --version`;
+2. instalar exactamente el lockfile con `npm.cmd ci`;
+3. iniciar con `npm.cmd run dev -- --host 0.0.0.0 --port 5173 --strictPort`;
+4. leer el primer error completo de terminal;
+5. comprobar si el puerto está ocupado:
+
+   ```powershell
+   Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue
+   ```
+
+En PowerShell, el error “`npm.ps1` no se puede cargar” proviene de la política
+de scripts, no del proyecto. Usar `npm.cmd` evita modificar la política del
+sistema.
+
+Si falla un import, no se borra `package-lock.json`: `npm.cmd ci` debe restaurar
+la combinación versionada. Si la página abre en blanco, revisar consola del
+navegador y el Error Boundary. Borrar datos del sitio elimina autosave y nombre
+local, por lo que antes se exporta el modelo si es recuperable.
 
 ### 12.2 El navegador no conecta a MQTT
 
-_Pendiente: host, WebSocket, credenciales, firewall y protocolo._
+Separar primero Vite de MQTT: que cargue la interfaz solo demuestra HTTP. En el
+panel **Conexión** revisar modo, host, puerto WebSocket, ruta, usuario y
+contraseña. El navegador usa WebSocket, no el puerto MQTT/TCP de las Picos.
+
+Comprobaciones:
+
+1. confirmar que Mosquitto está ejecutándose;
+2. verificar que escucha WebSocket en el puerto configurado, normalmente 9001;
+3. usar la IPv4 LAN del PC, no `localhost`, desde otro dispositivo;
+4. probar alcance del puerto:
+
+   ```powershell
+   Test-NetConnection <ip-del-pc> -Port 9001
+   ```
+
+5. revisar firewall de Windows y logs del broker;
+6. confirmar usuario/contraseña y que el listener permite esa cuenta;
+7. usar `ws://` para LAN HTTP o `wss://` cuando la página/broker sean seguros.
+
+Un error de “mixed content” aparece si una página HTTPS intenta abrir `ws://`;
+en ese caso se necesita `wss://`. Si cambió la IPv4 del PC, actualizar
+`.env.local`, el panel y los `config_local.py` de las placas.
 
 ### 12.3 Dos navegadores no colaboran
 
-_Pendiente: mismo `projectId`, snapshot, presencia y aislamiento._
+Ambos deben abrir exactamente el mismo `projectId` en la URL y conectarse al
+mismo broker con permisos sobre los mismos topics. El nombre visible identifica
+al participante, pero no selecciona el proyecto.
+
+1. comparar el valor de `?project=` en ambas URLs;
+2. comprobar estado MQTT conectado y presencia de ambos nombres;
+3. abrir DevTools y buscar rechazo de mensajes o desconexión;
+4. crear una entidad pequeña y observar si aparece en la otra sesión;
+5. recargar el segundo navegador para comprobar el snapshot retained;
+6. ejecutar `node .\scripts\test-project-collaboration.mjs`.
+
+Si una sesión nueva recibe un modelo viejo, puede existir un retained de una
+prueba anterior con el mismo `projectId`. Usar un ID nuevo o limpiar los topics
+de prueba. No se corrige borrando localStorage de todos los usuarios sin
+exportar antes: podría eliminar la única copia local de un modelo.
+
+Si los participantes aparecen pero los cambios no convergen, revisar versión
+del protocolo, IDs duplicados, deduplicación y regla de conflicto, no la red.
 
 ### 12.4 La Pico no aparece
 
-_Pendiente: red, identidad, proyecto, reloj, topics y Last Will._
+La Pico necesita Wi-Fi de 2.4 GHz, acceso MQTT/TCP y coincidencia exacta de
+proyecto. Revisar la consola serie desde el arranque y luego:
+
+1. validar SSID y contraseña en su `config_local.py`;
+2. comprobar que `MQTT_HOST` es la IPv4 LAN del PC, nunca `localhost`;
+3. comprobar puerto TCP, normalmente 1883, usuario y contraseña;
+4. comparar `HILES_PROJECT_ID` con `?project=`;
+5. confirmar `DEVICE_ID` y `MQTT_CLIENT_ID` únicos;
+6. revisar en Mosquitto conexión, suscripciones y publicación de estado;
+7. esperar más de un periodo de heartbeat y refrescar **Ejecutores**.
+
+Si encender una placa hace desaparecer otra, ambas usan el mismo client ID. Si
+aparece `offline`, el Last Will se publicó o el heartbeat expiró: revisar
+reinicios, alimentación, Wi-Fi y keepalive. Si no aparece ni online ni offline,
+la conexión o el topic/proyecto son incorrectos.
+
+Una Pico puede estar conectada al broker y no ser compatible con un fragment.
+En ese caso sí aparece en inventario, pero sus capacidades o versión impedirán
+el despliegue.
 
 ### 12.5 El modelo no despliega
 
-_Pendiente: asignaciones, compilación IR, manifest, ACK y errores visibles._
+El despliegue tiene cuatro fronteras; se diagnostican en orden:
+
+1. **Documento:** no debe tener referencias, Ports o conexiones inválidas.
+2. **Compilación IR:** revisar diagnósticos por ciclo CCH, código no soportado,
+   tipo, delay, capacidad o límites.
+3. **Particionado:** cada elemento ejecutable necesita exactamente un executor
+   disponible; revisar herencia y overrides de Structural Blocks.
+4. **Entrega:** manifest y fragments deben publicarse y cada executor debe
+   responder ACK para la misma `deploymentId` y epoch.
+
+Un ACK negativo debe mostrar código y etapa. Revisar tamaño/hash, ownership,
+capacidad, versión IR, perfil Python y rutas remotas. La ausencia de ACK indica
+conectividad, topic, executor desconectado o timeout; no es equivalente a un
+rechazo.
+
+No se pulsa ejecutar si faltan ACK. Si una nueva epoch falla, los workers deben
+conservar el fragmento anterior; revisar su snapshot permite confirmar que no
+se activó una mezcla. Para aislar la red, ejecutar primero:
+
+```powershell
+node .\scripts\test-distributed-mqtt.mjs --mode=memory
+```
+
+Si pasa en memoria y falla en MQTT, concentrarse en broker, retained,
+credenciales, tamaño de payload y tiempos, no en la semántica del motor.
 
 ### 12.6 Recuperar un cambio de Git
 
-_Pendiente: recuperación no destructiva, archivos sin seguimiento y conflictos._
+Primero detener ediciones y capturar el estado:
+
+```powershell
+git status --short --branch
+git diff
+git diff --cached
+git log -5 --oneline
+git reflog -10
+```
+
+No ejecutar limpieza o reset mientras no se identifique qué se quiere
+recuperar. Opciones seguras:
+
+- **Archivo modificado sin commit:** copiarlo fuera del repositorio o crear un
+  patch con `git diff -- ruta > cambio.patch` antes de restaurar.
+- **Commit perdido al cambiar de rama:** localizarlo en `git reflog` y crear
+  una rama de rescate: `git branch rescate/<nombre> <hash>`.
+- **Archivo de otro commit:** inspeccionarlo con
+  `git show <hash>:ruta/al/archivo` antes de usar
+  `git restore --source=<hash> -- ruta/al/archivo`.
+- **Cambios propios que bloquean un pull:** crear un commit temporal o
+  `git stash push -m "respaldo antes de actualizar"` después de revisar el
+  contenido. Usar `-u` solo si también se quieren guardar archivos nuevos.
+- **Conflicto:** abrir cada archivo, conservar la combinación correcta, quitar
+  marcadores, ejecutar pruebas y luego marcarlo resuelto con `git add`.
+
+`git reset --hard` y `git clean -fd` pueden borrar trabajo sin seguimiento o
+no publicado. No forman parte del procedimiento normal. Un commit ya subido a
+una rama compartida se corrige con un nuevo commit; no se fuerza ni reescribe
+sin coordinación explícita del equipo.
 
 ## 13. Glosario técnico
 
-_Pendiente: HiLeS, Structural Block, Functional Block, Service, Place,
-Transition, CCH, DCH, LCH, IR, fragment, manifest, executor, worker, ACK,
-snapshot, retained, Last Will, projectId y deploymentId._
+| Término | Significado en este proyecto |
+|---|---|
+| **HiLeS** | Formalismo híbrido usado para modelar estructura, procesamiento, flujo de datos y comportamiento Petri. |
+| **Canvas** | Área de edición visual basada en React Flow donde se ubican componentes y conexiones. |
+| **Structural Block** | Contenedor jerárquico que agrupa lógica interna, mueve a sus hijos y controla su nivel de detalle. No ejecuta una transformación por sí solo. |
+| **Functional Block** | Elemento ejecutable que transforma inputs en outputs mediante expresión o código Python restringido; JavaScript solo tiene soporte local heredado. |
+| **Service** | Elemento de interfaz del modelo con Ports de entrada o salida que representa interacción con el entorno. |
+| **Place** | Nodo de Petri que contiene tokens y puede limitar su capacidad. |
+| **Transition** | Nodo de Petri que consume y produce tokens atómicamente cuando arcos y condición la habilitan. |
+| **Port** | Punto tipado de entrada o salida de Service o Functional Block. Tiene identidad estable dentro del elemento. |
+| **CCH** | Continuous Channel. Conserva y propaga la última muestra disponible. |
+| **DCH** | Discrete Event Channel. Cola FIFO acotada de eventos discretos. |
+| **LCH** | Logical Channel. Pulso booleano válido durante un solo paso. |
+| **Petri arc** | Conexión dirigida Place ↔ Transition con peso entero para flujo de tokens. |
+| **Sample** | Elemento que captura el valor de entrada cuando recibe la señal de muestreo. |
+| **Hold** | Elemento que conserva el último valor capturado hasta una actualización válida. |
+| **Documento de modelo** | JSON persistente y colaborativo con esquema, elementos, conexiones y metadata; no contiene estado runtime ni secretos. |
+| **IR** | Intermediate Representation. Contrato ejecutable validado que resulta de compilar el documento. La distribución usa IR v2. |
+| **Compiler** | Convierte documento a IR, normaliza detalles visuales y produce diagnósticos; no ejecuta el modelo. |
+| **Validator** | Rechaza estructuras, tipos, límites o referencias inválidas antes de ejecutar o desplegar. |
+| **Logical clock** | Tiempo controlado por el motor para delays reproducibles sin bloquear el proceso. |
+| **Runtime snapshot** | Vista serializable del estado de ejecución: valores, tokens, colas, reloj y errores observables. |
+| **Executor** | Destino que posee y ejecuta elementos: una sesión Browser o una Pico identificada de forma única. |
+| **BrowserWorker** | Executor dentro de una pestaña del navegador para un fragment asignado a esa sesión. |
+| **DistributedWorker** | Task del firmware que recibe manifest/fragments, valida, ejecuta y publica estado, ACK y snapshots. |
+| **Assignment** | Decisión persistente que relaciona un elemento o Structural Block con un executor. |
+| **Partitioning** | División determinista de una IR en fragments por propietario y rutas remotas. |
+| **Manifest** | Mensaje retained que describe deployment, epoch, executors y hashes esperados de sus fragments. |
+| **Fragment** | Parte de la IR destinada a un executor, con modelo local y rutas inbound/outbound. |
+| **Remote route** | Contrato de un channel que cruza dos executors e incluye identidad, tipo, secuencia y epoch. |
+| **ACK** | Acknowledgement. Respuesta positiva o negativa de un executor al validar y activar un fragment. |
+| **Epoch** | Número de versión monotónico dentro de un deployment; evita mezclar mensajes de despliegues distintos. |
+| **deploymentId** | Identificador de una publicación coordinada de manifest y fragments. |
+| **projectId** | Identificador compartido en URL y topics que aísla modelo, presencia y ejecución de un proyecto. |
+| **sessionId** | Identificador temporal de una pestaña o participante; no reemplaza `projectId`. |
+| **MQTT topic** | Ruta jerárquica usada para publicar y suscribirse a mensajes. |
+| **QoS** | Nivel de entrega MQTT. QoS 1 puede duplicar mensajes y exige deduplicación. |
+| **Retained** | Mensaje que el broker conserva como último estado del topic y entrega a nuevos suscriptores. No se usa para comandos. |
+| **Last Will** | Mensaje configurado al conectar que el broker publica si el cliente desaparece inesperadamente. |
+| **Heartbeat** | Publicación periódica de presencia/estado que permite detectar expiración. |
+| **Deduplication** | Rechazo de una operación o mensaje ya aplicado mediante su identidad y ventana acotada. |
+| **Lamport clock** | Contador lógico usado para ordenar operaciones colaborativas sin depender de la hora del PC. |
+| **Broker** | Servidor MQTT —Mosquitto en el entorno local— que enruta mensajes; no ejecuta HiLeS. |
+| **Vite** | Herramienta que sirve y construye el frontend; no reemplaza al broker MQTT. |
+| **MicroPython** | Implementación ligera de Python usada por la Pico; no ofrece toda la API de CPython. |
+| **Pico W / Pico 2 W** | Placas soportadas por el mismo runtime, diferenciadas por configuración e identidad. |
 
 ## Apéndice A. Checklist para una contribución
 
@@ -2252,8 +2739,9 @@ snapshot, retained, Last Will, projectId y deploymentId._
 
 ## Apéndice B. Criterio de terminado del manual
 
-El manual podrá considerarse completo cuando una persona que no haya trabajado
-en el proyecto pueda:
+Este borrador cubre el recorrido completo del sistema y queda listo para
+revisión técnica. Se considerará aprobado cuando una persona que no haya
+trabajado en el proyecto pueda:
 
 1. Ejecutar HiLeS Web en un PC limpio.
 2. Conectar un segundo navegador por LAN.
@@ -2262,3 +2750,8 @@ en el proyecto pueda:
 5. Entender cómo el modelo pasa de JSON a IR y a fragments.
 6. Preparar una Pico sin publicar secretos.
 7. Diagnosticar un fallo básico usando únicamente este manual y sus enlaces.
+
+La revisión debe anotar comandos o pantallas que hayan cambiado y corregir la
+fuente de verdad además del manual. Cada cambio futuro de arquitectura,
+protocolo, instalación o seguridad debe actualizar la sección correspondiente
+en el mismo commit.
