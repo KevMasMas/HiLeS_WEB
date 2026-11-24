@@ -1,11 +1,11 @@
 # Manual para desarrolladores de HiLeS Web
 
-> **Versión del manual:** `1.0-rc1`
-> **Estado:** contenido auditado; revisión externa y aprobación definitivas pendientes
+> **Versión del manual:** `1.0-rc2`
+> **Estado:** revisión técnica finalizada; revisión externa y aprobación definitivas pendientes
 > **Responsable inicial:** Juan David Romero
 > **Rama de trabajo:** `multi-pico`
 > **Base técnica revisada:** `a419d33` (`multi-pico`)
-> **Última revisión técnica:** 23 de noviembre de 2026
+> **Última revisión técnica:** 24 de noviembre de 2026
 > **Aprobación definitiva:** pendiente de revisión por otra persona y prueba de
 > instalación por un desarrollador nuevo
 
@@ -20,8 +20,8 @@ El manual se puede leer de principio a fin, pero está diseñado para consulta:
    regresión mínima del capítulo 9;
 5. cerrar con el checklist del apéndice A.
 
-Cuando este manual y el código difieran, la implementación y sus pruebas son la
-fuente de verdad para el comportamiento vigente. Los contratos de `docs/mqtt/`
+Cuando este manual y el código difieran, la implementación y sus pruebas definen
+el comportamiento vigente. Los contratos de `docs/mqtt/`
 explican el diseño esperado y los registros de `entregas/` conservan evidencia
 histórica; una afirmación histórica no convierte automáticamente ese
 comportamiento en vigente.
@@ -55,7 +55,10 @@ Set-Location .\HiLeS_WEB
 git switch multi-pico
 Set-Location .\frontend
 npm.cmd ci
-Copy-Item .env.example .env.local
+if (-not (Test-Path .env.local)) {
+    Copy-Item .env.example .env.local
+}
+git check-ignore -v .env.local
 npm.cmd run test:run
 npm.cmd run lint
 npm.cmd run build
@@ -88,27 +91,16 @@ función, realizar cambios seguros y demostrar que esos cambios funcionan.
 El documento está dirigido a desarrolladores del frontend, del motor de
 simulación, de la integración MQTT y del runtime MicroPython. No reemplaza el
 manual de usuario ni los contratos técnicos especializados: los resume, explica
-cómo se relacionan y enlaza su fuente de verdad.
+cómo se relacionan y enlaza la documentación técnica de referencia.
 
 ## Estado editorial
 
-| Capítulo | Estado | Evidencia principal |
-|---|---|---|
-| 1. Visión técnica | Listo para revisión | `README.md` y arquitectura |
-| 2. Preparación del entorno | Listo para revisión | Guía de replicación y configuración actual |
-| 3. Estructura del repositorio | Listo para revisión | Código y scripts actuales |
-| 4. Frontend | Listo para revisión | Montaje, features, stores, services y estilos actuales |
-| 5. Motor y modelos | Listo para revisión | Motor, documento JSON, IR v2, particionado y vectores |
-| 6. Colaboración y MQTT | Listo para revisión | Cliente MQTT, colaboración v2 y ejecución distribuida v3 |
-| 7. Firmware MicroPython | Listo para revisión | Runtime, configuración, worker v3 y despliegue seguro |
-| 8. Flujos de desarrollo | Listo para revisión | Casos reales y puntos de extensión del proyecto |
-| 9. Pruebas y calidad | Listo para revisión | Suites de frontend, firmware, MQTT y hardware |
-| 10. Git y contribución | Listo para revisión | Flujo seguro de la rama compartida |
-| 11. Seguridad | Listo para revisión | Secretos, red y perfil Python |
-| 12. Diagnóstico | Listo para revisión | Árboles de comprobación y recuperación |
-| 13. Glosario | Listo para revisión | Terminología HiLeS, MQTT y distribución |
+Los trece capítulos y los dos apéndices están completos y contrastados con la
+base técnica indicada al inicio. La aprobación definitiva permanece pendiente
+hasta que otro desarrollador ejecute el recorrido de instalación y registre las
+observaciones descritas en el apéndice B.
 
-## Fuentes de verdad existentes
+## Documentación técnica de referencia
 
 | Tema | Documento principal |
 |---|---|
@@ -178,24 +170,15 @@ La aplicación reúne cinco capacidades relacionadas, pero separables:
    modelo, publica un fragment por ejecutor y agrega los snapshots parciales que
    recibe durante la ejecución.
 
-El soporte funcional actual incluye ejecución Browser ↔ Browser sobre un broker
-real, pruebas automatizadas del motor MicroPython y una línea base validada con
-dos placas físicas dentro de la LAN. Git sí documenta esa implementación en dos
-niveles: `ae9ac32` conserva inventario, respaldo y despliegue exitosos de una
-Pico W RP2040 y una Pico 2 W RP2350; el commit posterior `a419d33` registra que
-el equipo confirmó el funcionamiento conjunto de ambas placas. La prueba física
-se considera realizada, no pendiente.
-
-Lo que no quedó adjunto al commit es una traza reproducible con `projectId`,
-asignaciones, payloads de ACK, channels y snapshots de esa ejecución conjunta.
-Esto limita la auditoría posterior, pero no invalida el resultado confirmado
-por el equipo. El `README.md` de `origin/main` en `97a2a46` todavía dice que la
-evidencia física está pendiente porque ese merge ocurrió antes de `a419d33` y no
-contiene el manual actualizado de `multi-pico`.
+El sistema admite ejecución Browser ↔ Browser sobre un broker real y ejecución
+distribuida entre navegadores, Raspberry Pi Pico W y Pico 2 W. El equipo validó
+el funcionamiento conjunto de dos placas físicas dentro de una LAN. El capítulo
+9 separa esa validación física de las pruebas automatizadas con ejecutores
+simulados y describe el alcance de la evidencia conservada.
 
 ### 1.3 Dos ejes independientes
 
-La interfaz separa dos decisiones que anteriormente podían confundirse:
+La interfaz separa dos decisiones independientes:
 
 | Decisión | Dónde se configura | Opciones principales | Qué controla |
 |---|---|---|---|
@@ -296,20 +279,24 @@ el frontend no hace falta una Pico ni instalar MicroPython.
 | **Windows** | Entorno de referencia del equipo | Windows 10 u 11 de 64 bits |
 | **PowerShell** | Comandos, scripts y automatización | Incluido con Windows; algunos comandos administrativos requieren abrirlo como administrador |
 | **Git** | Clonar, actualizar y publicar cambios | Versión reciente con acceso al repositorio |
-| **Node.js y npm** | Siempre que se trabaje en el frontend | Node.js 22 LTS o posterior; npm se instala con Node.js |
-| **Python 3** | Pruebas del firmware y herramientas de flota | Versión de escritorio reciente disponible como `python` |
+| **Node.js y npm** | Siempre que se trabaje en el frontend | Node 22.12–22.x, 24.x o 26+; Node 24.18.0 y npm 11.16.0 fueron verificados |
+| **Python 3** | Pruebas del firmware y herramientas de flota | CPython 3.13.12 fue verificado; debe estar disponible como `python` o mediante una ruta explícita |
 | **Eclipse Mosquitto** | Colaboración o ejecución distribuida real | Mosquitto 2.x; la configuración comprobada usa 2.1.2 |
 | **Thonny o `mpremote`** | Copiar firmware y configuración a una Pico | Solo para pruebas con hardware |
-| **MicroPython** | Ejecutar un fragment en una Pico W o Pico 2 W | Firmware compatible instalado en cada placa |
+| **MicroPython** | Ejecutar un fragment en una Pico W o Pico 2 W | Se validaron 1.28.0 en Pico W RP2040 y 1.29.0 en Pico 2 W RP2350 |
+| **`rg` (ripgrep)** | Búsqueda de referencias y contratos | Recomendado; puede sustituirse por la búsqueda del editor |
 
 El frontend fija sus dependencias mediante
 [`../frontend/package.json`](../frontend/package.json) y
 [`../frontend/package-lock.json`](../frontend/package-lock.json). Entre las
 tecnologías principales están React 19.2.8, TypeScript 6.0.3, Vite 8.2.2,
 Zustand 5.0.15, MQTT.js 5.16.0, Pyodide 0.26.3, Vitest 5.0.1 y
-`@xyflow/react` 12.11.5 según el lockfile revisado. `package.json` declara
-rangos; el archivo de bloqueo es la fuente de verdad para la instalación
-exacta, por lo que se debe usar `npm ci` en entornos reproducibles.
+`@xyflow/react` 12.11.5 según el lockfile revisado. Vite admite Node
+`^20.19.0 || >=22.12.0`, pero Vitest 5 exige `^22.12.0`, `^24.0.0` o
+`>=26.0.0`; por ello, las líneas compatibles conjuntas son 22.12–22.x, 24.x o
+26 en adelante, y no cualquier versión intermedia de Node.
+`package.json` declara rangos y `package-lock.json` fija la instalación exacta,
+por lo que se debe usar `npm.cmd ci`.
 
 Para exponer el sistema a otros dispositivos de la LAN, el equipo debe estar en
 una red privada y el firewall debe permitir los puertos utilizados. Crear o
@@ -318,8 +305,10 @@ administrador.
 
 ### 2.2 Clonar e instalar
 
-En un equipo nuevo, abrir PowerShell en la carpeta donde se guardará el proyecto
-y ejecutar:
+#### Desarrollo activo
+
+Este procedimiento descarga la rama de trabajo vigente. Abrir PowerShell en la
+carpeta que contendrá el repositorio y ejecutar:
 
 ```powershell
 git clone https://github.com/KevMasMas/HiLeS_WEB.git
@@ -332,6 +321,34 @@ git status
 Set-Location .\frontend
 npm.cmd ci
 ```
+
+La rama puede avanzar después de publicar este manual. Antes de comenzar una
+tarea se revisa el plan de la entrega y se confirma que `multi-pico` siga siendo
+la rama acordada por el equipo.
+
+#### Instalación reproducible de la base documentada
+
+Para reproducir exactamente el código productivo utilizado como referencia en
+este manual se usa el commit indicado al inicio; no existe un tag estable para
+esa base técnica:
+
+```powershell
+git clone https://github.com/KevMasMas/HiLeS_WEB.git
+Set-Location .\HiLeS_WEB
+git switch --detach a419d33
+Set-Location .\frontend
+npm.cmd ci
+```
+
+El estado detached sirve para comprobar esa versión, no para desarrollar. Para
+crear cambios se vuelve a una rama acordada con `git switch <rama>` después de
+preservar cualquier modificación local.
+
+La versión `1.0-rc2` de este manual, el firmware `3.0.0`,
+`schemaVersion: 2`, `ir_version: 2` y `protocol_version: 3` son identificadores
+independientes. Actualizar uno no incrementa automáticamente los demás.
+
+#### Comprobación de la instalación
 
 Los comandos de npm deben ejecutarse desde `frontend/`, porque allí están el
 `package.json` y el lockfile de la aplicación. El `package-lock.json` de la raíz
@@ -361,9 +378,15 @@ configuración local persistente, continuar desde `frontend/`, que es el
 directorio final de la sección 2.2:
 
 ```powershell
-Copy-Item .env.example .env.local
+if (-not (Test-Path .env.local)) {
+    Copy-Item .env.example .env.local
+}
 git check-ignore -v .env.local
 ```
+
+Si `.env.local` ya existe, el bloque lo conserva. Para regenerarlo se hace antes
+una copia explícita y se comparan los valores; nunca se sobrescribe una
+configuración con credenciales por comodidad.
 
 Si se inicia este procedimiento desde la raíz del repositorio, ejecutar primero
 `Set-Location .\frontend`. El resultado esperado de `git check-ignore` debe
@@ -425,21 +448,24 @@ Después, en otra consola, iniciar el frontend:
 
 ```powershell
 Set-Location .\frontend
-npm.cmd run dev -- --host 0.0.0.0
+npm.cmd run dev -- --host 0.0.0.0 --port 5173 --strictPort
 ```
 
 Si la consola no está en la raíz, ubicarse primero en la carpeta real del clon;
 no se requiere una ruta absoluta específica de un integrante. La opción
-`--host 0.0.0.0` permite que Vite escuche tanto en el equipo como en su LAN.
-El resultado esperado es una línea `Local: http://localhost:5173/`. Si el puerto
-está ocupado, identificar el proceso o usar explícitamente otro puerto y abrir
-esa misma URL en los clientes.
+`--host 0.0.0.0` permite que Vite escuche tanto en el equipo como en su LAN. Para
+mantener el puerto documentado se recomienda ejecutar
+`npm.cmd run dev -- --host 0.0.0.0 --port 5173 --strictPort`; así, un puerto
+ocupado produce un error visible en vez de cambiar silenciosamente. El resultado
+esperado incluye `Local: http://localhost:5173/`.
 
 - Desde el mismo PC: `http://localhost:5173/`.
 - Desde otro dispositivo: `http://IP_DEL_PC:5173/`.
 
-La dirección IPv4 del PC se obtiene con `ipconfig`. Ambos dispositivos deben
-tener acceso a la misma red y el firewall debe permitir el tráfico entrante.
+La dirección IPv4 del PC se obtiene con `ipconfig`. Las Picos necesitan una red
+Wi-Fi de 2.4 GHz. El PC puede usar Ethernet o Wi-Fi de 5 GHz siempre que exista
+conectividad IP con las placas, no haya aislamiento entre clientes y el firewall
+permita el tráfico entrante.
 Para colaborar deben abrir el mismo enlace con el mismo parámetro, por ejemplo
 `?project=prueba-equipo`.
 
@@ -577,7 +603,8 @@ referencias ni la lectura de las pruebas existentes.
 | Ejemplo de demostración | `scripts/generate-*.mjs`, `output/` | Importación, despliegue y comportamiento esperado | README o guía específica del ejemplo |
 | Instalación o proceso del equipo | `docs/`, `README.md`, `entregas/` | Repetir comandos desde un entorno conocido | Guía y registro afectados |
 
-Para cualquier cambio, el recorrido mínimo es: localizar la fuente de verdad,
+Para cualquier cambio, el recorrido mínimo es: localizar la implementación o
+el contrato responsable,
 buscar todas las referencias del símbolo o contrato, leer las pruebas cercanas,
 implementar, ejecutar la verificación correspondiente y actualizar la
 documentación. Un cambio de semántica del motor debe revisarse en Browser y
@@ -641,6 +668,19 @@ Los dos transportes MQTT comparten configuración, pero mantienen conexiones y
 tiempos de reconexión propios. Los stores coordinan estado; los services
 implementan contratos y no renderizan interfaz.
 
+#### Referencia visual del editor
+
+![Canvas de HiLeS Web con Palette, modelo y panel lateral](../entregas/entrega-2-18-septiembre/image.png)
+
+La captura versionada permite ubicar las tres zonas que más afectan al código:
+la **Palette** crea elementos y selecciona el tipo de conexión; el **Canvas**
+renderiza nodos, Ports y channels mediante React Flow; el panel lateral muestra
+simulación y propiedades. Es una evidencia histórica de la interfaz, no una
+captura de la ejecución multi-executor actual. El repositorio no conserva un
+juego vigente de capturas del panel de ejecutores, ACK o consola de firmware;
+por eso esas vistas se describen mediante diagramas y contratos en lugar de
+imágenes recreadas.
+
 `MqttPanel` se monta junto al editor para conservar sus suscripciones aunque su
 pestaña esté cerrada. Cuando `PanelDock` registra el destino del portal, React
 traslada visualmente el panel a la pestaña **Conexión** sin desmontarlo.
@@ -692,8 +732,8 @@ reglas:
 - que una red de Petri alterne Place y Transition;
 - que la misma conexión no exista ya.
 
-La apariencia de la arista no define su semántica. La fuente de verdad es
-`hilesConnectionType`; color, trazo, punta y label se vuelven a normalizar al
+La apariencia de la arista no define su semántica. El campo
+`hilesConnectionType` determina el comportamiento; color, trazo, punta y label se vuelven a normalizar al
 importar el documento.
 
 #### Structural Blocks y elementos internos
@@ -961,8 +1001,8 @@ red, hardware, `eval`, `exec`, atributos generales y nombres `__dunder__`.
 Una sola salida puede devolverse directamente. Varias salidas deben devolverse
 en un diccionario cuyas claves coincidan con las variables declaradas. `None`
 significa que el bloque no publica una salida en ese paso. Este perfil reduce
-errores y acceso accidental a la placa, pero no es un sandbox criptográfico
-para código hostil.
+errores y acceso accidental a la placa, pero no es un entorno de aislamiento
+seguro para código no confiable.
 
 ### 5.2 Canales
 
@@ -1045,7 +1085,8 @@ construido a partir de él.
 ### 5.4 Documento JSON del editor
 
 El JSON exportado por el editor es un documento de diseño. Conserva información
-visual y editable; no es la IR que ejecuta una Pico. Su estructura raíz es:
+visual y editable; no es la IR que ejecuta una Pico. El siguiente bloque es un
+**documento completo importable**, aunque representa un Canvas vacío:
 
 ```json
 {
@@ -1054,7 +1095,7 @@ visual y editable; no es la IR que ejecuta una Pico. Su estructura raíz es:
   "network": {
     "topology": null,
     "protocol": null,
-    "nodes": ["block-sensor"]
+    "nodes": []
   },
   "allElements": [],
   "relationNode": [],
@@ -1073,7 +1114,9 @@ Campos principales:
 | `relationNode` | Índice derivado de Structural Block → hijos directos. No reemplaza `parentId`. |
 | `connections` | Aristas React Flow con extremos, handles y datos del canal. |
 
-Un elemento tiene esta forma general:
+El siguiente bloque es un **fragmento ilustrativo** de un elemento; no puede
+importarse por sí solo porque su `parentId` requiere el Structural Block
+`block-sensor` dentro del mismo documento:
 
 ```json
 {
@@ -1131,20 +1174,30 @@ usa el estado actual normalizado. Para compatibilidad, nunca se debe cambiar el
 significado de un campo existente sin incrementar la versión y añadir una
 migración.
 
+Como referencia importable con Structural Blocks y componentes internos puede
+usarse [`demo-minimo-3-structural-blocks.json`](../output/demo-minimo-3-structural-blocks.json).
+La prueba del tutorial utiliza el documento generado por
+[`crearEjemploMinimo()`](../frontend/src/features/onboarding/ejemploMinimo.ts),
+que también pasa `validateModelDocument()`.
+
 ### 5.5 Compilación a IR v2
 
-La IR v2 es el contrato ejecutable común entre Browser y MicroPython. El flujo
-de transformación es:
+La IR v2 es el contrato ejecutable común entre Browser y MicroPython. Conviene
+distinguir la carga del documento en el editor de su compilación:
 
 ```text
-Documento JSON del editor
-        │ validar estructura y referencias
+Importación / autosave / documento remoto
+        │ isModelDocument + validateModelDocument
+        ▼
+normalizar nodos y aristas para el editor
+
+Documento aceptado que se va a ejecutar
+        │ migrateV1toV2 dentro del compilador
         ▼
 normalizar propiedades, Ports y conexiones antiguas
         │ aplanar Structural Blocks y Ports de frontera
         ▼
-crear elementos y canales IR v2 tipados
-        │ validar límites, expresiones y Python
+crear y validar elementos y canales IR v2 tipados
         ▼
 IrModeloV2 válido o lista de diagnósticos
 ```
@@ -1152,8 +1205,12 @@ IrModeloV2 válido o lista de diagnósticos
 ```mermaid
 flowchart LR
     D[HilesModelDocument<br/>schemaVersion 1 o 2]
-    M[migrateV1toV2]
+    G{Ruta de uso}
+    DV[isModelDocument<br/>validateModelDocument]
+    N[normalizeNode + normalizeEdge]
+    ED[Estado editable]
     C[compilarDocumentoAIrV2]
+    M[migrateV1toV2<br/>solo dentro del compilador]
     V[validarModeloIrV2]
     IR[IrModeloV2]
     A[resolverAsignacionesDistribuidasV3]
@@ -1162,12 +1219,28 @@ flowchart LR
     F[Fragments por executor]
     E[Diagnósticos; sin modelo parcial]
 
-    D --> M --> C --> V
+    D --> G
+    G -->|importar, autosave o remoto| DV --> N --> ED
+    G -->|compilar| C --> M --> V
     V -->|válido| IR --> A --> P
     V -->|inválido| E
     P --> MF
     P --> F
 ```
+
+`migrateV1toV2()` se declara en
+[`modelDocument.ts`](../frontend/src/domain/modelDocument.ts) y completa defaults
+de Functional Blocks y CCH de documentos v1. La invoca
+[`compiladorIrV2.ts`](../frontend/src/services/ir/compiladorIrV2.ts) cuando
+prepara la IR. En cambio, `importModel()`, `loadAutosave()` y
+`applyRemoteDocument()` de
+[`useEditorStore.ts`](../frontend/src/stores/useEditorStore.ts) aceptan
+`schemaVersion` 1 o 2, validan referencias y aplican `normalizeNode()` /
+`normalizeEdge()` sin llamar la migración. Por tanto, un documento v1 puede
+verse y editarse con defaults visuales, pero sus defaults de esquema no quedan
+materializados hasta compilarlo o exportarlo nuevamente como v2. Esta diferencia
+es una limitación conocida, no una garantía de migración uniforme en todas las
+rutas.
 
 La raíz IR contiene `ir_version`, identidad y versión del modelo, nombre,
 metadata de compilación, entradas externas, elementos y conexiones. Los tipos
@@ -1270,8 +1343,8 @@ interfaz, pero no implementan rollback coordinado.
 
 ### 5.7 Vectores de conformidad
 
-Los vectores de `docs/mqtt/vectores_ir_v2/` son ejemplos ejecutables y la fuente
-de verdad para comprobar que Browser y MicroPython producen el mismo estado.
+Los vectores de `docs/mqtt/vectores_ir_v2/` son ejemplos ejecutables y la
+referencia para comprobar que Browser y MicroPython producen el mismo estado.
 Se organizan en:
 
 | Carpeta | Propósito |
@@ -1281,20 +1354,21 @@ Se organizan en:
 | `python/validos` y `python/invalidos` | Perfil permitido y prohibido de Functional Blocks |
 | `ejecucion` | Modelo, estado inicial, entradas por paso y snapshots esperados |
 
-Un vector de ejecución tiene esta forma:
+El archivo completo
+[`05_services_expresiones_tipos.json`](mqtt/vectores_ir_v2/ejecucion/05_services_expresiones_tipos.json)
+es un **vector ejecutable** compartido por ambas suites. El siguiente bloque es
+solo un **fragmento ilustrativo** de una de sus expectativas; no sustituye el
+modelo IR, el estado inicial ni los demás campos del archivo enlazado:
 
 ```json
 {
-  "descripcion": "Comportamiento que se congela",
-  "modelo": { "ir_version": 2, "elementos": [], "conexiones": [] },
-  "estado_inicial": {},
-  "pasos": [
-    {
-      "avance_tiempo_ms": 0,
-      "entradas": { "service-id": 5 },
-      "elementos_esperados": {}
-    }
-  ]
+  "tipo_de_ejemplo": "fragmento ilustrativo",
+  "fuente": "05_services_expresiones_tipos.json",
+  "entrada": { "service-number": 7 },
+  "estado_esperado": {
+    "service-number": { "valor": 7 },
+    "expression-double": { "salida": 14 }
+  }
 }
 ```
 
@@ -1358,7 +1432,8 @@ HiLeS usa principalmente QoS 0 y QoS 1:
 
 - **QoS 0:** entrega best effort. Es adecuado para cursores o telemetría que
   pronto será reemplazada por una muestra nueva.
-- **QoS 1:** el mensaje llega al menos una vez. Puede duplicarse, por lo que una
+- **QoS 1:** proporciona entrega al menos una vez dentro de las condiciones del
+  protocolo y de la sesión MQTT. Puede duplicar mensajes, por lo que una
   operación con efectos debe deduplicarse mediante `operationId`, `id_mensaje`
   o secuencia.
 - **Retain:** Mosquitto conserva el último payload del topic y lo entrega a un
@@ -1444,12 +1519,13 @@ Topics principales:
 | `presence/<clientId>` | Nombre, color, conexión, vista activa y TTL del participante | 1 / Sí |
 | `cursor` | Posición reciente del cursor en coordenadas del Canvas | 0 / No |
 
-Retained no significa permanente ni no temporal. La presencia es temporal,
-pero se publica retained en un topic exclusivo por `clientId` para que quien
-entra tarde conozca el último estado. Su TTL, heartbeat y Last Will determinan
-si sigue vigente. El cursor también es temporal, pero no es retained porque una
-posición antigua no aporta un estado recuperable. Las operaciones son eventos
-no retained; el snapshot es el checkpoint retained que las consolida.
+La retención de un mensaje no implica que su información siga vigente. La
+presencia es temporal, pero se publica retained en un topic exclusivo por
+`clientId` para que quien entra tarde conozca el último estado. Su TTL,
+heartbeat y Last Will determinan si todavía es válida. El cursor también es
+temporal, pero no es retained porque una posición antigua no aporta un estado
+recuperable. Las operaciones son eventos no retained; el snapshot es el
+checkpoint retained que las consolida.
 
 #### Entrada a un proyecto
 
@@ -1764,11 +1840,9 @@ Resultados esperados:
 
 La prueba visual mínima Browser ↔ Browser debe usar nombres distintos, el mismo
 enlace `?project=...`, un cambio de componente, un movimiento y una recarga. La
-línea base también fue validada con dos placas Pico físicas dentro de la LAN.
-Para cambios futuros de firmware o protocolo, la evidencia se actualiza con
-placas, firmware, configuración, comandos, snapshots y resultado observable.
-Un DryRun o `-AllowNoDevice` comprueba el procedimiento, no reemplaza esa
-validación física.
+evidencia de hardware está en 9.6. Para cambios futuros de firmware o protocolo
+se registran placas, firmware, configuración, comandos, snapshots y resultado
+observable; un DryRun o `-AllowNoDevice` solo comprueba el procedimiento.
 
 ## 7. Runtime MicroPython
 
@@ -2096,10 +2170,10 @@ y `Deploy` para un filesystem accesible. En `Backup` o `Deploy`:
 6. elimina solo rutas pasadas explícitamente mediante `-ObsoletePath` y rechaza
    borrar configuración, dependencias o rutas canónicas.
 
-Nunca se debe actualizar una placa sin respaldo ni asumir que
-`-AllowNoDevice` constituye una prueba física. La línea base actual ya se probó
-con dos placas; esa opción solo permite comprobar el procedimiento de forma
-segura cuando se desarrolla sin hardware conectado.
+Nunca se debe actualizar una placa sin respaldo ni presentar
+`-AllowNoDevice` como prueba física. Esa opción solo comprueba el procedimiento
+de forma segura cuando se desarrolla sin hardware conectado; véase 9.6 para la
+evidencia disponible.
 
 #### Verificación después de copiar
 
@@ -2151,7 +2225,7 @@ explícita sobre su alcance:
 | Distribución | particionado, contrato MQTT, frontend, firmware y prueba con más de un executor |
 | Colaboración | documento, operaciones, topics, convergencia y prueba con dos navegadores |
 
-La regla principal es mantener una sola fuente de verdad. Una forma visual no
+La regla principal es mantener un único contrato responsable. Una forma visual no
 define por sí sola el comportamiento; el documento JSON no contiene estado de
 ejecución; y el firmware no debe inventar una semántica diferente a la del
 motor Browser.
@@ -2560,7 +2634,7 @@ Comprobación enfocada desde la raíz:
 Set-Location .\frontend
 npm.cmd run test:run -- src/engine/__tests__/MotorSimulacionIrV2.test.ts
 Set-Location ..
-python -m unittest firmware.tests.test_hiles_delays -v
+python -m unittest discover -s firmware/tests -t . -p 'test_hiles_delays.py' -v
 ```
 
 Los casos existentes comprueban retardo de canal, retardo de elemento,
@@ -2579,7 +2653,303 @@ Verificación manual:
    cambia antes del vencimiento y sí después;
 6. pulsar **Reiniciar** y confirmar que no queda un timer pendiente.
 
-### 8.7 Lista de cierre para cualquier cambio
+### 8.7 Ejemplo completo: del Canvas a dos ejecutores
+
+Este recorrido reutiliza el modelo real que carga el botón **Cargar ejemplo sin
+hardware**. Su definición está en
+[`ejemploMinimo.ts`](../frontend/src/features/onboarding/ejemploMinimo.ts) y su
+validez, compilación y particionado se comprueban en
+[`ejemploMinimo.test.ts`](../frontend/src/features/onboarding/ejemploMinimo.test.ts).
+No existe un JSON independiente de este ejemplo: el tutorial crea el documento
+v2 en memoria y lo entrega a `importModel()`. Si se necesita un archivo para
+probar el importador, puede exportarse desde la interfaz; el modelo versionado
+[`demo-minimo-3-structural-blocks.json`](../output/demo-minimo-3-structural-blocks.json)
+ofrece una variante importable de tres bloques.
+
+El escenario siguiente usa dos Browser executors para que sea reproducible sin
+hardware. Asignar uno de los bloques a una Pico ejercita el mismo contrato, pero
+requiere repetir la validación física correspondiente.
+
+```mermaid
+flowchart LR
+    DOC[Documento v2<br/>ejemplo mínimo]
+    COMP[compilarDocumentoAIrV2]
+    IR[IR v2<br/>Entrada → Sumar uno → Resultado]
+    ASSIGN[resolverAsignacionesDistribuidasV3]
+    PART[particionarIrV2Distribuida]
+    MAN[Manifest v3]
+    FA[Fragment browser:a<br/>Service Entrada]
+    FB[Fragment browser:b<br/>Sumar uno + Service Resultado]
+    MQTT[(Mosquitto)]
+    ACK[ACK de ambos ejecutores]
+    SNAP[Snapshots parciales]
+    UI[Canvas agregado<br/>Resultado = 5]
+
+    DOC --> COMP --> IR --> ASSIGN --> PART
+    PART --> MAN
+    PART --> FA
+    PART --> FB
+    MAN --> MQTT
+    FA --> MQTT
+    FB --> MQTT
+    MQTT --> ACK
+    FA -->|CCH remoto: 4| MQTT
+    MQTT -->|CCH remoto: 4| FB
+    FB -->|salida local: 5| SNAP --> MQTT --> UI
+```
+
+#### Modelo, Ports y resultado
+
+| Elemento | Structural Block | Ports | Responsabilidad |
+|---|---|---|---|
+| `ejemplo-entrada` (`SERVICE`) | `ejemplo-sensor` | output `ejemplo-entrada-out`, integer/CCH | Recibe el valor externo; el valor inicial es `4` |
+| `ejemplo-sumar` (`FUNCTIONAL_BLOCK`) | `ejemplo-proceso` | input `ejemplo-sumar-in`; output `ejemplo-sumar-out` | Ejecuta `def calcular(x): return x + 1` |
+| `ejemplo-resultado` (`SERVICE`) | `ejemplo-proceso` | input `ejemplo-resultado-in`, integer/CCH | Expone el resultado observable |
+
+Los dos CCH son `ejemplo-cch-entrada` y `ejemplo-cch-resultado`. Al asignar
+`ejemplo-sensor` a `browser:a` y `ejemplo-proceso` a `browser:b`, el primero
+cruza MQTT y el segundo permanece dentro del fragment de `browser:b`. La
+entrada `4` debe producir `5` en `ejemplo-resultado`.
+
+El documento completo generado por el tutorial es un **documento importable**
+después de serializarlo. Este fragmento ilustrativo muestra la jerarquía que
+determina las asignaciones; no es un documento independiente:
+
+```json
+{
+  "network": { "nodes": ["ejemplo-sensor", "ejemplo-proceso"] },
+  "relationNode": [
+    { "nodeId": "ejemplo-sensor", "elementIds": ["ejemplo-entrada"] },
+    {
+      "nodeId": "ejemplo-proceso",
+      "elementIds": ["ejemplo-sumar", "ejemplo-resultado"]
+    }
+  ]
+}
+```
+
+#### Compilación, asignación y particionado
+
+`compilarDocumentoAIrV2()` aplana los Structural Blocks y conserva los tres
+elementos ejecutables. El siguiente bloque es un **fragmento ilustrativo de IR
+v2** obtenido del compilador; el objeto completo contiene metadata, entradas
+externas y ambas conexiones:
+
+```json
+{
+  "ir_version": 2,
+  "modelo_id": "manual-e2e",
+  "elementos": [
+    {
+      "id": "ejemplo-entrada",
+      "tipo": "service",
+      "tipo_dato": "integer",
+      "salidas": ["ejemplo-entrada-out"],
+      "valor_inicial": 4
+    },
+    {
+      "id": "ejemplo-sumar",
+      "tipo": "functional_block",
+      "lenguaje": "python",
+      "codigo": "def calcular(x):\n    return x + 1"
+    },
+    {
+      "id": "ejemplo-resultado",
+      "tipo": "service",
+      "tipo_dato": "integer",
+      "entradas": ["ejemplo-resultado-in"]
+    }
+  ]
+}
+```
+
+Las asignaciones heredadas de los Structural Blocks son:
+
+| Elemento | Executor | Origen |
+|---|---|---|
+| `ejemplo-entrada` | `browser:a` | `ejemplo-sensor` |
+| `ejemplo-sumar` | `browser:b` | `ejemplo-proceso` |
+| `ejemplo-resultado` | `browser:b` | `ejemplo-proceso` |
+
+`particionarIrV2Distribuida()` genera dos fragments y una única ruta remota. El
+manifest real depende de los IDs de sesión y del `deploymentId`; el siguiente
+**fragmento ilustrativo** muestra los campos estables, pero no debe publicarse
+como manifest completo:
+
+```json
+{
+  "protocol_version": 3,
+  "project_id": "manual-e2e",
+  "deployment_id": "dep-manual",
+  "epoch": 1,
+  "owners": {
+    "ejemplo-entrada": "browser:a",
+    "ejemplo-sumar": "browser:b",
+    "ejemplo-resultado": "browser:b"
+  },
+  "fragments": [
+    {
+      "fragment_id": "dep-manual:browser:a",
+      "executor_id": "browser:a",
+      "element_ids": ["ejemplo-entrada"]
+    },
+    {
+      "fragment_id": "dep-manual:browser:b",
+      "executor_id": "browser:b",
+      "element_ids": ["ejemplo-resultado", "ejemplo-sumar"]
+    }
+  ],
+  "routes": [
+    {
+      "connection_id": "ejemplo-cch-entrada",
+      "source_executor_id": "browser:a",
+      "target_executor_id": "browser:b",
+      "tipo": "cch",
+      "qos": 1,
+      "retain": false
+    }
+  ]
+}
+```
+
+Los resúmenes reales también incluyen `hash` SHA-256 y `size_bytes`; se omiten
+en el fragmento anterior porque cambian si cambia cualquier byte del fragment.
+El worker compara esos valores antes de activar el modelo.
+
+#### Publicación MQTT, ACK y ejecución
+
+Con `projectId=manual-e2e` y `deploymentId=dep-manual`, los topics relevantes
+son:
+
+| Etapa | Topic | QoS / retain |
+|---|---|---|
+| Manifest | `udfjc/hiles/v3/projects/manual-e2e/deployments/manifest` | 1 / sí |
+| Fragment A | `.../deployments/dep-manual/fragments/browser:a` | 1 / sí |
+| Fragment B | `.../deployments/dep-manual/fragments/browser:b` | 1 / sí |
+| ACK | `.../deployments/dep-manual/ack/<executorId>` | 1 / sí |
+| CCH remoto | `.../deployments/dep-manual/channels/ejemplo-cch-entrada` | 1 / no |
+| Snapshot | `.../deployments/dep-manual/snapshot/<executorId>` | 0 / no |
+
+Los puntos suspensivos de la tabla abrevían únicamente el prefijo ya mostrado;
+no forman parte del topic. El siguiente bloque agrupa tres **payloads
+ilustrativos válidos según el contrato**. El contenedor `ack/channel/snapshot`
+es solo presentación: cada objeto se publica por separado en su topic.
+
+```json
+{
+  "ack": {
+    "protocol_version": 3,
+    "project_id": "manual-e2e",
+    "deployment_id": "dep-manual",
+    "epoch": 1,
+    "executor_id": "browser:a",
+    "fragment_id": "dep-manual:browser:a",
+    "accepted": true,
+    "fragment_hash": "8c28a753c483859db298ce75b6281b2f93e64bd5747780612a845400560ba484"
+  },
+  "channel": {
+    "protocol_version": 3,
+    "project_id": "manual-e2e",
+    "deployment_id": "dep-manual",
+    "epoch": 1,
+    "message_id": "browser:a:ejemplo-cch-entrada:1",
+    "connection_id": "ejemplo-cch-entrada",
+    "owner_executor_id": "browser:a",
+    "sequence": 1,
+    "value": 4
+  },
+  "snapshot": {
+    "protocol_version": 3,
+    "project_id": "manual-e2e",
+    "deployment_id": "dep-manual",
+    "epoch": 1,
+    "executor_id": "browser:b",
+    "sequence": 1,
+    "elements": {
+      "ejemplo-sumar": { "salida": 5 },
+      "ejemplo-resultado": { "valor": 5 }
+    }
+  }
+}
+```
+
+El hash mostrado corresponde al documento, timestamp y IDs fijos usados para
+verificar este ejemplo. En una ejecución de la interfaz se
+debe comparar con el hash del manifest recién generado, no copiar este valor.
+
+#### Procedimiento reproducible en la interfaz
+
+1. Iniciar Mosquitto y Vite como indica el capítulo 2.
+2. Abrir dos pestañas con
+   `http://localhost:5173/?project=manual-e2e` y usar nombres distintos.
+3. En el Canvas vacío, pulsar **Cargar ejemplo sin hardware**.
+4. Abrir **Ejecutores** y activar **Ejecutar aquí** en ambas pestañas.
+5. Esperar a que ambos Browser executors aparezcan online.
+6. Asignar `Sensor` a la primera pestaña y `Proceso` a la segunda. Los elementos
+   internos heredan esos destinos.
+7. Pulsar **Desplegar**. No continuar hasta que ambos fragments muestren ACK
+   aceptado y la fase sea **Listo**.
+8. En **Entradas**, elegir `Entrada`, enviar `4` y pulsar **Paso** o **Iniciar**.
+9. Confirmar que `Resultado` muestra `5`, que el Canvas recibe snapshots de los
+   dos propietarios y que no aparecen diagnósticos de epoch, owner o secuencia.
+10. Pulsar **Reiniciar** y comprobar que el estado runtime se limpia sin cambiar
+    el documento del editor.
+
+Esta ejecución demuestra Browser ↔ Browser sobre MQTT. No demuestra Wi-Fi,
+memoria o runtime MicroPython de una Pico.
+
+#### Código responsable
+
+| Etapa | Archivo o función |
+|---|---|
+| Crear/cargar el ejemplo | [`ejemploMinimo.ts`](../frontend/src/features/onboarding/ejemploMinimo.ts), [`tutorialState.ts`](../frontend/src/features/onboarding/tutorialState.ts) |
+| Importar y serializar el documento | [`modelDocument.ts`](../frontend/src/domain/modelDocument.ts), [`useEditorStore.ts`](../frontend/src/stores/useEditorStore.ts) |
+| Configurar Ports y destino | [`PropertiesPanel.tsx`](../frontend/src/features/editor/PropertiesPanel.tsx), [`AssignmentSelector.tsx`](../frontend/src/features/distributed/AssignmentSelector.tsx) |
+| Compilar IR v2 | [`compilarDocumentoAIrV2()`](../frontend/src/services/ir/compiladorIrV2.ts) |
+| Resolver herencia de destinos | [`resolverAsignacionesDistribuidasV3()`](../frontend/src/services/ir/particionarIr.ts) |
+| Crear manifest, fragments y rutas | [`particionarIrV2Distribuida()`](../frontend/src/services/ir/particionarIr.ts) |
+| Publicar despliegue y esperar ACK | [`useDistributedExecutionStore.ts`](../frontend/src/stores/useDistributedExecutionStore.ts) |
+| Ejecutar en navegador | [`BrowserWorker.ts`](../frontend/src/services/distributed/BrowserWorker.ts) |
+| Transportar MQTT | [`distributedTransport.ts`](../frontend/src/features/distributed/distributedTransport.ts) |
+| Agregar snapshots y pintar el Canvas | [`assignments.ts`](../frontend/src/features/distributed/assignments.ts), [`useDistributedExecutionStore.ts`](../frontend/src/stores/useDistributedExecutionStore.ts) |
+
+#### Verificación automatizada
+
+Desde la raíz del repositorio:
+
+```powershell
+Set-Location .\frontend
+npm.cmd run test:run -- src/features/onboarding/ejemploMinimo.test.ts src/services/ir/particionarIr.test.ts src/services/distributed/BrowserWorker.test.ts
+Set-Location ..
+node .\scripts\test-distributed-mqtt.mjs --mode=memory
+```
+
+La primera orden valida el modelo exacto, la compilación, las asignaciones, el
+particionado y el BrowserWorker. El runner `memory` valida el protocolo completo
+con otro fixture y dobles de ejecutor. Para atravesar un Mosquitto real, con
+`.env.local` configurado y el broker activo:
+
+```powershell
+node .\scripts\test-distributed-mqtt.mjs --mode=mqtt --timeout=12000
+```
+
+El modo `mqtt` usa un broker real, pero sus identidades `pico:*` siguen siendo
+procesos Node.js; no cuentan como hardware físico.
+
+#### Diagnóstico por etapa
+
+| Síntoma | Comprobación | Punto principal |
+|---|---|---|
+| El ejemplo no carga | Revisar `connectionError` y `validateModelDocument()` | `useEditorStore.ts` |
+| La compilación falla | Leer el primer diagnóstico de IR y el elemento asociado | `compiladorIrV2.ts`, `validadorIrV2.ts` |
+| Falta un destino | Confirmar que cada elemento raíz o Structural Block tenga executor online | `assignments.ts` |
+| No se generan dos fragments | Revisar asignaciones heredadas y capacidades anunciadas | `particionarIr.ts` |
+| Falta un ACK | Comparar executor, epoch, fragment ID, hash y tamaño | `BrowserWorker.ts`, panel **Ejecutores** |
+| No cruza el valor `4` | Revisar el topic de `ejemplo-cch-entrada`, owner y sequence | `topics.ts`, `BrowserWorker.ts` |
+| El resultado no es `5` | Ejecutar el test del tutorial y revisar el código Python del bloque | `ejemploMinimo.ts`, `MotorSimulacion.ts` |
+| El Canvas no se actualiza | Confirmar deployment, epoch, executor propietario y sequence del snapshot | `aceptarSnapshot()`, `agregarSnapshots()` |
+
+### 8.8 Lista de cierre para cualquier cambio
 
 Antes de solicitar integración se confirma:
 
@@ -2760,29 +3130,24 @@ pegan `.env.local`, contraseñas, `config_local.py`, tokens ni contenido de
 respaldos. Los resultados se registran en el archivo de cambios de la entrega
 siguiendo su estructura existente.
 
-La línea base ya cuenta con validación de dos placas. Un cambio posterior puede
-integrarse sin repetirla únicamente si no modifica firmware, protocolo,
-empaquetado ni distribución. Cuando sí los modifica, cualquier falta de prueba
-física debe quedar explícita y no se atribuye al nuevo cambio la validación de
-la versión anterior.
+Un cambio que no modifique firmware, protocolo, empaquetado ni distribución no
+obliga a repetir hardware. Si afecta esas capas, se aplica el procedimiento de
+8.5 y se registra cualquier prueba física omitida sin atribuir al cambio nuevo
+la evidencia de otra versión.
 
 ### 9.6 Matriz de evidencia disponible
 
-Esta matriz separa resultados históricos de la verificación ejecutada durante
-la auditoría. Una fila solo demuestra el escenario que nombra.
+Cada fila demuestra únicamente el escenario y entorno indicados. Las pruebas con
+dobles no se presentan como hardware y un broker temporal sin autenticación no
+valida TLS, ACL ni exposición a Internet.
 
-| Fecha | Rama / commit | Entorno y versiones registradas | Hardware | Escenario y comando | Resultado | Limitaciones | Evidencia |
-|---|---|---|---|---|---|---|---|
-| 2026-10-09 | `mqtt-pico`; `069ad92`, `831b79c` | Frontend de la entrega; la entrada no fija todas las versiones | Pico W v1 | Service web ↔ MQTT ↔ Pico; humedad `70` y rechazo de `setenta` | Prueba física reportada; frontend 39/39, lint y build | Caso MQTT v1; no demuestra distribución v3 ni dos placas | [`REGISTRO_CAMBIOS_MQTT_PICO.md`](../entregas/entrega-4-9-octubre/REGISTRO_CAMBIOS_MQTT_PICO.md) |
-| 2026-10-25 | cierre de entrega 6 | Broker LAN y navegador; versiones en la guía de la entrega | Pico W como fuente remota | Python, Sample/Hold, CCH/DCH/Petri y delays; demo manual | Recorrido declarado aprobado por el usuario | Sensores GPIO no formaron parte del recorrido; es evidencia histórica | [`GUIA_DEMO.md`](../entregas/entrega-6-20-octubre/GUIA_DEMO.md) |
-| 2026-11-06 | `d15d5a0` | Windows 11, Node 26.2.0 y Python 3.13.2 registrados | Sin placas en los runners de software | Frontend, firmware, conformidad y runner distribuido | Firmware 169 OK; frontend 187 tests con timeout intermitente de `PanelDock` en 8/11 corridas; lint/build OK | Los executors `pico:*` del runner eran dobles; el informe dejó el flujo físico pendiente | [`INFORME_FINAL_ENTREGA_8.md`](../entregas/entrega-8-6-noviembre/INFORME_FINAL_ENTREGA_8.md) |
-| 2026-11-06 y 2026-11-11 | artefactos incluidos luego en `ae9ac32` | Script de flota y firmware `3.0.0` | COM5 Pico W RP2040 / MicroPython 1.28.0; COM8 Pico 2 W RP2350 / MicroPython 1.29.0 | Deploy con respaldo, hashes, preservación de configuración y umqtt; inventario posterior | `ok: true`; ambos filesystems coinciden con las fuentes tras desplegar | Demuestra inventario y sincronización del runtime, no registra ACK/channels/snapshots de un modelo Pico ↔ Pico | [`physical-deploy-20261106.json`](../output/physical-deploy-20261106.json), [`physical-inventory-20261111.json`](../output/physical-inventory-20261111.json) |
-| 2026-11-23 | `multi-pico`, `a419d33` | Confirmación del equipo incorporada al manual después del merge de `main` | Dos placas Pico en la LAN | Funcionamiento conjunto de la línea base física | Validación Pico ↔ Pico / dos placas registrada como realizada | El commit no adjunta `projectId`, ACK, channels, snapshots ni consola; `origin/main` en `97a2a46` conserva el estado anterior como pendiente | Historial de `docs/MANUAL_DESARROLLADORES.md` en `a419d33` |
-| 2026-11-23 | `multi-pico`, auditoría sobre `a419d33` | Windows NT 10.0.26300, PowerShell 7.6.9, Node 24.18.0, npm 11.16.0, Vite 8.2.2, Vitest 5.0.1 | Sin placa conectada | `npm.cmd run test:run`; `npm.cmd run lint`; `npm.cmd run build` | 32 archivos y 187/187 tests OK; lint OK; build OK, con avisos de externalización Pyodide y chunk principal >500 kB | No incluye revisión visual ni repetición del hardware | Auditoría documentada en esta revisión; repetir comandos de 9.2 |
-| 2026-11-23 | misma auditoría | Node 24.18.0 | Cuatro workers en memoria, dos con identidad `pico:*` simulada | `node .\scripts\test-distributed-mqtt.mjs --mode=memory` | Seis etapas OK: registro, 4 ACK, entrada/pasos/20 snapshots, deduplicación, reconexión y liberación | Sin broker, Wi-Fi, MicroPython ni placa | Runner versionado en `scripts/test-distributed-mqtt.mjs` |
-| 2026-11-23 | misma auditoría | PowerShell 7.6.9 | Filesystem temporal, sin placa | `& .\scripts\test-pico-provisioning.ps1` | `Pruebas de aprovisionamiento Pico: PASS` | Valida copia, backup y protecciones en disco temporal; no radio ni memoria física | Script versionado en `scripts/test-pico-provisioning.ps1` |
-| 2026-11-23 | misma auditoría | Python 3.13.12 incluido con pgAdmin 4 | Sin placa; fakes de reloj, Wi-Fi, GPIO y transporte | `python.exe -m unittest discover -s firmware/tests -t . -v` | 180/180 tests firmware aprobados en 0,618 s | Prueba de escritorio; no mide memoria, radio ni filesystem real | Suite versionada en `firmware/tests/` |
-| 2026-11-23 | misma auditoría | Mosquitto 2.1.2 temporal en `127.0.0.1:19001`; Node 24.18.0 | Cinco clientes de colaboración y cuatro workers de protocolo simulados | `test-mqtt-four-clients.mjs`; `test-project-collaboration.mjs`; `test-distributed-mqtt.mjs --mode=mqtt --timeout=12000` | 4/4 clientes; colaboración, snapshot retained, presencia, cursor y aislamiento OK; seis etapas distribuidas, 4 ACK, 20 snapshots, 2 descartes y resultado 5 → 6 OK | Broker real, pero executors `pico:*` son dobles Node.js; listener de prueba restringido a localhost y sin autenticación | Runners versionados en `scripts/`; `.env.local` fue restaurado por hash al terminar |
+| Fecha | Referencia | Entorno / hardware | Escenario | Resultado | Alcance y evidencia |
+|---|---|---|---|---|---|
+| 2026-11-23 | [`a419d33`](https://github.com/KevMasMas/HiLeS_WEB/commit/a419d33a4e0089a7a7fc6863c4556bc64d97938d) | Windows NT 10.0.26300; Node 24.18.0; npm 11.16.0; Vite 8.2.2; Vitest 5.0.1; sin placa | `npm.cmd run test:run`, lint y build | 32 archivos y 187/187 tests; lint y build aprobados | El build conserva avisos de externalización Pyodide y chunk principal mayor de 500 kB; no incluye hardware |
+| 2026-11-23 | misma base técnica | CPython 3.13.12; fakes de reloj, Wi-Fi, GPIO y transporte | `python -m unittest discover -s firmware/tests -t . -v` | 180/180 tests aprobados en 0,618 s | Valida el runtime en escritorio; no mide radio, RAM o filesystem de una placa |
+| 2026-11-23 | runners versionados | Node 24.18.0 y filesystem temporal | Distribución en memoria y aprovisionamiento | Seis etapas distribuidas aprobadas; `Pruebas de aprovisionamiento Pico: PASS` | Los executors `pico:*` son dobles; el aprovisionamiento usa un destino temporal |
+| 2026-11-23 | runners versionados | Mosquitto 2.1.2 temporal en localhost; Node 24.18.0; sin placa | Cuatro clientes, colaboración y distribución `--mode=mqtt` | 4/4 clientes; snapshot retained, presencia, cursor, aislamiento, 4 ACK, 20 snapshots, deduplicación y resultado 5 → 6 aprobados | Broker real restringido a localhost y sin autenticación; los workers Pico son procesos Node.js; `.env.local` se restauró al terminar |
+| 2026-11-06 a 2026-11-23 | [`ae9ac32`](https://github.com/KevMasMas/HiLeS_WEB/commit/ae9ac32ba0a1f349977c62b68aaf5817cd8adb48) y [`a419d33`](https://github.com/KevMasMas/HiLeS_WEB/commit/a419d33a4e0089a7a7fc6863c4556bc64d97938d) | Pico W RP2040 / MicroPython 1.28.0 y Pico 2 W RP2350 / MicroPython 1.29.0 en LAN | Aprovisionamiento, inventario y funcionamiento conjunto de dos placas | Implementación y validación física confirmadas por el equipo | [`physical-deploy-20261106.json`](../output/physical-deploy-20261106.json) y [`physical-inventory-20261111.json`](../output/physical-inventory-20261111.json) conservan despliegue e inventario; no se versionó la traza completa de `projectId`, ACK, channels, snapshots y consola de la ejecución conjunta |
 
 ## 10. Git y flujo de contribución
 
@@ -3146,10 +3511,24 @@ git reflog -10
 ```
 
 No ejecutar limpieza o reset mientras no se identifique qué se quiere
-recuperar. Opciones seguras:
+recuperar. `git diff` muestra cambios unstaged; `git diff --cached` muestra los
+staged, y ninguno incluye archivos sin seguimiento. Para conservar bytes y
+evitar que la redirección de PowerShell cambie la codificación, Git puede
+escribir directamente los patches:
 
-- **Archivo modificado sin commit:** copiarlo fuera del repositorio o crear un
-  patch con `git diff -- ruta > cambio.patch` antes de restaurar.
+```powershell
+git diff --binary --output=../hiles-unstaged.patch -- ruta/al/archivo
+git diff --cached --binary --output=../hiles-staged.patch -- ruta/al/archivo
+git ls-files --others --exclude-standard
+git apply --check ../hiles-unstaged.patch
+```
+
+Los archivos listados por `git ls-files --others` se copian individualmente a
+una carpeta de respaldo fuera del repositorio; no forman parte de los patches.
+Después de comprobar el respaldo se elige la operación de recuperación:
+
+- **Archivo modificado sin commit:** conservar los patches anteriores o copiar
+  el archivo completo antes de restaurarlo.
 - **Commit perdido al cambiar de rama:** localizarlo en `git reflog` y crear
   una rama de rescate: `git branch rescate/<nombre> <hash>`.
 - **Archivo de otro commit:** inspeccionarlo con
@@ -3166,22 +3545,23 @@ no publicado. No forman parte del procedimiento normal. Un commit ya subido a
 una rama compartida se corrige con un nuevo commit; no se fuerza ni reescribe
 sin coordinación explícita del equipo.
 
-### 12.7 Riesgos técnicos que requieren tareas independientes
+### 12.7 Limitaciones técnicas conocidas y mejoras futuras
 
-La auditoría del manual encontró comportamientos que no deben “corregirse” solo
-en la documentación. No se modificaron en esta revisión porque requieren diseño,
-pruebas y acuerdo del equipo:
+Las limitaciones siguientes describen el comportamiento actual. No todas son
+requisitos pendientes de la entrega: algunas son decisiones de diseño, otras
+son restricciones del perfil Local/LAN y otras requieren cambios de
+implementación antes de poder ofrecer una garantía mayor.
 
-| Riesgo observado | Consecuencia posible | Trabajo recomendado |
-|---|---|---|
-| No existe transacción ni rollback global del despliegue | Una epoch rechazada puede dejar executors sin motor o con versiones distintas | Diseñar preparación/commit en dos fases o restauración explícita y probar fallos parciales |
-| La limpieza de retained puede quedar interrumpida | Manifest, fragments o ACK huérfanos pueden reaparecer al reconectar | Agregar reconciliación idempotente por deployment/epoch |
-| BrowserWorker y Pico pueden vaciar el outbox al reconectar antes de terminar la resincronización | Una salida producida durante la partición puede publicarse antes de confirmar la epoch activa | Introducir una barrera de salida hasta validar manifest y fragment; cubrir orden y descarte |
-| LWW se aplica a la entidad completa, no a cada propiedad | Dos ediciones simultáneas sobre propiedades diferentes del mismo nodo pueden perder una | Definir operaciones por campo o una estrategia CRDT/merge más granular |
-| `migrateV1toV2()` existe, pero importación, autosave y documento remoto aceptan schema 1 sin invocarla | Un documento v1 puede omitir valores que la migración pretendía completar | Centralizar parseo, migración y validación; agregar fixtures v1 de las tres rutas |
-| Credenciales compartidas sin ACL y transporte `ws://`/TCP plano | Un cliente de la LAN con la cuenta puede observar o publicar otros topics y credenciales viajan sin cifrar | Mantener la red aislada; si cambia el alcance, diseñar cuentas/ACL/TLS antes de exponerla |
-| SHA-256 sin firma | Verifica integridad respecto del manifest, no autenticidad del publicador | Si el modelo de amenaza lo exige, autenticar artefactos o reforzar autorización del broker |
-| La implementación y validación conjunta con dos placas está documentada, pero su traza detallada no quedó versionada | El resultado confirmado por el equipo no puede reproducirse solo con `projectId`, ACK, channels y snapshots guardados en Git | En la próxima repetición, adjuntar esos datos como evidencia adicional sin volver a marcar la implementación como pendiente |
+| Clasificación | Limitación actual | Consecuencia posible | Mejora futura |
+|---|---|---|---|
+| Limitación de diseño distribuido | No existe una transacción ni rollback global del despliegue | Una epoch rechazada puede dejar executors sin motor o con versiones distintas | Diseñar preparación/commit en dos fases o restauración explícita y probar fallos parciales |
+| Defecto de recuperación | La limpieza de retained puede interrumpirse | Manifest, fragments o ACK huérfanos pueden reaparecer al reconectar | Agregar reconciliación idempotente por deployment y epoch |
+| Defecto de implementación | BrowserWorker y Pico pueden vaciar el outbox antes de terminar la resincronización | Una salida creada durante la partición puede publicarse antes de confirmar la epoch activa | Bloquear la salida hasta validar manifest y fragment; cubrir orden y descarte con pruebas |
+| Limitación de diseño colaborativo | LWW se aplica a la entidad completa, no a cada propiedad | Dos ediciones simultáneas sobre propiedades distintas del mismo nodo pueden perder una | Definir operaciones por campo o una estrategia CRDT/merge más granular |
+| Defecto de compatibilidad | Importación, autosave y documento remoto aceptan schema 1 sin invocar `migrateV1toV2()` | Un documento v1 puede usar defaults visuales sin materializar todos los defaults del esquema v2 | Centralizar parseo, migración y validación; agregar fixtures v1 para las tres rutas |
+| Restricción del alcance Local/LAN | Las credenciales son compartidas, no hay ACL por topic y `ws://`/TCP no cifra | Un cliente con acceso a la LAN y a la cuenta puede observar o publicar otros topics | Mantener la red aislada; diseñar cuentas, ACL y TLS únicamente si cambia el alcance |
+| Mejora de seguridad opcional | SHA-256 no incluye firma | Comprueba integridad frente al manifest, pero no identidad del publicador | Autenticar artefactos o reforzar autorización si el modelo de amenaza lo exige |
+| Limitación documental | La validación conjunta con dos placas está confirmada, pero no se conserva su traza completa | No puede reconstruirse esa ejecución concreta solo desde Git | Adjuntar `projectId`, asignaciones, ACK, channels, snapshots y consola en una futura repetición; véase 9.6 |
 
 ## 13. Glosario técnico
 
@@ -3235,7 +3615,7 @@ pruebas y acuerdo del equipo:
 ## Apéndice A. Checklist para una contribución
 
 - [ ] Confirmar la rama y el estado de Git.
-- [ ] Identificar la fuente de verdad del comportamiento que se modificará.
+- [ ] Identificar la implementación o contrato responsable del comportamiento.
 - [ ] Implementar el cambio mínimo necesario.
 - [ ] Añadir o actualizar pruebas.
 - [ ] Ejecutar tests, lint y build.
@@ -3250,8 +3630,8 @@ pruebas y acuerdo del equipo:
 ### B.1 Criterio de terminado
 
 El contenido cubre el recorrido completo y fue contrastado con la base técnica
-`a419d33`. Su aprobación editorial sigue pendiente hasta que una persona que no
-haya trabajado en el proyecto pueda, sin instrucciones externas:
+indicada al inicio. Su aprobación editorial sigue pendiente hasta que una
+persona que no haya trabajado en el proyecto pueda, sin instrucciones externas:
 
 1. ejecutar HiLeS Web en un PC limpio;
 2. conectar un segundo navegador por LAN;
@@ -3267,35 +3647,34 @@ significa **aprobado por un desarrollador nuevo**.
 
 ### B.2 Historial de revisiones
 
-| Fecha | Commit o estado | Alcance |
+| Versión | Fecha | Descripción de los cambios |
 |---|---|---|
-| 2026-11-23 | `fb56495` | Creación del borrador y estructura inicial |
-| 2026-11-23 | `f6bdefe`–`3a9a7db` | Visión, entorno, repositorio, frontend, motor, MQTT, firmware y flujos |
-| 2026-11-23 | `0b832f4` | Pruebas, Git, seguridad, diagnóstico, glosario y cierre |
-| 2026-11-23 | `a419d33` | Alcance exclusivamente LAN y declaración de validación con dos Picos |
-| 2026-11-23 | este commit | Auditoría contra código, lockfiles, tests y evidencia; corrección de garantías, diagramas y ejemplo reproducible |
+| `0.1` | 2026-11-23 | Estructura inicial y alcance del manual |
+| `0.9` | 2026-11-23 | Trece capítulos, pruebas, Git, seguridad, diagnóstico y glosario completos |
+| `1.0-rc1` | 2026-11-23 | Contraste técnico con código, contratos, pruebas automatizadas y validación física disponible |
+| `1.0-rc2` | 2026-11-24 | Cierre editorial, instalación segura y reproducible, flujo real de migración y ejemplo distribuido de extremo a extremo |
 
-### B.3 Inconsistencias resueltas en la auditoría
+### B.3 Criterios de consistencia
 
-| Afirmación o ambigüedad previa | Fuente revisada | Corrección aplicada |
-|---|---|---|
-| Solo snapshot/base era retained | `projectTopics.ts`, `services/distributed/topics.ts` y publishers | Se documentaron snapshot y presencia colaborativa, y status/manifest/fragment/ACK distribuidos como retained |
-| Presencia retained parecía incompatible con que fuera temporal | `ProjectSyncClient.ts` | Se explicaron TTL, heartbeat y Last Will: retención del último mensaje no elimina su caducidad semántica |
-| Una epoch fallida siempre conservaba el motor anterior | store de despliegue y workers | Se separó atomicidad local de ausencia de rollback global y se documentó la limpieza previa |
-| Reconectar garantizaba recuperación completa antes de emitir | `BrowserWorker.ts` y `distributed_worker.py` | Se registró que inbound queda bloqueado, pero el outbox puede empezar a vaciarse antes de terminar resync |
-| La documentación de `main` y `multi-pico` discrepaba sobre las dos Picos | `README.md` en `97a2a46`, artefactos de `ae9ac32` y manual en `a419d33` | Se reconoció la implementación y validación conjunta como realizada; se separó de la ausencia de una traza detallada versionada |
-| `.env.local` mantenía secreta la contraseña MQTT | Vite y consumo de variables `VITE_*` | Se aclaró que evita Git, pero el navegador/bundle expone el valor al usuario local |
-| Autenticación MQTT equivalía a seguridad completa | `mosquitto.conf.example` | Se separaron autenticación, cifrado y autorización; la plantilla no configura TLS ni ACL |
-| `projectId` aislaba usuarios de forma segura | Construcción de topics | Se definió como namespace, no como frontera de autorización |
-| SHA-256 autenticaba el despliegue | validadores de manifest/fragment | Se limitó la garantía a integridad respecto del manifest, no identidad del publicador |
-| Los comandos de configuración cambiaban dos veces a `frontend/` | secuencia de preparación | Se fijó el directorio de trabajo de cada comando |
-| El documento explicaba extensión en abstracto | recorrido de `executionDelay` | Se agregó un ejemplo real desde propiedades y JSON hasta IR, Browser, MicroPython y tests |
+- Describir primero el comportamiento vigente; el historial de entregas se usa
+  solo como evidencia cuando aporta un resultado que no puede deducirse del
+  código.
+- Separar documento JSON, versión IR, versión del protocolo, firmware y versión
+  del manual; son contratos distintos.
+- Distinguir pruebas de escritorio, broker real, dobles de protocolo y hardware
+  físico en toda afirmación de validación.
+- Tratar `projectId` como namespace y SHA-256 como integridad, no como mecanismos
+  de autorización o autenticidad.
+- Mantener juntas la semántica Browser y MicroPython cuando una regla es
+  compartida, y declarar las excepciones.
+- Explicar las rutas reales de compatibilidad: aceptar schema 1 no equivale a
+  migrarlo en importación, autosave y sincronización remota.
 
 ### B.4 Cuándo actualizar el manual
 
 | Cambio en el proyecto | Secciones mínimas que deben revisarse |
 |---|---|
-| Versión de dependencia, requisito o comando | 2, 9 y quickstart |
+| Versión de dependencia, requisito o comando | 2, 9 e Inicio rápido |
 | Componente visual, store o flujo de interfaz | 4, 5.4, 8 y glosario |
 | Esquema JSON o migración | 5.2, 8.1/8.6, 9 y diagnóstico |
 | Semántica del motor o IR | 5, 7.4, 8.2/8.5, vectores y evidencia |
@@ -3304,7 +3683,7 @@ significa **aprobado por un desarrollador nuevo**.
 | Firmware, capacidades o paquete | 7, 8.5, 9.3 y evidencia física |
 | Perfil de red o seguridad | 2.3–2.5, 11 y diagnóstico |
 
-Cada cambio futuro corrige primero la fuente de verdad y sus pruebas, y actualiza
-el manual en el mismo commit. La revisión debe anotar comandos o pantallas que
-hayan cambiado; los registros históricos no se reescriben para aparentar que el
-comportamiento actual existía antes.
+Cada cambio futuro modifica primero la implementación o contrato responsable y
+sus pruebas, y actualiza el manual en el mismo commit. La revisión debe anotar
+comandos o pantallas que hayan cambiado; los registros históricos no se
+reescriben para aparentar que el comportamiento actual existía antes.
